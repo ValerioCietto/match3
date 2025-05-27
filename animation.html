@@ -1,0 +1,103 @@
+<!DOCTYPE html><html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Stickman Runner (Realistic Gait)</title>
+  <style>
+    body {
+      margin: 0;
+      background: #ccc;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    canvas {
+      background: #fff;
+      box-shadow: 0 0 10px #0005;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="800" height="300"></canvas>
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');let x = 50;
+let frame = 0;
+
+function drawLimb(fromX, fromY, angleDeg, length) {
+  const angleRad = angleDeg * Math.PI / 180;
+  const toX = fromX + Math.cos(angleRad) * length;
+  const toY = fromY + Math.sin(angleRad) * length;
+  ctx.beginPath();
+  ctx.moveTo(fromX, fromY);
+  ctx.lineTo(toX, toY);
+  ctx.stroke();
+  return [toX, toY];
+}
+
+function drawStickman(x, y, frame) {
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 2;
+
+  // Head
+  ctx.beginPath();
+  ctx.arc(x, y - 30, 10, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Torso
+  const torsoTop = [x, y - 20];
+  const torsoBottom = [x, y + 20];
+  ctx.beginPath();
+  ctx.moveTo(...torsoTop);
+  ctx.lineTo(...torsoBottom);
+  ctx.stroke();
+
+  // Running cycle angles
+  const legAngle = Math.sin(frame / 10) * 30;
+  const legBackAngle = -Math.sin(frame / 10) * 30;
+  const kneeBend = 45;
+
+  const armAngle = -Math.sin(frame / 10) * 45;
+  const armBackAngle = Math.sin(frame / 10) * 45;
+  const elbowBend = 30;
+
+  // Arms with elbows
+  let [elbowX, elbowY] = drawLimb(x, y - 10, armAngle, 20);
+  drawLimb(elbowX, elbowY, armAngle + elbowBend, 15);
+
+  [elbowX, elbowY] = drawLimb(x, y - 10, armBackAngle, 20);
+  drawLimb(elbowX, elbowY, armBackAngle - elbowBend, 15);
+
+  // Legs with knees
+  let [kneeX, kneeY] = drawLimb(x, y + 20, legAngle, 20);
+  drawLimb(kneeX, kneeY, legAngle - kneeBend, 20);
+
+  [kneeX, kneeY] = drawLimb(x, y + 20, legBackAngle, 20);
+  drawLimb(kneeX, kneeY, legBackAngle + kneeBend, 20);
+}
+
+function animate() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Ground line
+  ctx.beginPath();
+  ctx.moveTo(0, 190);
+  ctx.lineTo(canvas.width, 190);
+  ctx.strokeStyle = '#444';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  drawStickman(x, 150, frame);
+
+  x += 2;
+  if (x > canvas.width + 20) x = -20;
+  frame++;
+
+  requestAnimationFrame(animate);
+}
+
+animate();
+
+  </script>
+</body>
+</html>
