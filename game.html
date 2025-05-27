@@ -16,6 +16,7 @@
     canvas {
       background: #333;
       box-shadow: 0 0 10px #000;
+      touch-action: none;
       cursor: grab;
     }
     #controls {
@@ -37,7 +38,7 @@
   'lime', 'teal', 'brown', 'navy', 'maroon', 'olive', 'gold', 'silver'
 ];
 
-let TYPES = ALL_TYPES.slice(0, 5); // Default to 5 types
+let TYPES = ALL_TYPES.slice(0, 5);
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -120,37 +121,50 @@ function getCellFromCoords(x, y) {
   return { x: Math.floor(x / CELL_SIZE), y: Math.floor(y / CELL_SIZE) };
 }
 
-canvas.addEventListener('mousedown', (e) => {
-  const rect = canvas.getBoundingClientRect();
-  const mx = e.clientX - rect.left;
-  const my = e.clientY - rect.top;
-  dragStart = getCellFromCoords(mx, my);
-});
-
-canvas.addEventListener('mouseup', (e) => {
-  if (!dragStart) return;
-  const rect = canvas.getBoundingClientRect();
-  const mx = e.clientX - rect.left;
-  const my = e.clientY - rect.top;
-  dragEnd = getCellFromCoords(mx, my);
-
-  const dx = Math.abs(dragStart.x - dragEnd.x);
-  const dy = Math.abs(dragStart.y - dragEnd.y);
-
+function handleMove(start, end) {
+  const dx = Math.abs(start.x - end.x);
+  const dy = Math.abs(start.y - end.y);
   if ((dx + dy === 1)) {
-    swap(dragStart.x, dragStart.y, dragEnd.x, dragEnd.y);
+    swap(start.x, start.y, end.x, end.y);
     if (!checkMatches()) {
       setTimeout(() => {
-        swap(dragStart.x, dragStart.y, dragEnd.x, dragEnd.y);
+        swap(start.x, start.y, end.x, end.y);
         drawGrid();
       }, 300);
     } else {
       comboMultiplier = 1;
     }
   }
-  dragStart = dragEnd = null;
   drawGrid();
+}
+
+canvas.addEventListener('mousedown', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  dragStart = getCellFromCoords(e.clientX - rect.left, e.clientY - rect.top);
 });
+
+canvas.addEventListener('mouseup', (e) => {
+  if (!dragStart) return;
+  const rect = canvas.getBoundingClientRect();
+  dragEnd = getCellFromCoords(e.clientX - rect.left, e.clientY - rect.top);
+  handleMove(dragStart, dragEnd);
+  dragStart = dragEnd = null;
+});
+
+canvas.addEventListener('touchstart', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const touch = e.touches[0];
+  dragStart = getCellFromCoords(touch.clientX - rect.left, touch.clientY - rect.top);
+}, { passive: false });
+
+canvas.addEventListener('touchend', (e) => {
+  if (!dragStart) return;
+  const rect = canvas.getBoundingClientRect();
+  const touch = e.changedTouches[0];
+  dragEnd = getCellFromCoords(touch.clientX - rect.left, touch.clientY - rect.top);
+  handleMove(dragStart, dragEnd);
+  dragStart = dragEnd = null;
+}, { passive: false });
 
 function swap(x1, y1, x2, y2) {
   const temp = grid[y1][x1];
