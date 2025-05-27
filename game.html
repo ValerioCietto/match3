@@ -1,0 +1,248 @@
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Match 3 Game</title>
+  <style>
+    body {
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #222;
+      color: white;
+      font-family: sans-serif;
+    }
+    canvas {
+      background: #333;
+      box-shadow: 0 0 10px #000;
+      cursor: grab;
+    }
+    #controls {
+      margin: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="controls">
+    <label for="colorCount">Number of Colors: </label>
+    <select id="colorCount"></select>
+  </div>
+  <canvas id="gameCanvas" width="480" height="600"></canvas>
+  <script>
+    const COLS = 12;
+    const ROWS = 15;
+    const CELL_SIZE = 40;const ALL_TYPES = [
+  'red', 'green', 'blue', 'yellow', 'purple', 'orange', 'cyan', 'pink',
+  'lime', 'teal', 'brown', 'navy', 'maroon', 'olive', 'gold', 'silver'
+];
+
+let TYPES = ALL_TYPES.slice(0, 5); // Default to 5 types
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const colorCountSelect = document.getElementById('colorCount');
+
+let grid = [];
+let selected = null;
+let score = 0;
+let comboMultiplier = 1;
+let dragStart = null;
+let dragEnd = null;
+
+for (let i = 3; i <= 16; i++) {
+  const option = document.createElement('option');
+  option.value = i;
+  option.textContent = i;
+  if (i === 5) option.selected = true;
+  colorCountSelect.appendChild(option);
+}
+
+colorCountSelect.addEventListener('change', () => {
+  const count = parseInt(colorCountSelect.value);
+  TYPES = ALL_TYPES.slice(0, count);
+  initGrid();
+  drawGrid();
+  checkMatches();
+});
+
+function randomType() {
+  return TYPES[Math.floor(Math.random() * TYPES.length)];
+}
+
+function initGrid() {
+  grid = [];
+  for (let y = 0; y < ROWS; y++) {
+    const row = [];
+    for (let x = 0; x < COLS; x++) {
+      row.push({ type: randomType(), x, y, falling: 0 });
+    }
+    grid.push(row);
+  }
+}
+
+function drawGrid() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      if (grid[y][x]) {
+        drawCell(x, y, grid[y][x]);
+      }
+    }
+  }
+  ctx.fillStyle = "#fff";
+  ctx.font = "18px sans-serif";
+  ctx.fillText("Score: " + score, 10, 20);
+  ctx.fillText("Combo x" + comboMultiplier, 10, 40);
+}
+
+function drawCell(x, y, cell) {
+  const screenY = (y - cell.falling) * CELL_SIZE + CELL_SIZE / 2;
+  if (selected && selected.x === x && selected.y === y) {
+    ctx.shadowColor = '#fff';
+    ctx.shadowBlur = 15;
+  } else {
+    ctx.shadowBlur = 0;
+  }
+  ctx.fillStyle = cell.type;
+  ctx.beginPath();
+  ctx.arc(
+    x * CELL_SIZE + CELL_SIZE / 2,
+    screenY,
+    CELL_SIZE / 2 - 3,
+    0,
+    Math.PI * 2
+  );
+  ctx.fill();
+}
+
+function getCellFromCoords(x, y) {
+  return { x: Math.floor(x / CELL_SIZE), y: Math.floor(y / CELL_SIZE) };
+}
+
+canvas.addEventListener('mousedown', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  dragStart = getCellFromCoords(mx, my);
+});
+
+canvas.addEventListener('mouseup', (e) => {
+  if (!dragStart) return;
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  dragEnd = getCellFromCoords(mx, my);
+
+  const dx = Math.abs(dragStart.x - dragEnd.x);
+  const dy = Math.abs(dragStart.y - dragEnd.y);
+
+  if ((dx + dy === 1)) {
+    swap(dragStart.x, dragStart.y, dragEnd.x, dragEnd.y);
+    if (!checkMatches()) {
+      setTimeout(() => {
+        swap(dragStart.x, dragStart.y, dragEnd.x, dragEnd.y);
+        drawGrid();
+      }, 300);
+    } else {
+      comboMultiplier = 1;
+    }
+  }
+  dragStart = dragEnd = null;
+  drawGrid();
+});
+
+function swap(x1, y1, x2, y2) {
+  const temp = grid[y1][x1];
+  grid[y1][x1] = grid[y2][x2];
+  grid[y2][x2] = temp;
+}
+
+function checkMatches() {
+  let foundMatch = false;
+  let toClear = Array.from({ length: ROWS }, () => Array(COLS).fill(false));
+
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS - 2; x++) {
+      if (
+        grid[y][x] && grid[y][x + 1] && grid[y][x + 2] &&
+        grid[y][x].type === grid[y][x + 1].type &&
+        grid[y][x].type === grid[y][x + 2].type
+      ) {
+        toClear[y][x] = toClear[y][x + 1] = toClear[y][x + 2] = true;
+        foundMatch = true;
+      }
+    }
+  }
+
+  for (let x = 0; x < COLS; x++) {
+    for (let y = 0; y < ROWS - 2; y++) {
+      if (
+        grid[y][x] && grid[y + 1][x] && grid[y + 2][x] &&
+        grid[y][x].type === grid[y + 1][x].type &&
+        grid[y][x].type === grid[y + 2][x].type
+      ) {
+        toClear[y][x] = toClear[y + 1][x] = toClear[y + 2][x] = true;
+        foundMatch = true;
+      }
+    }
+  }
+
+  if (foundMatch) {
+    let cleared = 0;
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        if (toClear[y][x]) {
+          grid[y][x] = null;
+          cleared++;
+        }
+      }
+    }
+    score += cleared * 10 * comboMultiplier;
+    comboMultiplier++;
+    drawGrid();
+    setTimeout(() => collapseGrid(), 300);
+  }
+
+  return foundMatch;
+}
+
+function collapseGrid() {
+  for (let x = 0; x < COLS; x++) {
+    let empty = 0;
+    for (let y = ROWS - 1; y >= 0; y--) {
+      if (!grid[y][x]) {
+        empty++;
+      } else if (empty > 0) {
+        grid[y + empty][x] = grid[y][x];
+        grid[y + empty][x].falling = empty;
+        grid[y][x] = null;
+      }
+    }
+  }
+  fillGrid();
+}
+
+function fillGrid() {
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      if (!grid[y][x]) {
+        grid[y][x] = { type: randomType(), x, y, falling: 0 };
+      } else {
+        grid[y][x].falling = 0;
+      }
+    }
+  }
+  drawGrid();
+  setTimeout(() => {
+    if (checkMatches()) drawGrid();
+  }, 200);
+}
+
+initGrid();
+drawGrid();
+checkMatches();
+
+  </script>
+</body>
+</html>
