@@ -56,6 +56,9 @@
     let comboMultiplier = 1;
     let dragStart = null;
     let dragEnd = null;
+    let countDestroyedShapes = 0;
+    let victoryShapesCount = 100;
+    let colorsNumber = 5;
 
     for (let i = 3; i <= 16; i++) {
       const option = document.createElement('option');
@@ -67,11 +70,17 @@
 
     colorCountSelect.addEventListener('change', () => {
       const count = parseInt(colorCountSelect.value);
-      TYPES = ALL_TYPES.slice(0, count);
+      colorsNumber = count;
+      TYPES = ALL_TYPES.slice(0, colorsNumber);
       initGrid();
       drawGrid();
       checkMatches();
     });
+
+    function changeNumberOfColors(newNumber){
+      colorsNumber = newNumber;
+      TYPES = ALL_TYPES.slice(0, newNumber);
+    }
 
     function randomType() {
       return TYPES[Math.floor(Math.random() * TYPES.length)];
@@ -299,6 +308,7 @@
           }
         }
         score += cleared * 10 * comboMultiplier;
+        countDestroyedShapes += cleared;
         comboMultiplier++;
         drawGrid();
         setTimeout(() => collapseGrid(), 300);
@@ -320,7 +330,15 @@
           }
         }
       }
-      fillGrid();
+      if(countDestroyedShapes < victoryShapesCount && colorsNumber > 0){
+        changeNumberOfColors(colorsNumber-1)
+        colorsNumber -= 1;
+        countDestroyedShapes = 0;
+      }
+      if(colorsNumber > 1){
+        fillGrid();
+      }
+
     }
 
     function fillGrid() {
