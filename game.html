@@ -330,10 +330,12 @@
           }
         }
       }
-      if(countDestroyedShapes < victoryShapesCount && colorsNumber > 0){
+      if(countDestroyedShapes > victoryShapesCount && colorsNumber > 0){
         changeNumberOfColors(colorsNumber-1)
         colorsNumber -= 1;
         countDestroyedShapes = 0;
+        fillGrid();
+        return;
       }
       if(colorsNumber > 1){
         fillGrid();
