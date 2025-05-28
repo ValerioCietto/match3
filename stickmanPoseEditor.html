@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Stickman Pose Editor</title>
+  <style>
+    body { background: #000; color: #fff; font-family: sans-serif; font-size: 80.5%; }
+    canvas { background: #222; display: block; margin: 10px auto; }
+    .controls { max-width: 800px; margin: auto; display: flex; flex-direction: column; gap: 5px; }
+    .slider-columns { display: flex; gap: 10px; }
+    .slider-column { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+    .slider-group { display: flex; justify-content: space-between; align-items: center; }
+    label { flex: 1; }
+    input[type="range"] { flex: 2; transform: scale(0.805); transform-origin: left center; }
+    #savedList { white-space: pre-wrap; margin-top: 10px; background: #111; padding: 5px; border: 1px solid #333; }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="600" height="400"></canvas>
+  <div class="controls">
+    <div class="slider-group"><label>Pose Name:</label><input id="poseName" type="text" placeholder="e.g., Attack Stance" /></div>
+    <div class="slider-group"><label>Millisecond Duration:</label><input id="duration" type="number" value="1000" step="100" /></div>
+    <div class="slider-columns">
+      <div class="slider-column">
+        <div class="slider-group"><label>Torso Angle</label><input type="range" id="torso" min="0" max="360" step="15"></div>
+        <div class="slider-group"><label>Left Shoulder</label><input type="range" id="shoulderL" min="0" max="360" step="15"></div>
+        <div class="slider-group"><label>Left Elbow</label><input type="range" id="elbowL" min="0" max="360" step="15"></div>
+        <div class="slider-group"><label>Left Hand</label><input type="range" id="handL" min="0" max="360" step="15"></div>
+        <div class="slider-group"><label>Left Hip</label><input type="range" id="hipL" min="0" max="360" step="15"></div>
+        <div class="slider-group"><label>Left Knee</label><input type="range" id="kneeL" min="0" max="360" step="15"></div>
+        <div class="slider-group"><label>Left Feet</label><input type="range" id="feetL" min="0" max="360" step="15"></div>
+      </div>
+      <div class="slider-column">
+        <div class="slider-group"><label>Height Offset</label><input type="range" id="height" min="0" max="100" step="5"></div>
+        <div class="slider-group"><label>Right Shoulder</label><input type="range" id="shoulderR" min="0" max="360" step="15"></div>
+        <div class="slider-group"><label>Right Elbow</label><input type="range" id="elbowR" min="0" max="360" step="15"></div>
+        <div class="slider-group"><label>Right Hand</label><input type="range" id="handR" min="0" max="360" step="15"></div>
+        <div class="slider-group"><label>Right Hip</label><input type="range" id="hipR" min="0" max="360" step="15"></div>
+        <div class="slider-group"><label>Right Knee</label><input type="range" id="kneeR" min="0" max="360" step="15"></div>
+        <div class="slider-group"><label>Right Feet</label><input type="range" id="feetR" min="0" max="360" step="15"></div>
+      </div>
+    </div>
+    <button onclick="savePose()">Save Pose</button>
+    <span id="angleValues"></span>
+    <div id="savedList"></div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    const get = id => document.getElementById(id);
+    const heightSlider = get('height');
+    const angleDisplay = document.getElementById('angleValues');
+    const savedList = document.getElementById('savedList');
+
+    const joints = ['shoulder', 'elbow', 'hand', 'hip', 'knee', 'feet'];
+    const sliders = [get('torso'), ...joints.flatMap(j => [get(j + 'L'), get(j + 'R')])];
+
+    function stickManPoseDraw(torso, shoulderL, shoulderR, elbowL, elbowR, handL, handR, hipL, hipR, kneeL, kneeR, feetL, feetR, heightOffset) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.strokeStyle = '#888';
+      ctx.beginPath();
+      ctx.moveTo(0, 350);
+      ctx.lineTo(600, 350);
+      ctx.stroke();
+
+      const cx = 300;
+      const cy = 250 - heightOffset;
+      const torsoLen = 60;
+      const upperArm = 40;
+      const lowerArm = 35;
+      const handLen = 10;
+      const thigh = 50;
+      const shin = 45;
+      const footLen = 16;
+
+      function degToRad(deg) { return deg * Math.PI / 180; }
+
+      const torsoEnd = {
+        x: cx + torsoLen * Math.sin(degToRad(torso)),
+        y: cy + torsoLen * Math.cos(degToRad(torso))
+      };
+      ctx.strokeStyle = '#fff';
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(torsoEnd.x, torsoEnd.y);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(cx, cy - 15, 10, 0, 2 * Math.PI);
+      ctx.stroke();
+
+      function drawLimb(baseX, baseY, angle1, len1, angle2, len2, angle3, len3) {
+        const x1 = baseX + len1 * Math.sin(degToRad(angle1));
+        const y1 = baseY + len1 * Math.cos(degToRad(angle1));
+        const x2 = x1 + len2 * Math.sin(degToRad(angle2));
+        const y2 = y1 + len2 * Math.cos(degToRad(angle2));
+        const x3 = x2 + len3 * Math.sin(degToRad(angle3));
+        const y3 = y2 + len3 * Math.cos(degToRad(angle3));
+
+        ctx.beginPath();
+        ctx.moveTo(baseX, baseY);
+        ctx.lineTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.lineTo(x3, y3);
+        ctx.stroke();
+      }
+
+      drawLimb(cx, cy, shoulderL, upperArm, elbowL, lowerArm, handL, handLen);
+      drawLimb(cx, cy, shoulderR, upperArm, elbowR, lowerArm, handR, handLen);
+      drawLimb(torsoEnd.x, torsoEnd.y, hipL, thigh, kneeL, shin, feetL, footLen);
+      drawLimb(torsoEnd.x, torsoEnd.y, hipR, thigh, kneeR, shin, feetR, footLen);
+    }
+
+    function setInitialPose() {
+      const initialValues = {
+        torso: 0,
+        shoulderL: 15,
+        shoulderR: 345,
+        elbowL: 60,
+        elbowR: 300,
+        handL: 180,
+        handR: 180,
+        hipL: 315,
+        hipR: 45,
+        kneeL: 360,
+        kneeR: 0,
+        feetL: 285,
+        feetR: 75,
+        height: 45
+      };
+      Object.entries(initialValues).forEach(([id, value]) => {
+        const el = document.getElementById(id);
+        if (el) el.value = value;
+      });
+    }
+
+    function updatePose() {
+      const values = sliders.map(sl => parseInt(sl.value));
+      const heightOffset = parseInt(heightSlider.value);
+      stickManPoseDraw(...values, heightOffset);
+      angleDisplay.textContent = `Torso: ${values[0]}°, Left Shoulder: ${values[1]}°, Right Shoulder: ${values[2]}°, Left Elbow: ${values[3]}°, Right Elbow: ${values[4]}°, Left Hand: ${values[5]}°, Right Hand: ${values[6]}°, Left Hip: ${values[7]}°, Right Hip: ${values[8]}°, Left Knee: ${values[9]}°, Right Knee: ${values[10]}°, Left Feet: ${values[11]}°, Right Feet: ${values[12]}°, Height Offset: ${heightOffset}px`;
+    }
+
+    function savePose() {
+      const pose = {
+        name: get('poseName').value || 'Unnamed Pose',
+        duration: parseInt(get('duration').value) || 1000,
+        torso: parseInt(get('torso').value),
+        shoulderL: parseInt(get('shoulderL').value),
+        shoulderR: parseInt(get('shoulderR').value),
+        elbowL: parseInt(get('elbowL').value),
+        elbowR: parseInt(get('elbowR').value),
+        handL: parseInt(get('handL').value),
+        handR: parseInt(get('handR').value),
+        hipL: parseInt(get('hipL').value),
+        hipR: parseInt(get('hipR').value),
+        kneeL: parseInt(get('kneeL').value),
+        kneeR: parseInt(get('kneeR').value),
+        feetL: parseInt(get('feetL').value),
+        feetR: parseInt(get('feetR').value),
+        height: parseInt(get('height').value)
+      };
+      savedList.textContent += JSON.stringify(pose) + '\n';
+    }
+
+    setInitialPose();
+    [...sliders, heightSlider].forEach(sl => sl.addEventListener('input', updatePose));
+    updatePose();
+  </script>
+</body>
+</html>
