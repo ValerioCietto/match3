@@ -312,8 +312,6 @@
         score += cleared * 10 * comboMultiplier;
         countDestroyedShapes += cleared;
         if(countDestroyedShapes > victoryShapesCount && colorsNumber > 0){
-          changeNumberOfColors(colorsNumber-1)
-          colorsNumber -= 1;
           countDestroyedShapes = 0;
         }
         comboMultiplier++;
