@@ -138,6 +138,8 @@
       ctx.font = "18px sans-serif";
       ctx.fillText("Score: " + score, 10, 20);
       ctx.fillText("Combo x" + comboMultiplier, 10, 40);
+      ctx.fillText("Colors: " + colorsNumber, 10, 60);
+      ctx.fillText("nextLevel: " + countDestroyedShapes, 10, 80);
     }
 
     function drawCell(x, y, cell) {
@@ -309,6 +311,11 @@
         }
         score += cleared * 10 * comboMultiplier;
         countDestroyedShapes += cleared;
+        if(countDestroyedShapes > victoryShapesCount && colorsNumber > 0){
+          changeNumberOfColors(colorsNumber-1)
+          colorsNumber -= 1;
+          countDestroyedShapes = 0;
+        }
         comboMultiplier++;
         drawGrid();
         setTimeout(() => collapseGrid(), 300);
@@ -330,17 +337,6 @@
           }
         }
       }
-      if(countDestroyedShapes > victoryShapesCount && colorsNumber > 0){
-        changeNumberOfColors(colorsNumber-1)
-        colorsNumber -= 1;
-        countDestroyedShapes = 0;
-        fillGrid();
-        return;
-      }
-      if(colorsNumber > 1){
-        fillGrid();
-      }
-
     }
 
     function fillGrid() {
