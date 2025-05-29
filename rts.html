@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Battle of Polygons</title>
+  <style>
+    body { margin: 0; overflow: hidden; background: #1e1e1e; }
+    canvas { background: #2b2b2b; display: block; margin: 0 auto; }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Game state
+    let gameOver = false;
+    let winner = '';
+    let blueMoney = 0;
+    let redSpawnTimer = 0;
+    let redSpawnSquareTimer = 0;
+
+    // Base Polygon Unit
+    class PolygonUnit {
+      constructor(x, y, sides, radius, color, speed, hp) {
+        this.x = x; this.y = y;
+        this.sides = sides;
+        this.radius = radius;
+        this.color = color;
+        this.speed = speed;
+        this.maxHp = hp;
+        this.hp = hp;
+      }
+      draw(angle = 0) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(angle);
+        ctx.beginPath();
+        for (let i = 0; i < this.sides; i++) {
+          const theta = (i / this.sides) * 2 * Math.PI;
+          const px = Math.cos(theta) * this.radius;
+          const py = Math.sin(theta) * this.radius;
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fillStyle = this.color;
+        ctx.fill();
+        // HP bar
+        ctx.fillStyle = 'red';
+        ctx.fillRect(-this.radius, -this.radius - 6, this.radius * 2, 3);
+        ctx.fillStyle = 'green';
+        ctx.fillRect(-this.radius, -this.radius - 6, (this.hp/this.maxHp)*this.radius*2, 3);
+        ctx.restore();
+      }
+    }
+
+    // Units
+    class Triangle extends PolygonUnit {
+      constructor(x, y, color) { super(x, y, 3, 15, color, 20, 40); this.damage = 10; }
+    }
+    class Square extends PolygonUnit {
+      constructor(x, y, color) { super(x, y, 4, 20, color, 15, 80); this.damage = 40; }
+    }
+    // Bullet unit
+    class Bullet extends PolygonUnit {
+      constructor(x, y) {
+        super(x, y, 3, 5, 'blue', 150, 1);
+        this.damage = 10;
+      }
+    }
+
+    // Tower class
+    class Tower {
+      constructor(x, y, sides, radius, color, hp) {
+        this.x = x; this.y = y;
+        this.sides = sides;
+        this.radius = radius; this.color = color; this.hp = hp;
+      }
+      draw() {
+        ctx.save(); ctx.translate(this.x, this.y);
+        if (this.color==='red') ctx.rotate(Math.PI);
+        ctx.beginPath();
+        for (let i=0;i<this.sides;i++){ const ang=(i/this.sides)*2*Math.PI;
+          ctx[i===0?'moveTo':'lineTo'](
+            Math.cos(ang)*this.radius, Math.sin(ang)*this.radius);
+        }
+        ctx.closePath(); ctx.fillStyle=this.color; ctx.fill();
+        // HP bar
+        ctx.fillStyle='red';
+        ctx.fillRect(-this.radius, -this.radius-12, this.radius*2, 6);
+        ctx.fillStyle='green';
+        ctx.fillRect(-this.radius, -this.radius-12, (this.hp/500)*this.radius*2, 6);
+        ctx.restore();
+      }
+    }
+
+    const blueTower = new Tower(50, canvas.height/2, 5, 30, 'blue', 500);
+    const redTower  = new Tower(canvas.width-50, canvas.height/2, 5, 30, 'red', 500);
+    const blueUnits = [];
+    const redUnits  = [];
+    const bullets   = [];
+
+    // Spawn functions
+    function spawnBlueTriangle(){ if(!gameOver) blueUnits.push(new Triangle(blueTower.x+40, blueTower.y,'blue')); }
+    function spawnBlueSquare(){ if(!gameOver) blueUnits.push(new Square(blueTower.x+40, blueTower.y,'blue')); }
+    function spawnBlueBullet(){ if(!gameOver) bullets.push(new Bullet(blueTower.x+30, blueTower.y)); }
+    function spawnRedTriangle(){ if(!gameOver) redUnits.push(new Triangle(redTower.x-40, redTower.y,'red')); }
+    function spawnRedSquare(){ if(!gameOver) redUnits.push(new Square(redTower.x-40, redTower.y,'red')); }
+
+    // Initial spawn
+    spawnBlueTriangle(); spawnRedTriangle();
+
+    // Input handling
+    document.addEventListener('keydown', e=>{
+      if(gameOver) return;
+      if((e.key==='t'||e.key==='T') && blueMoney>=4){ spawnBlueTriangle(); blueMoney-=4; }
+      if((e.key==='s'||e.key==='S') && blueMoney>=10){ spawnBlueSquare(); blueMoney-=10; }
+      if((e.key==='b'||e.key==='B') && blueMoney>=1){ spawnBlueBullet(); blueMoney-=1; }
+    });
+
+    // Game update
+    function update(delta){
+      if(gameOver) return;
+      blueMoney+=delta;
+      redSpawnTimer+=delta; redSpawnSquareTimer+=delta;
+      if(redSpawnTimer>=6){ spawnRedTriangle(); redSpawnTimer-=6; }
+      if(redSpawnSquareTimer>=30){ spawnRedSquare(); redSpawnSquareTimer-=30; }
+
+      // Move units
+      [...blueUnits].forEach(b=>{
+        moveTowards(b, redTower.x, redTower.y, delta);
+      });
+      [...redUnits].forEach(r=>{
+        moveTowards(r, blueTower.x, blueTower.y, delta);
+      });
+      bullets.forEach(b=>{
+        moveTowards(b, redTower.x, redTower.y, delta);
+      });
+
+      // Combat unit vs unit
+      blueUnits.forEach(b=> redUnits.forEach(r=> checkCollisionDamage(b,r,delta)));
+      // Bullet vs red units
+      bullets.forEach((b,i)=>{
+        for(let j=0;j<redUnits.length;j++){
+          if(isColliding(b, redUnits[j])){
+            redUnits[j].hp-=b.damage;
+            bullets.splice(i,1); break;
+          }
+        }
+      });
+      // Unit vs tower
+      blueUnits.forEach(b=>{ if(isColliding(b, redTower)) redTower.hp-=b.damage * delta; });
+      redUnits.forEach(r=>{ if(isColliding(r, blueTower)) blueTower.hp-=r.damage * delta; });
+      // Bullet vs tower
+      bullets.forEach((b,i)=>{
+        if(isColliding(b, redTower)){
+          redTower.hp-=b.damage;
+          bullets.splice(i,1);
+        }
+      });
+
+      // Cleanup dead
+      [blueUnits, redUnits].forEach(arr=> cleanup(arr));
+
+      // Check win
+      if(blueTower.hp<=0){ gameOver=true; winner='Red'; }
+      else if(redTower.hp<=0){ gameOver=true; winner='Blue'; }
+    }
+
+    // Draw everything
+    function draw(){
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      if(!gameOver){
+        blueTower.hp>0 && blueTower.draw(); redTower.hp>0 && redTower.draw();
+        blueUnits.forEach(b=> b.draw(getAngle(b, redTower)));
+        redUnits.forEach(r=> r.draw(getAngle(r, blueTower)));
+        bullets.forEach(b=> b.draw(getAngle(b, redTower)));
+        drawUI();
+      } else {
+        ctx.fillStyle=winner.toLowerCase();
+        ctx.font='48px Arial'; ctx.textAlign='center';
+        ctx.fillText(`${winner} wins`, canvas.width/2, canvas.height/2);
+      }
+    }
+
+    // Helpers
+    function moveTowards(obj, tx, ty, delta){
+      const dx=tx-obj.x, dy=ty-obj.y;
+      const dist=Math.hypot(dx,dy);
+      if(dist>obj.radius + 5){ obj.x+=(dx/dist)*obj.speed*delta; obj.y+=(dy/dist)*obj.speed*delta; }
+    }
+    function isColliding(a,b){
+      return Math.hypot(b.x-a.x,b.y-a.y)<=a.radius + (b.radius||b.sides*5);
+    }
+    function checkCollisionDamage(a,b,delta){ if(isColliding(a,b)){ a.hp-=b.damage*delta; b.hp-=a.damage*delta; }}
+    function cleanup(arr){ for(let i=arr.length-1;i>=0;i--) if(arr[i].hp<=0) arr.splice(i,1); }
+    function getAngle(a, target){ return Math.atan2(target.y - a.y, target.x - a.x); }
+    function drawUI(){
+      ctx.fillStyle='white'; ctx.font='16px Arial'; ctx.textAlign='left';
+      ctx.fillText(`Money: $${Math.floor(blueMoney)}`, 10,20);
+      ctx.fillText('T:Triangle $4  S:Square $10  B:Bullet $1', 10,40);
+    }
+
+    // Game loop
+    let last = performance.now();
+    function loop(ts){ const delta=(ts-last)/1000; last=ts; update(delta); draw(); requestAnimationFrame(loop); }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
