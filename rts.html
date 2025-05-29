@@ -10,7 +10,15 @@
   </style>
 </head>
 <body>
+
   <canvas id="gameCanvas" width="800" height="600"></canvas>
+  <!-- Controls -->
+  <div id="controls">
+    <button id="btnBullet">Bullet $1</button>
+    <button id="btnTriangle">Soldier $4</button>
+    <button id="btnSquare">Squire $10</button>
+    <button id="btnPentagon">Pendragon $20</button>
+  </div>
   <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -21,6 +29,8 @@
     let blueMoney = 0;
     let redSpawnTimer = 0;
     let redSpawnSquareTimer = 0;
+
+
 
     // Base Polygon Unit
     class PolygonUnit {
@@ -144,6 +154,18 @@
       if ((e.key === 's' || e.key === 'S') && blueMoney >= 10){ spawnBlueSquare(); blueMoney -= 10; }
       if ((e.key === 'b' || e.key === 'B') && blueMoney >= 1) { spawnBlueBullet(); blueMoney -= 1; }
       if ((e.key === 'p' || e.key === 'P') && blueMoney >= 20) { spawnBluePentagon(); blueMoney -= 20; }
+    });
+    document.getElementById('btnBullet').addEventListener('click', () => {
+      if (!gameOver && blueMoney >= 1) { spawnBlueBullet(); blueMoney -= 1; }
+    });
+    document.getElementById('btnTriangle').addEventListener('click', () => {
+      if (!gameOver && blueMoney >= 4) { spawnBlueTriangle(); blueMoney -= 4; }
+    });
+    document.getElementById('btnSquare').addEventListener('click', () => {
+      if (!gameOver && blueMoney >= 10) { spawnBlueSquare(); blueMoney -= 10; }
+    });
+    document.getElementById('btnPentagon').addEventListener('click', () => {
+      if (!gameOver && blueMoney >= 20) { spawnBluePentagon(); blueMoney -= 20; }
     });
 
     // Game update
