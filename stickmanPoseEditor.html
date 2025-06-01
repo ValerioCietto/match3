@@ -41,6 +41,9 @@
       </div>
     </div>
     <button onclick="savePose()">Save Pose</button>
+    <div class="slider-group">
+      <label><input type="checkbox" id="playAnimation"> Play Animation</label>
+    </div>
     <span id="angleValues"></span>
     <div id="savedList"></div>
   </div>
@@ -48,11 +51,11 @@
   <script>
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
-
     const get = id => document.getElementById(id);
     const heightSlider = get('height');
     const angleDisplay = document.getElementById('angleValues');
     const savedList = document.getElementById('savedList');
+    const playAnimationCheckbox = get('playAnimation');
 
     const joints = ['shoulder', 'elbow', 'hand', 'hip', 'knee', 'feet'];
     const sliders = [get('torso'), ...joints.flatMap(j => [get(j + 'L'), get(j + 'R')])];
@@ -165,6 +168,58 @@
       };
       savedList.textContent += JSON.stringify(pose) + '\n';
     }
+
+    let animationIndex = 0;
+    let lastFrameTime = 0;
+
+    function animate(timestamp) {
+      if (!playAnimationCheckbox.checked) return;
+
+      const poses = savedList.textContent.trim().split('\n').map(line => {
+        try {
+          return JSON.parse(line);
+        } catch {
+          return null;
+        }
+      }).filter(Boolean);
+
+      if (poses.length === 0) return;
+
+      const currentPose = poses[animationIndex];
+      if (!currentPose) return;
+
+      if (timestamp - lastFrameTime >= currentPose.duration) {
+        animationIndex = (animationIndex + 1) % poses.length;
+        lastFrameTime = timestamp;
+      }
+
+      stickManPoseDraw(
+        currentPose.torso,
+        currentPose.shoulderL,
+        currentPose.shoulderR,
+        currentPose.elbowL,
+        currentPose.elbowR,
+        currentPose.handL,
+        currentPose.handR,
+        currentPose.hipL,
+        currentPose.hipR,
+        currentPose.kneeL,
+        currentPose.kneeR,
+        currentPose.feetL,
+        currentPose.feetR,
+        currentPose.height
+      );
+
+      requestAnimationFrame(animate);
+    }
+
+    playAnimationCheckbox.addEventListener('change', () => {
+      if (playAnimationCheckbox.checked) {
+        animationIndex = 0;
+        lastFrameTime = performance.now();
+        requestAnimationFrame(animate);
+      }
+    });
 
     setInitialPose();
     [...sliders, heightSlider].forEach(sl => sl.addEventListener('input', updatePose));
