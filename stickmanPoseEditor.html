@@ -168,6 +168,60 @@
       };
       savedList.textContent += JSON.stringify(pose) + '\n';
     }
+    
+    function addPoseToList() {
+      const pose = {
+        name: get('poseName').value || 'Unnamed Pose',
+        duration: parseInt(get('duration').value) || 1000,
+        torso: parseInt(get('torso').value),
+        shoulderL: parseInt(get('shoulderL').value),
+        shoulderR: parseInt(get('shoulderR').value),
+        elbowL: parseInt(get('elbowL').value),
+        elbowR: parseInt(get('elbowR').value),
+        handL: parseInt(get('handL').value),
+        handR: parseInt(get('handR').value),
+        hipL: parseInt(get('hipL').value),
+        hipR: parseInt(get('hipR').value),
+        kneeL: parseInt(get('kneeL').value),
+        kneeR: parseInt(get('kneeR').value),
+        feetL: parseInt(get('feetL').value),
+        feetR: parseInt(get('feetR').value),
+        height: parseInt(get('height').value)
+      };
+      
+      const poseDiv = document.createElement('div');
+      poseDiv.className = 'pose-item';
+
+      const text = document.createElement('span');
+      text.textContent = `${pose.name} (${pose.duration}ms) - Torso: ${pose.torso}°, etc.`;
+      poseDiv.appendChild(text);
+
+      const editButton = document.createElement('button');
+      editButton.textContent = 'Edit';
+      editButton.addEventListener('click', () => {
+        loadPoseIntoSliders(pose);
+      });
+      poseDiv.appendChild(editButton);
+
+      const deleteButton = document.createElement('button');
+      deleteButton.textContent = 'Delete';
+      deleteButton.addEventListener('click', () => {
+        poseDiv.remove();
+      });
+      poseDiv.appendChild(deleteButton);
+
+      savedList.appendChild(poseDiv);
+    }
+
+    function loadPoseIntoSliders(pose) {
+      poseFields.forEach(field => {
+        const el = get(field);
+        if (el && pose[field] !== undefined) {
+          el.value = pose[field];
+        }
+      });
+    }
+
 
     let animationIndex = 0;
     let lastFrameTime = 0;
