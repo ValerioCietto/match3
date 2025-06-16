@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Virtual Notepad Widget Demo</title>
+
+  <style>
+    /* -----------  Layout & button  ------------ */
+    body{
+      margin:0;
+      height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-family:system-ui, sans-serif;
+      background:#f5f5f7;
+    }
+    #open-notepad{
+      padding:.75rem 1.5rem;
+      font-size:1rem;
+      border:none;
+      border-radius:.5rem;
+      background:#4678f4;
+      color:#fff;
+      cursor:pointer;
+      box-shadow:0 4px 10px rgba(0,0,0,.15);
+      transition:transform .15s;
+    }
+    #open-notepad:active{ transform:scale(.96); }
+
+    /* -------------  Notepad window  ------------- */
+    .notepad{
+      position:absolute;
+      top:120px;                 /* default position */
+      left:120px;
+      width:320px;
+      height:380px;
+      display:flex;
+      flex-direction:column;
+      background:#fffffb;
+      border:1px solid #cfd1d4;
+      border-radius:12px;
+      box-shadow:0 6px 18px rgba(0,0,0,.22);
+      user-select:none;
+      z-index:999;
+    }
+    .hidden      { display:none; }
+    .minimized   { height:auto; }
+    .minimized textarea{ display:none; }
+
+    /* Header / drag-handle */
+    .notepad-header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:.5rem .75rem;
+      background:#eeeeef;
+      border-top-left-radius:12px;
+      border-top-right-radius:12px;
+      border-bottom:1px solid #d4d4d4;
+      cursor:move;
+    }
+    .notepad-header span{ font-weight:600; }
+
+    /* Window controls */
+    .notepad-controls button{
+      appearance:none;
+      border:none;
+      width:26px;height:26px;
+      margin-left:6px;
+      font-size:18px;
+      line-height:26px;
+      background:transparent;
+      border-radius:4px;
+      cursor:pointer;
+    }
+    .notepad-controls button:hover{
+      background:#dcdcdc;
+    }
+
+    /* Text area */
+    textarea{
+      flex:1;
+      padding:1rem;
+      border:none;
+      resize:none;
+      outline:none;
+      font-family:inherit;
+      font-size:.95rem;
+      background:transparent;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Launcher -->
+  <button id="open-notepad">Start Notepad</button>
+
+  <!-- Widget -->
+  <div id="notepad" class="notepad hidden">
+    <div class="notepad-header">
+      <span>Notepad</span>
+      <div class="notepad-controls">
+        <button id="minimize-btn" title="Minimize">—</button>
+        <button id="close-btn"    title="Close">✕</button>
+      </div>
+    </div>
+    <textarea placeholder="Type your notes here…"></textarea>
+  </div>
+
+  <script>
+    const launcher   = document.getElementById('open-notepad');
+    const pad        = document.getElementById('notepad');
+    const header     = pad.querySelector('.notepad-header');
+    const minimize   = document.getElementById('minimize-btn');
+    const closeBtn   = document.getElementById('close-btn');
+
+    /* ---------- Open / Close / Minimize ---------- */
+    launcher.addEventListener('click', () => {
+      pad.classList.remove('hidden');
+      pad.classList.remove('minimized');
+      /* optional: bring to front */
+      pad.style.zIndex = Date.now();   // simple stacking trick
+    });
+
+    closeBtn.addEventListener('click', () => pad.classList.add('hidden'));
+    minimize.addEventListener('click', () => pad.classList.toggle('minimized'));
+
+    /* ---------------- Dragging ------------------- */
+    header.addEventListener('mousedown', startDrag);
+
+    function startDrag(e){
+      const shiftX = e.clientX - pad.getBoundingClientRect().left;
+      const shiftY = e.clientY - pad.getBoundingClientRect().top;
+
+      moveAt(e.pageX, e.pageY);
+
+      function moveAt(pageX, pageY){
+        pad.style.left = pageX - shiftX + 'px';
+        pad.style.top  = pageY - shiftY + 'px';
+      }
+
+      function onMouseMove(ev){ moveAt(ev.pageX, ev.pageY); }
+      document.addEventListener('mousemove', onMouseMove);
+
+      document.addEventListener('mouseup', () => {
+        document.removeEventListener('mousemove', onMouseMove);
+      }, { once:true });
+    }
+
+    /* Disable built-in drag ghost */
+    header.ondragstart = () => false;
+  </script>
+</body>
+</html>
