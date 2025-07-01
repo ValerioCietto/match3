@@ -83,7 +83,7 @@
       const isSame = sameIndices.has(i);
       if (!isSame) {
         const channel = Math.floor(Math.random() * 3);
-        const delta = Math.floor(Math.random() * 3) + 1;
+        const delta = Math.floor(Math.random() * 40) + 5;
         color2[channel] = clamp(color2[channel] + (Math.random() < 0.5 ? -delta : delta));
       }
 
