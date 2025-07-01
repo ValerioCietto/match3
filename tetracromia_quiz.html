@@ -1,1 +1,126 @@
-test
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Test Tetracromia</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f0f0f0;
+      text-align: center;
+      padding: 20px;
+    }
+    .row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 20px;
+      gap: 20px;
+    }
+    .circle {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      border: 1px solid #999;
+    }
+    .result {
+      margin-top: 20px;
+      font-weight: bold;
+      font-size: 1.2em;
+    }
+    .correct {
+      background-color: #cce8cc; /* verde tenue */
+    }
+    .wrong {
+      background-color: #f5cccc; /* rosso tenue */
+    }
+  </style>
+</head>
+<body>
+  <h1>Hai la tetracromia?</h1>
+  <p>Guarda i due colori in ogni riga e seleziona se secondo te sono <strong>uguali</strong>.</p>
+  <div id="quiz"></div>
+  <button onclick="checkAnswers()">Controlla Risposte</button>
+  <div class="result" id="score"></div>
+
+  <script>
+    const quiz = document.getElementById('quiz');
+    const rows = 10;
+    const colorDiffRange = 1; // tra 1 e 3
+
+    const data = [];
+
+    // Genera numero casuale di coppie uguali (tra 3 e 7)
+    const sameCount = Math.floor(Math.random() * 5) + 3;
+    const sameIndices = new Set();
+    while (sameIndices.size < sameCount) {
+      sameIndices.add(Math.floor(Math.random() * rows));
+    }
+
+    function clamp(val) {
+      return Math.max(0, Math.min(255, val));
+    }
+
+    for (let i = 0; i < rows; i++) {
+      const baseColor = [
+        Math.floor(Math.random() * 256),
+        Math.floor(Math.random() * 256),
+        Math.floor(Math.random() * 256)
+      ];
+      let color1 = [...baseColor];
+      let color2 = [...baseColor];
+
+      const isSame = sameIndices.has(i);
+      if (!isSame) {
+        // Cambia solo un componente RGB di 1-3 punti
+        const channel = Math.floor(Math.random() * 3);
+        const delta = Math.floor(Math.random() * 3) + 1;
+        color2[channel] = clamp(color2[channel] + (Math.random() < 0.5 ? -delta : delta));
+      }
+
+      data.push({ color1, color2, isSame });
+
+      const row = document.createElement('div');
+      row.className = 'row';
+      row.dataset.index = i;
+
+      const circle1 = document.createElement('div');
+      circle1.className = 'circle';
+      circle1.style.backgroundColor = `rgb(${color1.join(',')})`;
+
+      const circle2 = document.createElement('div');
+      circle2.className = 'circle';
+      circle2.style.backgroundColor = `rgb(${color2.join(',')})`;
+
+      const label = document.createElement('label');
+      label.innerHTML = ` uguali? <input type="checkbox" data-index="${i}">`;
+
+      row.appendChild(circle1);
+      row.appendChild(circle2);
+      row.appendChild(label);
+
+      quiz.appendChild(row);
+    }
+
+    function checkAnswers() {
+      let score = 0;
+      document.querySelectorAll('.row').forEach(row => {
+        const idx = row.dataset.index;
+        const correct = data[idx].isSame;
+        const checked = row.querySelector('input').checked;
+
+        if (correct === checked) {
+          score++;
+          row.classList.add('correct');
+          row.classList.remove('wrong');
+        } else {
+          row.classList.add('wrong');
+          row.classList.remove('correct');
+        }
+      });
+
+      document.getElementById('score').textContent = `Hai ottenuto ${score}/10 punti.`;
+    }
+  </script>
+</body>
+</html>
