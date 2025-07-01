@@ -16,12 +16,14 @@
       align-items: center;
       margin-bottom: 20px;
       gap: 20px;
+      transition: all 0.3s ease;
     }
     .circle {
       width: 50px;
       height: 50px;
       border-radius: 50%;
       border: 1px solid #999;
+      transition: all 0.3s ease;
     }
     .result {
       margin-top: 20px;
@@ -29,10 +31,20 @@
       font-size: 1.2em;
     }
     .correct {
-      background-color: #cce8cc; /* verde tenue */
+      background-color: #cce8cc;
     }
     .wrong {
-      background-color: #f5cccc; /* rosso tenue */
+      background-color: #f5cccc;
+    }
+    .square {
+      border-radius: 0;
+      border: none;
+      margin: 0;
+    }
+    .tight {
+      gap: 0;
+      margin-bottom: 0;
+      padding: 0;
     }
   </style>
 </head>
@@ -46,11 +58,9 @@
   <script>
     const quiz = document.getElementById('quiz');
     const rows = 10;
-    const colorDiffRange = 1; // tra 1 e 3
 
     const data = [];
 
-    // Genera numero casuale di coppie uguali (tra 3 e 7)
     const sameCount = Math.floor(Math.random() * 5) + 3;
     const sameIndices = new Set();
     while (sameIndices.size < sameCount) {
@@ -72,7 +82,6 @@
 
       const isSame = sameIndices.has(i);
       if (!isSame) {
-        // Cambia solo un componente RGB di 1-3 punti
         const channel = Math.floor(Math.random() * 3);
         const delta = Math.floor(Math.random() * 3) + 1;
         color2[channel] = clamp(color2[channel] + (Math.random() < 0.5 ? -delta : delta));
@@ -93,7 +102,12 @@
       circle2.style.backgroundColor = `rgb(${color2.join(',')})`;
 
       const label = document.createElement('label');
-      label.innerHTML = ` uguali? <input type="checkbox" data-index="${i}">`;
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.dataset.index = i;
+
+      label.appendChild(checkbox);
+      label.appendChild(document.createTextNode(" uguali?"));
 
       row.appendChild(circle1);
       row.appendChild(circle2);
@@ -104,10 +118,19 @@
 
     function checkAnswers() {
       let score = 0;
+
       document.querySelectorAll('.row').forEach(row => {
         const idx = row.dataset.index;
         const correct = data[idx].isSame;
         const checked = row.querySelector('input').checked;
+
+        const circle1 = row.children[0];
+        const circle2 = row.children[1];
+
+        // Cambia stile cerchi in quadrati adiacenti
+        row.classList.add('tight');
+        circle1.classList.add('square');
+        circle2.classList.add('square');
 
         if (correct === checked) {
           score++;
