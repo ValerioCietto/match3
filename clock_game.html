@@ -1,0 +1,173 @@
+<!DOCTYPE html><html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Solitario dell'Orologio</title>
+  <style>
+    body { margin: 0; background: #111; display: flex; flex-direction: column; align-items: center; color: white; font-family: sans-serif;}
+    canvas { background: #222; margin-top: 20px; }
+    #buttons {
+      margin-top: 10px;
+      display: none;
+      gap: 10px;
+    }
+    #controls {
+      margin-top: 10px;
+      display: flex;
+      gap: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    #winText {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 32px;
+      font-weight: bold;
+      color: lime;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>Solitario dell'Orologio</h1>
+  <canvas id="canvas" width="600" height="600"></canvas>
+  <div id="winText">Hai vinto!</div>
+  <div id="buttons">
+    <button id="removeSecond">Rimuovi secondo</button>
+    <button id="removeBoth">Rimuovi entrambi</button>
+  </div>
+  <div id="controls">
+    <button id="restart">Ricomincia</button>
+  </div>
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const center = { x: canvas.width / 2, y: canvas.height / 2 };
+    let radius = 200;
+    const colors = ['red', 'blue', 'yellow'];
+    const maxNumber = 3;
+    let items = [];function initGame() {
+  items = [];
+  for (let i = 0; i < 12; i++) {
+    items.push({
+      id: i,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      number: 1 + Math.floor(Math.random() * maxNumber)
+    });
+  }
+  selected = null;
+  highlighted = [];
+  document.getElementById('buttons').style.display = 'none';
+  document.getElementById('winText').style.display = 'none';
+  radius = 200;
+  draw();
+}
+
+let selected = null;
+let highlighted = [];
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (items.length === 0) {
+    document.getElementById('winText').style.display = 'block';
+    return;
+  }
+
+  const angleStep = 2 * Math.PI / items.length;
+
+  items.forEach((item, index) => {
+    const angle = angleStep * index - Math.PI / 2;
+    const x = center.x + radius * Math.cos(angle);
+    const y = center.y + radius * Math.sin(angle);
+
+    ctx.beginPath();
+    ctx.arc(x, y, 30, 0, 2 * Math.PI);
+    ctx.fillStyle = item.color;
+    ctx.fill();
+    ctx.lineWidth = (selected === index || highlighted.includes(index)) ? 5 : 2;
+    ctx.strokeStyle = (selected === index) ? 'white' : (highlighted.includes(index) ? 'orange' : '#333');
+    ctx.stroke();
+
+    ctx.fillStyle = '#000';
+    ctx.font = 'bold 20px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(item.number, x, y);
+  });
+}
+
+function getIndexAtPos(x, y) {
+  const angleStep = 2 * Math.PI / items.length;
+  for (let i = 0; i < items.length; i++) {
+    const angle = angleStep * i - Math.PI / 2;
+    const cx = center.x + radius * Math.cos(angle);
+    const cy = center.y + radius * Math.sin(angle);
+    const dx = x - cx;
+    const dy = y - cy;
+    if (Math.sqrt(dx*dx + dy*dy) < 30) return i;
+  }
+  return null;
+}
+
+canvas.addEventListener('click', e => {
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  const index = getIndexAtPos(x, y);
+  if (index === null) return;
+
+  if (highlighted.includes(index)) {
+    const candidate = items[index];
+    const original = items[selected];
+    const match = candidate.color === original.color || candidate.number === original.number;
+    if (match) {
+      document.getElementById('buttons').style.display = 'flex';
+      document.getElementById('removeSecond').onclick = () => {
+        removeCards([index]);
+      };
+      document.getElementById('removeBoth').onclick = () => {
+        removeCards([selected, index]);
+      };
+    }
+  } else {
+    selected = index;
+    highlighted = [];
+    const n = items[index].number;
+    highlighted.push((index + n) % items.length);
+    highlighted.push((index - n + items.length) % items.length);
+    document.getElementById('buttons').style.display = 'none';
+  }
+  draw();
+});
+
+function removeCards(indices) {
+  items = items.filter((_, i) => !indices.includes(i));
+  selected = null;
+  highlighted = [];
+  document.getElementById('buttons').style.display = 'none';
+  animateRadius(radius, radius * 0.95, () => draw());
+}
+
+function animateRadius(from, to, cb) {
+  let frame = 0;
+  const frames = 10;
+  function animate() {
+    frame++;
+    radius = from + (to - from) * (frame / frames);
+    draw();
+    if (frame < frames) requestAnimationFrame(animate);
+    else cb();
+  }
+  animate();
+}
+
+document.getElementById('restart').addEventListener('click', initGame);
+initGame();
+
+  </script>
+</body>
+</html>
