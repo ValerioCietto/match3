@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>Solitario dell'Orologio</title>
+  <title>Solitario dell'Orologio di Carrese</title>
   <style>
     body { margin: 0; background: #111; display: flex; flex-direction: column; align-items: center; color: white; font-family: sans-serif;}
     canvas { background: #222; margin-top: 20px; }
@@ -41,6 +41,16 @@
   </div>
   <div id="controls">
     <button id="restart">Ricomincia</button>
+  </div>
+  <div id="controls">
+  <button id="restart">Ricomincia</button>
+  </div>
+  <div style="max-width: 600px; text-align: center; margin: 10px;">
+    <p>
+      Clicca su un pallino per selezionarlo. Verranno evidenziati due pallini a distanza pari al numero mostrato, 
+      in senso orario e antiorario. Se uno dei due ha lo stesso colore o numero, puoi scegliere se rimuovere solo quello o entrambi.
+      L'obiettivo è eliminare tutti i pallini.
+    </p>
   </div>
   <script>
     const canvas = document.getElementById('canvas');
