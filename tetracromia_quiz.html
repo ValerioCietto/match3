@@ -57,94 +57,115 @@
   <div class="result" id="score"></div>
 
   <script>
-    const quiz = document.getElementById('quiz');
-    const rows = 10;
+  const quiz = document.getElementById('quiz');
+  const rows = 10;
 
-    const data = [];
+  const data = [];
 
-    const sameCount = Math.floor(Math.random() * 5) + 3;
-    const sameIndices = new Set();
-    while (sameIndices.size < sameCount) {
-      sameIndices.add(Math.floor(Math.random() * rows));
-    }
+  const sameCount = Math.floor(Math.random() * 5) + 3;
+  const sameIndices = new Set();
+  while (sameIndices.size < sameCount) {
+    sameIndices.add(Math.floor(Math.random() * rows));
+  }
 
-    function clamp(val) {
-      return Math.max(0, Math.min(255, val));
-    }
+  function clamp(val) {
+    return Math.max(0, Math.min(255, val));
+  }
 
-    for (let i = 0; i < rows; i++) {
-      const baseColor = [
-        Math.floor(Math.random() * 256),
-        Math.floor(Math.random() * 256),
-        Math.floor(Math.random() * 256)
-      ];
-      let color1 = [...baseColor];
-      let color2 = [...baseColor];
-
-      const isSame = sameIndices.has(i);
-      if (!isSame) {
-        const channel = Math.floor(Math.random() * 3);
-        const delta = Math.floor(Math.random() * 50) + 10;
-        color2[channel] = clamp(color2[channel] + (Math.random() < 0.5 ? -delta : delta));
+  function calculateDifferentColor(startingColor, delta) {
+    const channel = Math.floor(Math.random() * 3); // 0 = R, 1 = G, 2 = B
+    const newColor = [...startingColor];
+    const direction = Math.random() < 0.5 ? -1 : 1;
+    const currentVal = startingColor[channel];
+    
+    if (direction === 1) {
+      if (currentVal + delta > 255) {
+        newColor[channel] = clamp(currentVal - delta);
+      } else {
+        newColor[channel] = clamp(currentVal + delta);
       }
-
-      data.push({ color1, color2, isSame });
-
-      const row = document.createElement('div');
-      row.className = 'row';
-      row.dataset.index = i;
-
-      const circle1 = document.createElement('div');
-      circle1.className = 'circle';
-      circle1.style.backgroundColor = `rgb(${color1.join(',')})`;
-
-      const circle2 = document.createElement('div');
-      circle2.className = 'circle';
-      circle2.style.backgroundColor = `rgb(${color2.join(',')})`;
-
-      const label = document.createElement('label');
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.dataset.index = i;
-
-      label.appendChild(checkbox);
-      label.appendChild(document.createTextNode(" uguali?"));
-
-      row.appendChild(circle1);
-      row.appendChild(circle2);
-      row.appendChild(label);
-
-      quiz.appendChild(row);
+    } else {
+      if (currentVal - delta < 0) {
+        newColor[channel] = clamp(currentVal + delta);
+      } else {
+        newColor[channel] = clamp(currentVal - delta);
+      }
     }
 
-    function checkAnswers() {
-      let score = 0;
+    return newColor;
+  }
 
-      document.querySelectorAll('.row').forEach(row => {
-        const idx = row.dataset.index;
-        const correct = data[idx].isSame;
-        const checked = row.querySelector('input').checked;
+  for (let i = 0; i < rows; i++) {
+    const baseColor = [
+      Math.floor(Math.random() * 256),
+      Math.floor(Math.random() * 256),
+      Math.floor(Math.random() * 256)
+    ];
+    let color1 = [...baseColor];
+    let color2 = [...baseColor];
 
-        const circle1 = row.children[0];
-        const circle2 = row.children[1];
-
-        // Cambia stile cerchi in quadrati adiacenti
-        row.classList.add('tight');
-        circle1.classList.add('square');
-        circle2.classList.add('square');
-
-        if (correct === checked) {
-          score++;
-          row.classList.add('correct');
-          row.classList.remove('wrong');
-        } else {
-          row.classList.add('wrong');
-          row.classList.remove('correct');
-        }
-      });
-
-      document.getElementById('score').textContent = `Hai ottenuto ${score}/10 punti.`;
+    const isSame = sameIndices.has(i);
+    if (!isSame) {
+      const delta = Math.floor(Math.random() * 31) + 10; // delta tra 10 e 40
+      color2 = calculateDifferentColor(color1, delta);
     }
-  </script>
+
+    data.push({ color1, color2, isSame });
+
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.dataset.index = i;
+
+    const circle1 = document.createElement('div');
+    circle1.className = 'circle';
+    circle1.style.backgroundColor = `rgb(${color1.join(',')})`;
+
+    const circle2 = document.createElement('div');
+    circle2.className = 'circle';
+    circle2.style.backgroundColor = `rgb(${color2.join(',')})`;
+
+    const label = document.createElement('label');
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.dataset.index = i;
+
+    label.appendChild(checkbox);
+    label.appendChild(document.createTextNode(" uguali?"));
+
+    row.appendChild(circle1);
+    row.appendChild(circle2);
+    row.appendChild(label);
+
+    quiz.appendChild(row);
+  }
+
+  function checkAnswers() {
+    let score = 0;
+
+    document.querySelectorAll('.row').forEach(row => {
+      const idx = row.dataset.index;
+      const correct = data[idx].isSame;
+      const checked = row.querySelector('input').checked;
+
+      const circle1 = row.children[0];
+      const circle2 = row.children[1];
+
+      row.classList.add('tight');
+      circle1.classList.add('square');
+      circle2.classList.add('square');
+
+      if (correct === checked) {
+        score++;
+        row.classList.add('correct');
+        row.classList.remove('wrong');
+      } else {
+        row.classList.add('wrong');
+        row.classList.remove('correct');
+      }
+    });
+
+    document.getElementById('score').textContent = `Hai ottenuto ${score}/10 punti.`;
+  }
+</script>
 </body>
 </html>
