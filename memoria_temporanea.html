@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Memoria Temporanea</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 20px;
+    }
+    canvas {
+      border: 1px solid #ccc;
+      background: #f9f9f9;
+      margin-top: 20px;
+    }
+    .button, .option, .action {
+      font-size: 1.2em;
+      padding: 10px 20px;
+      margin: 10px;
+      cursor: pointer;
+      border-radius: 10px;
+    }
+    .button { background: #4caf50; color: white; border: none; }
+    .option { background: #e0e0e0; border: 1px solid #ccc; display: block; width: 100%; max-width: 300px; }
+    .option.disabled { opacity: 0.6; pointer-events: none; }
+    .option.selected { background: yellow !important; }
+    .correct { background: #a5d6a7 !important; }
+    .highlight { font-weight: bold; margin-top: 10px; }
+    .result-area { text-align: center; margin-top: 20px; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <h1>Test di Memoria Temporanea</h1>
+  <button id="startBtn" class="button">Start</button>
+  <canvas id="gameCanvas" width="300" height="150"></canvas>
+  
+  <div id="quizArea" class="hidden">
+    <div id="options"></div>
+    <button id="verifyBtn" class="action">Verifica sequenza</button>
+  </div>
+
+  <div id="resultArea" class="result-area hidden"></div>
+  <div id="buttonsArea" class="result-area hidden"></div>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    let millis = parseInt(urlParams.get('millis')) || 1000;
+    const sequenceLength = parseInt(urlParams.get('sequence')) || 5;
+    if (millis < 100) millis = 100;
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const startBtn = document.getElementById('startBtn');
+    const quizArea = document.getElementById('quizArea');
+    const optionsDiv = document.getElementById('options');
+    const verifyBtn = document.getElementById('verifyBtn');
+    const resultArea = document.getElementById('resultArea');
+    const buttonsArea = document.getElementById('buttonsArea');
+
+    let sequence = [];
+    let correctAnswer = "";
+    let selected = null;
+
+    function drawNumber(num) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.font = "100px sans-serif";
+      ctx.fillStyle = "black";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(num, canvas.width / 2, canvas.height / 2);
+    }
+
+    function clearCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function shuffle(arr) {
+      let copy = [...arr];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function generateOptions(seq) {
+      const correct = seq.join('');
+      const options = new Set();
+      options.add(correct);
+      while (options.size < 4) {
+        const shuffled = shuffle(seq).join('');
+        options.add(shuffled);
+      }
+      return shuffle([...options]);
+    }
+
+    startBtn.addEventListener('click', () => {
+      startBtn.classList.add('hidden');
+      sequence = Array.from({ length: sequenceLength }, () => Math.floor(Math.random() * 10));
+      correctAnswer = sequence.join('');
+      let index = 0;
+
+      function showNextNumber() {
+        if (index >= sequence.length) {
+          clearCanvas();
+          showQuiz();
+          return;
+        }
+        clearCanvas();
+        setTimeout(() => {
+          drawNumber(sequence[index]);
+          index++;
+          setTimeout(showNextNumber, millis);
+        }, 20);
+      }
+
+      showNextNumber();
+    });
+
+    function showQuiz() {
+      const options = generateOptions(sequence);
+      optionsDiv.innerHTML = '';
+      selected = null;
+
+      options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.textContent = opt;
+        btn.className = 'option';
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.option').forEach(b => b.classList.remove('selected'));
+          btn.classList.add('selected');
+          selected = opt;
+        });
+        optionsDiv.appendChild(btn);
+      });
+
+      quizArea.classList.remove('hidden');
+    }
+
+    verifyBtn.addEventListener('click', () => {
+      const buttons = document.querySelectorAll('.option');
+      buttons.forEach(btn => {
+        btn.classList.add('disabled');
+        if (btn.textContent === correctAnswer) btn.classList.add('correct');
+        if (btn.textContent === selected && selected === correctAnswer) btn.classList.add('correct');
+      });
+
+      if (selected === correctAnswer) {
+        let newHigh = false;
+        let highMillis = parseInt(localStorage.getItem('highScoreMillis'));
+        let highSeq = parseInt(localStorage.getItem('highScoreSequence'));
+
+        if (isNaN(highMillis)) highMillis = 1000;
+        if (isNaN(highSeq)) highSeq = 0;
+
+        if (millis < highMillis) {
+          localStorage.setItem('highScoreMillis', millis);
+          newHigh = true;
+        }
+        if (sequence.length > highSeq) {
+          localStorage.setItem('highScoreSequence', sequence.length);
+          newHigh = true;
+        }
+
+        const bestTime = localStorage.getItem('highScoreMillis');
+        const bestLength = localStorage.getItem('highScoreSequence');
+        resultArea.innerHTML = `<div class="highlight">Record velocità: ${bestTime}ms — Lunghezza: ${bestLength}</div>`;
+        if (newHigh) {
+          resultArea.innerHTML += '<div class="highlight">Nuovo highscore!</div>';
+        }
+      } else {
+        resultArea.innerHTML = '<div class="highlight">Sequenza errata.</div>';
+      }
+
+      resultArea.classList.remove('hidden');
+      buttonsArea.innerHTML = '';
+
+      if (millis > 100) {
+        const faster = document.createElement('a');
+        faster.href = `?millis=${millis - 50}&sequence=${sequence.length}`;
+        faster.className = 'button';
+        faster.textContent = 'Ritenta ma più veloce';
+        buttonsArea.appendChild(faster);
+      }
+
+      const harder = document.createElement('a');
+      harder.href = `?millis=${millis}&sequence=${sequence.length + 1}`;
+      harder.className = 'button';
+      harder.textContent = 'Più difficile';
+      buttonsArea.appendChild(harder);
+
+      buttonsArea.classList.remove('hidden');
+    });
+  </script>
+</body>
+</html>
