@@ -181,6 +181,7 @@
 
       resultArea.classList.remove('hidden');
       buttonsArea.innerHTML = '';
+      buttonsArea.innerHTML += '<br><br>';
 
       if (millis > 100) {
         const faster = document.createElement('a');
@@ -188,6 +189,7 @@
         faster.className = 'button';
         faster.textContent = 'Ritenta ma più veloce';
         buttonsArea.appendChild(faster);
+        buttonsArea.innerHTML += '<br>';
       }
 
       const harder = document.createElement('a');
