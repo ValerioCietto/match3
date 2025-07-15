@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>MTG Modular Simulator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f0f0f0;
+      margin: 20px;
+    }
+    .zone {
+      margin-top: 20px;
+    }
+    .cards {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .card {
+      border: 1px solid #aaa;
+      border-radius: 5px;
+      padding: 8px;
+      width: 120px;
+      height: 80px;
+      background: white;
+      position: relative;
+    }
+    .card.tapped {
+      transform: rotate(-45deg);
+    }
+    .stats {
+      position: absolute;
+      bottom: 4px;
+      right: 6px;
+      font-size: 14px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>MTG Modular Simulator</h1>
+
+  <div>
+    <button id="btnStart">Play Game</button>
+    <button id="btnTurn">Play Turn</button>
+  </div>
+
+  <div class="zone">
+    <h2>Battlefield</h2>
+    <div><strong>Permanents</strong></div>
+    <div id="creatureZone" class="cards"></div>
+    <div><strong>Lands</strong></div>
+    <div id="landZone" class="cards"></div>
+  </div>
+
+  <div class="zone" style="display: flex; align-items: flex-start; gap: 20px;">
+    <div>
+      <h2>Graveyard</h2>
+      <div id="graveyard" class="cards"></div>
+    </div>
+    <div>
+      <h2>Hand</h2>
+      <div id="hand" class="cards"></div>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
