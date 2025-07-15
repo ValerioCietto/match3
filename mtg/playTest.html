@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MTG Solo Simulator</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 20px;
+      background: #f0f0f0;
+    }
+    button {
+      margin: 5px;
+      padding: 10px 20px;
+      font-size: 16px;
+    }
+    .zone {
+      margin-top: 20px;
+    }
+    .cards {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .card {
+      position: relative;
+      border: 1px solid #aaa;
+      border-radius: 5px;
+      padding: 8px;
+      width: 120px;
+      height: 80px;
+      cursor: pointer;
+      transition: transform 0.2s;
+      box-sizing: border-box;
+      background: white;
+    }
+    .card.forest {
+      background: #cceccc;
+    }
+    .card.verge, .card.mortuary {
+      background: linear-gradient(to right, #ddd, #cceccc);
+    }
+    .card.selected {
+      border: 2px solid blue;
+    }
+    .card.tapped {
+      transform: rotate(-45deg);
+    }
+    .stats {
+      position: absolute;
+      bottom: 4px;
+      right: 6px;
+      font-size: 14px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>MTG Solo Simulator</h1>
+  <button onclick="startGame()">Play Game</button>
+  <button onclick="playTurn()">Play Turn</button>
+  <button onclick="playSelectedCard()">Play Card</button>
+
+  <div class="zone">
+    <h2>Battlefield</h2>
+    <div><strong>Permanents</strong></div>
+    <div id="creatureZone" class="cards"></div>
+    <div><strong>Lands</strong></div>
+    <div id="landZone" class="cards"></div>
+  </div>
+
+  <div class="zone">
+    <h2>Hand</h2>
+    <div id="hand" class="cards"></div>
+  </div>
+
+  <script>
+    const CARD_LIBRARY = {
+      "Kona, Rescue Beast": { type: "creature", cost: "3G", cmc: 4, strength: 4, constitution: 3, abilities: ["Survival"] },
+      "Forest": { type: "land" },
+      "Cynical Loner": { type: "creature", cost: "1B", cmc: 2, strength: 3, constitution: 1, abilities: ["Survival"] },
+      "Swamp": { type: "land" },
+      "District Mascot": { type: "creature", cost: "G", cmc: 1, strength: 1, constitution: 1, abilities: ["Mount"] },
+      "Routeway Moose": { type: "creature", cost: "1G", cmc: 2, strength: 3, constitution: 3, abilities: ["Mount"] },
+      "Bloodthirsty Conqueror": { type: "creature", cost: "3BB", cmc: 5, strength: 5, constitution: 5 },
+      "Enduring Tenacity": { type: "creature", cost: "2BB", cmc: 4, strength: 4, constitution: 3 },
+      "Aftermath Analyst": { type: "creature", cost: "1G", cmc: 2, strength: 1, constitution: 3, onEnter: ["millThree"] },
+      "Valgavoth, Terror Eater": { type: "creature", cost: "6BBB", cmc: 9, strength: 9, constitution: 9 },
+      "Unholy Annex": { type: "enchantment", cost: "2B", cmc: 3 },
+      "Demon Wall": { type: "creature", cost: "1B", cmc: 2, strength: 3, constitution: 3 },
+      "Zombify": { type: "sorcery", cost: "3B", cmc: 4 },
+      "Llanowar Elves": { type: "creature", cost: "G", cmc: 1, strength: 1, constitution: 1 },
+      "Fountainport Charmer": { type: "creature", cost: "2G", cmc: 3, strength: 2, constitution: 3, onEnter: ["charmEffect"] },
+      "Wastewood Verge": { type: "land" },
+      "Underground Mortuary": { type: "land", onEnter: ["surveil"] }
+    };
+
+    const composition = {
+      "Kona, Rescue Beast": 2,
+      "Forest": 10,
+      "Cynical Loner": 1,
+      "Swamp": 10,
+      "District Mascot": 1,
+      "Routeway Moose": 1,
+      "Bloodthirsty Conqueror": 4,
+      "Enduring Tenacity": 4,
+      "Aftermath Analyst": 2,
+      "Valgavoth, Terror Eater": 4,
+      "Unholy Annex": 2,
+      "Demon Wall": 2,
+      "Zombify": 4,
+      "Llanowar Elves": 3,
+      "Fountainport Charmer": 4,
+      "Wastewood Verge": 4,
+      "Underground Mortuary": 2
+    };
+
+    let state = {
+      turn: 0,
+      life: 20,
+      deck: [],
+      hand: [],
+      battlefield: [],
+      graveyard: [],
+      landsPlayed: 0,
+      gameEnded: false,
+      log: [],
+      selectedCardIndex: null
+    };
+
+    function buildDeck() {
+      const deck = [];
+      for (const [cardName, count] of Object.entries(composition)) {
+        for (let i = 0; i < count; i++) {
+          deck.push({ name: cardName, ...CARD_LIBRARY[cardName] });
+        }
+      }
+      for (let i = deck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [deck[i], deck[j]] = [deck[j], deck[i]];
+      }
+      return deck;
+    }
+
+    function startGame() {
+      state.deck = buildDeck();
+      state.hand = [];
+      state.battlefield = [];
+      state.turn = 1;
+      state.landsPlayed = 0;
+      state.selectedCardIndex = null;
+      for (let i = 0; i < 7; i++) {
+        drawCard();
+      }
+      shadowMulligan();
+      saveGame();
+      render();
+    }
+
+    function drawCard() {
+      if (state.deck.length > 0) {
+        state.hand.push(state.deck.shift());
+      }
+    }
+
+    function playTurn() {
+      state.turn++;
+      state.landsPlayed = 0;
+      drawCard();
+      saveGame();
+      render();
+    }
+
+    function toggleTapped(index) {
+      const card = state.battlefield[index];
+      card.tapped = !card.tapped;
+      saveGame();
+      render();
+    }
+
+    function render() {
+      const handEl = document.getElementById("hand");
+      const creatureZone = document.getElementById("creatureZone");
+      const landZone = document.getElementById("landZone");
+
+      handEl.innerHTML = "";
+      state.hand.forEach((card, i) => {
+        const div = document.createElement("div");
+        let extraClass =
+          card.name === 'Forest' ? ' forest' :
+          card.name === 'Swamp' ? ' swamp' :
+          card.name === 'Wastewood Verge' ? ' verge' :
+          card.name === 'Underground Mortuary' ? ' mortuary' :
+          '';
+        div.className = "card" + extraClass;
+        div.innerHTML = `<strong>${card.name}</strong><br>${card.cost || "—"}`;
+        div.onclick = () => {
+          state.battlefield.push({ ...card, tapped: false });
+          state.hand.splice(i, 1);
+          saveGame();
+          render();
+        };
+        handEl.appendChild(div);
+      });
+
+      creatureZone.innerHTML = "";
+      landZone.innerHTML = "";
+
+      state.battlefield.forEach((card, i) => {
+        const div = document.createElement("div");
+        let extraClass = card.name === 'Forest' ? ' forest' : card.name === 'Swamp' ? ' swamp' : '';
+        div.className = "card" + (card.tapped ? " tapped" : "") + extraClass;
+        div.innerHTML = `<strong>${card.name}</strong><br>${card.cost || "—"}`;
+        if (card.type === "creature") {
+          div.innerHTML += `<div class="stats">${card.strength}/${card.constitution}</div>`;
+        }
+        div.onclick = () => {
+          card.tapped = !card.tapped;
+          saveGame();
+          render();
+        };
+        if (card.type === "land") {
+          landZone.appendChild(div);
+        } else {
+          creatureZone.appendChild(div);
+        }
+      });
+    }
+
+    function saveGame() {
+      localStorage.setItem("mtgSimulatorState", JSON.stringify(state));
+    }
+
+    function shadowMulligan() {
+      const lands = state.hand.filter(c => c.type === 'land').length;
+      if (lands === 0 || lands === state.hand.length) {
+        state.deck.push(...state.hand);
+        state.hand = [];
+        for (let i = state.deck.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [state.deck[i], state.deck[j]] = [state.deck[j], state.deck[i]];
+        }
+        for (let i = 0; i < 7; i++) {
+          drawCard();
+        }
+      }
+    }
+
+    function loadGame() {
+      const saved = localStorage.getItem("mtgSimulatorState");
+      if (saved) {
+        state = JSON.parse(saved);
+        render();
+      }
+    }
+
+    loadGame();
+  </script>
+</body>
+</html>
