@@ -36,8 +36,7 @@
     }
     .card.forest {
       background: #cceccc;
-    }
-    .card.verge, .card.mortuary {
+    }.card.verge, .card.mortuary {
       background: linear-gradient(to right, #ddd, #cceccc);
     }
     .card.selected {
@@ -69,9 +68,16 @@
     <div id="landZone" class="cards"></div>
   </div>
 
-  <div class="zone">
-    <h2>Hand</h2>
-    <div id="hand" class="cards"></div>
+  <div class="zone" style="display: flex; align-items: flex-start; gap: 20px;">
+    <div>
+      <h2>Graveyard</h2>
+      <div id="graveyard" class="cards"></div>
+    </div>
+    <div>
+      <h2>Hand</h2>
+      <div id="hand" class="cards"></div>
+    </div>
+  </div>
   </div>
 
   <script>
@@ -179,11 +185,19 @@
     }
 
     function render() {
+      const graveEl = document.getElementById("graveyard");
       const handEl = document.getElementById("hand");
       const creatureZone = document.getElementById("creatureZone");
       const landZone = document.getElementById("landZone");
 
+      graveEl.innerHTML = "";
       handEl.innerHTML = "";
+      state.graveyard.forEach((card) => {
+        const div = document.createElement("div");
+        div.className = "card";
+        div.innerHTML = `<strong>${card.name}</strong><br>${card.cost || "—"}`;
+        graveEl.appendChild(div);
+      });
       state.hand.forEach((card, i) => {
         const div = document.createElement("div");
         let extraClass =
@@ -196,6 +210,13 @@
         div.innerHTML = `<strong>${card.name}</strong><br>${card.cost || "—"}`;
         div.onclick = () => {
           state.battlefield.push({ ...card, tapped: false });
+          if (card.onEnter && card.onEnter.includes("millThree")) {
+            for (let j = 0; j < 3; j++) {
+              if (state.deck.length > 0) {
+                state.graveyard.push(state.deck.shift());
+              }
+            }
+          }
           state.hand.splice(i, 1);
           saveGame();
           render();
