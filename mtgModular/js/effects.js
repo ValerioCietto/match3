@@ -41,8 +41,14 @@ export const effects = {
   },
 
   surveil() {
-    // Placeholder: non implementato, ma riconosciuto
-    console.log("👁️ Surveil triggered");
+    if (state.deck.length === 0) return;
+    const topCard = state.deck[0];
+    if (topCard.type === 'creature') {
+      state.graveyard.push(state.deck.shift());
+      console.log(`Surveil: ${topCard.name} was a creature and was put into graveyard.`);
+    } else {
+      console.log(`Surveil: ${topCard.name} was kept on top.`);
+    }
   }
 };
 
