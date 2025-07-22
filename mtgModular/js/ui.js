@@ -57,13 +57,17 @@ export function render() {
 
 function createCardDiv(card) {
   const div = document.createElement('div');
-  let extraClass =
-    card.name === 'Forest' ? 'forest' :
-    card.name === 'Swamp' ? 'swamp' :
-    (card.name === 'Wastewood Verge' || card.name === 'Underground Mortuary') ? 'dual-black-green' :
-    '';
 
-  div.className = 'card' + (card.tapped ? ' tapped' : '') + ' ' + extraClass;
+  let extraClass = '';
+  if (card.name === 'Forest') extraClass = 'forest';
+  else if (card.name === 'Swamp') extraClass = 'swamp';
+  else if (card.name === 'Wastewood Verge' || card.name === 'Underground Mortuary') {
+    extraClass = 'dual-black-green';
+  }
+
+  const tappedClass = card.tapped ? 'tapped' : '';
+  div.className = `card ${extraClass} ${tappedClass}`.trim();
+
   div.innerHTML = `<strong>${card.name}</strong><br>${card.cost || '—'}`;
 
   if (card.type === 'creature') {
