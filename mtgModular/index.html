@@ -4,49 +4,7 @@
   <meta charset="UTF-8" />
   <title>MTG Modular Simulator</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <style>
-    body {
-      font-family: sans-serif;
-      background: #f0f0f0;
-      margin: 20px;
-    }
-    .zone {
-      margin-top: 20px;
-      border: 1px solid #aaa;
-      border-radius: 5px;
-      padding: 5px;
-    }
-    .cards {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    .card {
-      border: 1px solid #aaa;
-      border-radius: 5px;
-      padding: 8px;
-      width: 120px;
-      height: 80px;
-      background: white;
-      position: relative;
-    }
-    .card.tapped {
-      transform: rotate(-45deg);
-    }
-    .card.forest {
-      background: #ccffcc;
-    }
-    .card.swamp {
-      background: #dddddd;
-    }
-    .stats {
-      position: absolute;
-      bottom: 4px;
-      right: 6px;
-      font-size: 14px;
-      font-weight: bold;
-    }
-  </style>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <h1>MTG Modular Simulator</h1>
@@ -73,6 +31,12 @@
       <h2>Hand</h2>
       <div id="hand" class="cards"></div>
     </div>
+  </div>
+
+  <div class="zone" id="promptZone" style="display: none;">
+    <h2>Prompt</h2>
+    <p id="promptText">Choose a card...</p>
+    <div id="promptCards" class="cards"></div>
   </div>
 
   <script type="module" src="js/main.js"></script>
