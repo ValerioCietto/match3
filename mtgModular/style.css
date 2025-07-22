@@ -2,19 +2,19 @@ body {
       font-family: sans-serif;
       background: #f0f0f0;
       margin: 20px;
-    }
-    .zone {
+}
+.zone {
       margin-top: 20px;
       border: 1px solid #aaa;
       border-radius: 5px;
       padding: 5px;
-    }
-    .cards {
+}
+.cards {
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
-    }
-    .card {
+}
+.card {
       border: 1px solid #aaa;
       border-radius: 5px;
       padding: 8px;
@@ -22,20 +22,20 @@ body {
       height: 80px;
       background: white;
       position: relative;
-    }
-    .card.tapped {
+}
+.card.tapped {
       transform: rotate(-45deg);
-    }
-    .card.forest {
+}
+.card.forest {
       background: #ccffcc;
-    }
-    .card.swamp {
+}
+      .card.swamp {
       background: #dddddd;
-    }
-    .stats {
+}
+.stats {
       position: absolute;
       bottom: 4px;
       right: 6px;
       font-size: 14px;
       font-weight: bold;
-    }
+}
