@@ -1,1 +1,41 @@
-
+body {
+      font-family: sans-serif;
+      background: #f0f0f0;
+      margin: 20px;
+    }
+    .zone {
+      margin-top: 20px;
+      border: 1px solid #aaa;
+      border-radius: 5px;
+      padding: 5px;
+    }
+    .cards {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .card {
+      border: 1px solid #aaa;
+      border-radius: 5px;
+      padding: 8px;
+      width: 120px;
+      height: 80px;
+      background: white;
+      position: relative;
+    }
+    .card.tapped {
+      transform: rotate(-45deg);
+    }
+    .card.forest {
+      background: #ccffcc;
+    }
+    .card.swamp {
+      background: #dddddd;
+    }
+    .stats {
+      position: absolute;
+      bottom: 4px;
+      right: 6px;
+      font-size: 14px;
+      font-weight: bold;
+    }
