@@ -51,8 +51,7 @@ body {
 }
 
 .card.dual-black-green {
-  background: linear-gradient(to right, #222222, #ccffcc); /* black to green */
-  color: white;
+  background: linear-gradient(to right, #dddddd, #ccffcc); /* black to green */
 }
 
 /* === Prompt interaction highlight === */
