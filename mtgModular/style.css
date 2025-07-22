@@ -1,41 +1,74 @@
 body {
-      font-family: sans-serif;
-      background: #f0f0f0;
-      margin: 20px;
+  font-family: sans-serif;
+  background: #f0f0f0;
+  margin: 20px;
 }
+
 .zone {
-      margin-top: 20px;
-      border: 1px solid #aaa;
-      border-radius: 5px;
-      padding: 5px;
+  margin-top: 20px;
+  border: 1px solid #aaa;
+  border-radius: 5px;
+  padding: 5px;
 }
+
 .cards {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
+
 .card {
-      border: 1px solid #aaa;
-      border-radius: 5px;
-      padding: 8px;
-      width: 120px;
-      height: 80px;
-      background: white;
-      position: relative;
+  border: 1px solid #aaa;
+  border-radius: 5px;
+  padding: 8px;
+  width: 120px;
+  height: 80px;
+  background: white;
+  position: relative;
+  transition: border 0.2s, transform 0.2s;
 }
+
 .card.tapped {
-      transform: rotate(-45deg);
+  transform: rotate(-45deg);
 }
-.card.forest {
-      background: #ccffcc;
-}
-      .card.swamp {
-      background: #dddddd;
-}
+
 .stats {
-      position: absolute;
-      bottom: 4px;
-      right: 6px;
-      font-size: 14px;
-      font-weight: bold;
+  position: absolute;
+  bottom: 4px;
+  right: 6px;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+/* === Card background styles === */
+
+.card.forest {
+  background: #ccffcc; /* light green */
+}
+
+.card.swamp {
+  background: #dddddd; /* light grey */
+}
+
+.card.dual-black-green {
+  background: linear-gradient(to right, #222222, #ccffcc); /* black to green */
+  color: white;
+}
+
+/* === Prompt interaction highlight === */
+
+.card.highlight {
+  border: 2px solid gold;
+  cursor: pointer;
+}
+
+/* Optional hover feedback */
+.card.highlight:hover {
+  filter: brightness(1.05);
+}
+
+/* Responsive overflow (in case of too many cards) */
+.cards {
+  overflow-x: auto;
+  max-width: 100%;
 }
