@@ -63,7 +63,7 @@ function createCardDiv(card) {
     (card.name === 'Wastewood Verge' || card.name === 'Underground Mortuary') ? 'dual-black-green' :
     '';
 
-  div.className = 'card' + (card.tapped ? ' tapped' : '') + extraClass;
+  div.className = 'card' + (card.tapped ? ' tapped' : '') + ' ' + extraClass;
   div.innerHTML = `<strong>${card.name}</strong><br>${card.cost || '—'}`;
 
   if (card.type === 'creature') {
