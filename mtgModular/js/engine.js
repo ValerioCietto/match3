@@ -67,3 +67,67 @@ function shadowMulligan() {
     }
   }
 }
+
+// Gioca la prima carta con quel nome dalla mano
+export function playCard(name) {
+  const index = state.hand.findIndex(c => c.name === name);
+  if (index !== -1) {
+    const card = state.hand.splice(index, 1)[0];
+    state.battlefield.push({ ...card, tapped: false });
+    if (card.onEnter) applyOnEnter(card);
+    saveState();
+  }
+}
+
+// Pesca un numero di carte
+export function drawCards(number) {
+  for (let i = 0; i < number; i++) {
+    if (state.deck.length > 0) {
+      state.hand.push(state.deck.shift());
+    }
+  }
+  saveState();
+}
+
+// Macina carte dal mazzo al cimitero
+export function millCards(number) {
+  for (let i = 0; i < number; i++) {
+    if (state.deck.length > 0) {
+      state.graveyard.push(state.deck.shift());
+    }
+  }
+  saveState();
+}
+
+// Scarta una carta dalla mano per indice
+export function discardCard(indexOrName) {
+  if (typeof indexOrName === 'number') {
+    const card = state.hand.splice(indexOrName, 1)[0];
+    if (card) state.graveyard.push(card);
+  } else if (typeof indexOrName === 'string') {
+    const idx = state.hand.findIndex(c => c.name === indexOrName);
+    if (idx !== -1) {
+      const card = state.hand.splice(idx, 1)[0];
+      state.graveyard.push(card);
+    }
+  }
+  saveState();
+}
+
+// Somma della forza di tutte le creature in gioco
+export function getStrengthTotalCreatures() {
+  return state.battlefield
+    .filter(c => c.type === 'creature')
+    .reduce((sum, c) => sum + (c.strength || 0), 0);
+}
+
+// Somma della forza di tutte le creature non tappate e senza "defender"
+export function getCombatStrength() {
+  return state.battlefield
+    .filter(c =>
+      c.type === 'creature' &&
+      !c.tapped &&
+      !(c.abilities || []).includes('defender')
+    )
+    .reduce((sum, c) => sum + (c.strength || 0), 0);
+}
