@@ -69,7 +69,7 @@ function shadowMulligan() {
 }
 
 // Gioca la prima carta con quel nome dalla mano
-export function playCard(name) {
+export function playCardName(name) {
   const index = state.hand.findIndex(c => c.name === name);
   if (index !== -1) {
     const card = state.hand.splice(index, 1)[0];
