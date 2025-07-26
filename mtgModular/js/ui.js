@@ -11,7 +11,7 @@ export function setupUI() {
     playTurn();
     render();
   };
-  document.getElementById('btnAI').onclick = () => {
+  document.getElementById('btnAITurn').onclick = () => {
     runTurn();
   };
 }
