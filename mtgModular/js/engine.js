@@ -135,10 +135,11 @@ export function getCombatStrength() {
 }
 
 export function getAvailableMana() {
+  const mana = state.battlefield.filter(c => c.type === 'land' && !c.tapped).length;
   const span = document.getElementById('availableMana');
   if (span) {
-    span.textContent = `Available mana: ${getAvailableMana()}`;
+    span.textContent = `Available mana: ${mana}`;
   }
-  return state.battlefield.filter(c => c.type === 'land' && !c.tapped).length;
+  return mana;
 }
 
