@@ -1,5 +1,6 @@
 import { state, saveState } from './state.js';
 import { playCard, startGame, playTurn } from './engine.js';
+import { runTurn } from './ai.js'
 
 export function setupUI() {
   document.getElementById('btnStart').onclick = () => {
@@ -9,6 +10,9 @@ export function setupUI() {
   document.getElementById('btnTurn').onclick = () => {
     playTurn();
     render();
+  };
+  document.getElementById('btnAI').onclick = () => {
+    runTurn();
   };
 }
 
