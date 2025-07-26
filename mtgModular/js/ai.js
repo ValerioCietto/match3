@@ -1,5 +1,5 @@
 import { state } from './state.js';
-import { drawCards, getAvailableMana, playCard, untapAll } from './engine.js';
+import { drawCards, getAvailableMana, playCard, untapAll, passTurn } from './engine.js';
 import { render } from './ui.js';
 
 export const strategy = {
@@ -23,6 +23,7 @@ export function runTurn() {
       if (land) {
         logReasoning(`Playing land: ${land.name}`);
         playCard(land.name);
+        render();
       }
     }
 
@@ -36,6 +37,7 @@ export function runTurn() {
         playCard(best.name);
         // Optionally tap lands to simulate mana use
         tapAvailableLands(best.cmc);
+        render();
       }
     }
 
@@ -45,6 +47,7 @@ export function runTurn() {
 
     if (action === 'end') {
       logReasoning(`End phase`);
+      passTurn();
     }
   }
 
