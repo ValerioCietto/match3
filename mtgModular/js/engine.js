@@ -151,3 +151,8 @@ export function untapAll() {
   saveState();
 }
 
+export function passTurn() {
+  state.turn += 1;
+  saveState();
+}
+
