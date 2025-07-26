@@ -144,3 +144,10 @@ export function getAvailableMana() {
   return mana;
 }
 
+export function untapAll() {
+  state.battlefield.forEach(card => {
+    card.tapped = false;
+  });
+  saveState();
+}
+
