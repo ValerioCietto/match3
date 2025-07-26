@@ -131,3 +131,8 @@ export function getCombatStrength() {
     )
     .reduce((sum, c) => sum + (c.strength || 0), 0);
 }
+
+export function getAvailableMana() {
+  return state.battlefield.filter(c => c.type === 'land' && !c.tapped).length;
+}
+
