@@ -54,6 +54,7 @@ export function playCard(index) {
   state.battlefield.push({ ...card, tapped: false });
   if (card.onEnter) applyOnEnter(card);
   saveState();
+  getAvailableMana()
 }
 
 function shadowMulligan() {
@@ -77,6 +78,7 @@ export function playCardName(name) {
     if (card.onEnter) applyOnEnter(card);
     saveState();
   }
+  getAvailableMana()
 }
 
 // Pesca un numero di carte
@@ -133,6 +135,10 @@ export function getCombatStrength() {
 }
 
 export function getAvailableMana() {
+  const span = document.getElementById('availableMana');
+  if (span) {
+    span.textContent = `Available mana: ${getAvailableMana()}`;
+  }
   return state.battlefield.filter(c => c.type === 'land' && !c.tapped).length;
 }
 
