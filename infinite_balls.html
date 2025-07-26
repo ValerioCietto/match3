@@ -34,7 +34,7 @@
   <script>
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
-    const squareSize = 400;
+    const squareSize = 500;
     const squareX = (canvas.width - squareSize) / 2;
     const squareY = (canvas.height - squareSize) / 2;
     const ballCountSpan = document.getElementById("ballCount");
@@ -61,7 +61,10 @@
 
     addBall(); // start with 1
 
-    setInterval(addBall, 1); // add 1 every 0.1s
+    setInterval(addBall, 1); 
+    setInterval(addBall, 1);
+    setInterval(addBall, 1);
+    setInterval(addBall, 1);
 
     function update() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
