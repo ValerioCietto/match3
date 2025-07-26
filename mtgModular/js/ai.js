@@ -22,7 +22,7 @@ export function runTurn() {
       const land = state.hand.find(c => c.type === 'land');
       if (land) {
         logReasoning(`Playing land: ${land.name}`);
-        playCard(land.name);
+        playCardName(land.name);
         render();
       }
     }
@@ -34,7 +34,7 @@ export function runTurn() {
       if (playable.length) {
         const best = playable.sort((a, b) => b.strength - a.strength)[0];
         logReasoning(`Playing creature: ${best.name} (str: ${best.strength})`);
-        playCard(best.name);
+        playCardName(best.name);
         // Optionally tap lands to simulate mana use
         tapAvailableLands(best.cmc);
         render();
