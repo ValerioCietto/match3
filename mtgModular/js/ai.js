@@ -1,5 +1,5 @@
 import { state } from './state.js';
-import { drawCards, getAvailableMana, playCard } from './engine.js';
+import { drawCards, getAvailableMana, playCard, untapAll } from './engine.js';
 import { render } from './ui.js';
 
 export const strategy = {
@@ -14,7 +14,7 @@ export function runTurn() {
   for (const action of strategy.turnActions) {
     if (action === 'start' && strategy.startActions === 'normal') {
       logReasoning(`Start phase: untap and draw`);
-      state.battlefield.forEach(c => (c.tapped = false));
+      untapAll();
       drawCards(1);
     }
 
