@@ -1,6 +1,6 @@
 import { state } from './state.js';
 import { drawCards, getAvailableMana, playCard } from './engine.js';
-import { render, showManaAvailable } from './ui.js';
+import { render } from './ui.js';
 
 export const strategy = {
   turnActions: ['start', 'playLand', 'playCreature', 'combat', 'end'],
@@ -56,7 +56,7 @@ function tapAvailableLands(n) {
   for (let i = 0; i < n && i < lands.length; i++) {
     lands[i].tapped = true;
   }
-  showManaAvailable();
+
 }
 
 function logReasoning(text) {
