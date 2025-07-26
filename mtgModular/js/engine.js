@@ -32,6 +32,7 @@ export function startGame() {
   }
   shadowMulligan();
   saveState();
+  getAvailableMana();
 }
 
 export function drawCard() {
@@ -54,7 +55,7 @@ export function playCard(index) {
   state.battlefield.push({ ...card, tapped: false });
   if (card.onEnter) applyOnEnter(card);
   saveState();
-  getAvailableMana()
+  getAvailableMana();
 }
 
 function shadowMulligan() {
