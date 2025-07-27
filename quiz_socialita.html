@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quiz Socievolezza</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 1em;
+      background: #f0f8ff;
+      color: #222;
+      max-width: 600px;
+      margin: auto;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 0.5em;
+    }
+    .question {
+      margin-bottom: 1.5em;
+    }
+    .question p {
+      font-weight: bold;
+    }
+    label {
+      display: block;
+      margin: 0.3em 0;
+    }
+    button {
+      display: block;
+      margin: 2em auto;
+      padding: 0.7em 2em;
+      font-size: 1.1em;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+    }
+    #result {
+      text-align: center;
+      font-size: 1.2em;
+      font-weight: bold;
+      margin-top: 1em;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Quanto sei socievole?</h1>
+  <form id="quiz"></form>
+  <button onclick="verificaRisposte()">Verifica Risposte</button>
+  <div id="result"></div>
+
+  <script>
+    const domande = [
+      { id: 1, text: "Mi sento a mio agio a parlare con persone nuove", type: "positive" },
+      { id: 2, text: "Evito di partecipare a feste o eventi sociali", type: "negative" },
+      { id: 3, text: "Trovo facile fare amicizia", type: "positive" },
+      { id: 4, text: "Mi sento spesso ansioso in gruppo", type: "negative" },
+      { id: 5, text: "Mi piace condividere idee con gli altri", type: "positive" },
+      { id: 6, text: "Parlare con sconosciuti mi mette a disagio", type: "negative" },
+      { id: 7, text: "Mi sento energico quando sono circondato da persone", type: "positive" },
+      { id: 8, text: "Mi isolo spesso per evitare interazioni", type: "negative" },
+      { id: 9, text: "Mi piace collaborare in gruppo", type: "positive" },
+      { id: 10, text: "Trovo difficile iniziare conversazioni", type: "negative" },
+      { id: 11, text: "Cerco opportunità per conoscere persone nuove", type: "positive" },
+      { id: 12, text: "Preferisco evitare contatti sociali se possibile", type: "negative" },
+      { id: 13, text: "Mi sento motivato a stare con gli altri", type: "positive" },
+      { id: 14, text: "Mi sento inadeguato in situazioni sociali", type: "negative" },
+      { id: 15, text: "Sono a mio agio quando parlo davanti a un gruppo", type: "positive" },
+      { id: 16, text: "Mi sento giudicato quando parlo con gli altri", type: "negative" },
+      { id: 17, text: "Mi entusiasmo a partecipare ad attività collettive", type: "positive" },
+      { id: 18, text: "Tendo a chiudermi in me stesso nei contesti sociali", type: "negative" },
+      { id: 19, text: "Mi piace raccontare esperienze agli altri", type: "positive" },
+      { id: 20, text: "Preferisco non condividere troppo con gli altri", type: "negative" },
+      { id: 21, text: "Sono curioso delle vite delle persone che incontro", type: "positive" },
+      { id: 22, text: "Mi sento facilmente sopraffatto dalle interazioni sociali", type: "negative" },
+      { id: 23, text: "Mi piace ascoltare gli altri e rispondere", type: "positive" },
+      { id: 24, text: "Provo disagio quando sono al centro dell’attenzione", type: "negative" },
+      { id: 25, text: "Mi sento valorizzato quando partecipo attivamente", type: "positive" },
+      { id: 26, text: "Evito di esprimere le mie opinioni davanti a un gruppo", type: "negative" },
+      { id: 27, text: "Cerco spesso interazioni sociali nella mia giornata", type: "positive" },
+      { id: 28, text: "Mi sento spesso escluso o non compreso dagli altri", type: "negative" },
+      { id: 29, text: "Parlare in pubblico mi dà soddisfazione", type: "positive" },
+      { id: 30, text: "Evito domande personali per non espormi", type: "negative" }
+    ];
+
+    const risposte = [
+      { label: "Mai", value: -5 },
+      { label: "Qualche volta", value: -2 },
+      { label: "Quasi sempre", value: 2 },
+      { label: "Sempre", value: 5 }
+    ];
+
+    const domandeSelezionate = domande.sort(() => 0.5 - Math.random()).slice(0, 5);
+    const quizDiv = document.getElementById("quiz");
+
+    domandeSelezionate.forEach((domanda, index) => {
+      const container = document.createElement("div");
+      container.className = "question";
+
+      const p = document.createElement("p");
+      p.textContent = `Domanda ${index + 1}: ${domanda.text}`;
+      container.appendChild(p);
+
+      risposte.forEach((risposta, ri) => {
+        const id = `q${index}_r${ri}`;
+        const label = document.createElement("label");
+        const input = document.createElement("input");
+        input.type = "radio";
+        input.name = `q${index}`;
+        input.value = domanda.type === "positive" ? risposta.value : -risposta.value;
+        input.id = id;
+
+        label.setAttribute("for", id);
+        label.appendChild(input);
+        label.appendChild(document.createTextNode(" " + risposta.label));
+        container.appendChild(label);
+      });
+
+      quizDiv.appendChild(container);
+    });
+
+    function verificaRisposte() {
+      let total = 0;
+      for (let i = 0; i < 5; i++) {
+        const rispostaSelezionata = document.querySelector(`input[name="q${i}"]:checked`);
+        if (rispostaSelezionata) {
+          total += parseInt(rispostaSelezionata.value);
+        }
+      }
+
+      let livello = "";
+      if (total <= -10) livello = "🐻 Socievolezza livello orso polare";
+      else if (total <= 10) livello = "🐱 Socievolezza livello gatto";
+      else livello = "🐶 Socievolezza livello cane da compagnia";
+
+      document.getElementById("result").textContent = `Punteggio: ${total} – ${livello}`;
+    }
+  </script>
+</body>
+</html>
