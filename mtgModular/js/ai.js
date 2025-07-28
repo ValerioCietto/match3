@@ -11,18 +11,20 @@ export const strategy = {
 
 export function runTurn() {
   logReasoning(`--- AI TURN ${state.turn} ---`);
+  
   for (const action of strategy.turnActions) {
     if (action === 'start' && strategy.startActions === 'normal') {
       logReasoning(`Start phase: untap and draw`);
-      untapAll();
+      state.battlefield.forEach(c => (c.tapped = false));
       drawCards(1);
+      render();
     }
 
     if (action === 'playLand' && strategy.playLand === 'any') {
       const land = state.hand.find(c => c.type === 'land');
       if (land) {
         logReasoning(`Playing land: ${land.name}`);
-        playCardName(land.name);
+        playCard(land.name);
         render();
       }
     }
@@ -33,25 +35,23 @@ export function runTurn() {
         .filter(c => c.type === 'creature' && c.cmc <= mana);
       if (playable.length) {
         const best = playable.sort((a, b) => b.strength - a.strength)[0];
-        logReasoning(`Playing creature: ${best.name} (str: ${best.strength})`);
-        playCardName(best.name);
-        // Optionally tap lands to simulate mana use
+        logReasoning(`Playing creature: ${best.name}`);
+        playCard(best.name);
         tapAvailableLands(best.cmc);
         render();
       }
     }
 
     if (action === 'combat') {
-      logReasoning(`Combat phase: not implemented`);
+      logReasoning(`Combat phase: (not implemented)`);
     }
 
     if (action === 'end') {
       logReasoning(`End phase`);
       passTurn();
+      render();
     }
   }
-
-  render();
 }
 
 function tapAvailableLands(n) {
