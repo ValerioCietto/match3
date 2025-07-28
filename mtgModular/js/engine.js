@@ -153,6 +153,7 @@ export function untapAll() {
 
 export function passTurn() {
   state.turn += 1;
+  state.landsPlayed = 0;
   saveState();
 }
 
