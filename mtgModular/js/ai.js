@@ -24,7 +24,7 @@ export function runTurn() {
       const land = state.hand.find(c => c.type === 'land');
       if (land) {
         logReasoning(`Playing land: ${land.name}`);
-        playCard(land.name);
+        playCardName(land.name);
         render();
       }
     }
@@ -36,7 +36,7 @@ export function runTurn() {
       if (playable.length) {
         const best = playable.sort((a, b) => b.strength - a.strength)[0];
         logReasoning(`Playing creature: ${best.name}`);
-        playCard(best.name);
+        playCardName(best.name);
         tapAvailableLands(best.cmc);
         render();
       }
