@@ -13,6 +13,7 @@ export function setupUI() {
   };
   document.getElementById('btnAITurn').onclick = () => {
     runTurn();
+    render();
   };
 }
 
