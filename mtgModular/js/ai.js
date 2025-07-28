@@ -11,7 +11,7 @@ export const strategy = {
 
 export function runTurn() {
   logReasoning(`--- AI TURN ${state.turn} ---`);
-  
+
   for (const action of strategy.turnActions) {
     if (action === 'start' && strategy.startActions === 'normal') {
       logReasoning(`Start phase: untap and draw`);
@@ -21,22 +21,24 @@ export function runTurn() {
     }
 
     if (action === 'playLand' && strategy.playLand === 'any') {
-      const land = state.hand.find(c => c.type === 'land');
-      if (land) {
-        logReasoning(`Playing land: ${land.name}`);
-        playCardName(land.name);
+      const index = state.hand.findIndex(c => c.type === 'land');
+      if (index !== -1) {
+        logReasoning(`Playing land: ${state.hand[index].name}`);
+        playCard(index);
         render();
       }
     }
 
     if (action === 'playCreature' && strategy.playCreature === 'strongest') {
       const mana = getAvailableMana();
-      const playable = state.hand
+      const candidates = state.hand
+        .map((c, i) => ({ ...c, index: i }))
         .filter(c => c.type === 'creature' && c.cmc <= mana);
-      if (playable.length) {
-        const best = playable.sort((a, b) => b.strength - a.strength)[0];
+
+      if (candidates.length) {
+        const best = candidates.sort((a, b) => b.strength - a.strength)[0];
         logReasoning(`Playing creature: ${best.name}`);
-        playCardName(best.name);
+        playCard(best.index);
         tapAvailableLands(best.cmc);
         render();
       }
