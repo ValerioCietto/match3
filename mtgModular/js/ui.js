@@ -62,21 +62,21 @@ export function render() {
 
 function createCardDiv(card) {
   const div = document.createElement('div');
+  let extraClass =
+    card.name === 'Forest' ? 'forest' :
+    card.name === 'Swamp' ? 'swamp' :
+    (card.name === 'Wastewood Verge' || card.name === 'Underground Mortuary') ? 'dual-black-green' :
+    '';
 
-  let extraClass = '';
-  if (card.name === 'Forest') extraClass = 'forest';
-  else if (card.name === 'Swamp') extraClass = 'swamp';
-  else if (card.name === 'Wastewood Verge' || card.name === 'Underground Mortuary') {
-    extraClass = 'dual-black-green';
-  }
-
-  const tappedClass = card.tapped ? 'tapped' : '';
-  div.className = `card ${extraClass} ${tappedClass}`.trim();
-
+  div.className = 'card' + (card.tapped ? ' tapped' : '') + ' ' + extraClass;
   div.innerHTML = `<strong>${card.name}</strong><br>${card.cost || '—'}`;
 
   if (card.type === 'creature') {
-    div.innerHTML += `<div class="stats">${card.strength}/${card.constitution}</div>`;
+    let statsText = `${card.strength}/${card.constitution}`;
+    if (card.combatModifiers && card.combatModifiers.includes('defender')) {
+      statsText = `🛡${statsText}`; // aggiunge l'iconcina scudo davanti
+    }
+    div.innerHTML += `<div class="stats">${statsText}</div>`;
   }
 
   return div;
