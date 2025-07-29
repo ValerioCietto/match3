@@ -11,7 +11,7 @@
     "Aftermath Analyst": { "type": "creature", "cost": "1G", "cmc": 2, "strength": 1, "constitution": 3, "onEnter": ["millThree"] },
     "Valgavoth, Terror Eater": { "type": "creature", "cost": "6BBB", "cmc": 9, "strength": 9, "constitution": 9 },
     "Unholy Annex": { "type": "enchantment", "cost": "2B", "cmc": 3 },
-    "Demon Wall": { "type": "creature", "cost": "1B", "cmc": 2, "strength": 3, "constitution": 3 },
+    "Demon Wall": { "type": "creature", "cost": "1B", "cmc": 2, "strength": 3, "constitution": 3, "combatModifiers": ["defender"] },
     "Zombify": { "type": "sorcery", "cost": "3B", "cmc": 4 },
     "Llanowar Elves": { "type": "creature", "cost": "G", "cmc": 1, "strength": 1, "constitution": 1 },
     "Fountainport Charmer": { "type": "creature", "cost": "2G", "cmc": 3, "strength": 2, "constitution": 3, "onEnter": ["charmEffect"] },
