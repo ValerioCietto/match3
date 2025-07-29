@@ -54,6 +54,7 @@ export const effects = {
 
   entersTapped(card) {
     // Quando la carta entra in gioco, viene tappata automaticamente
+    console.log('card enters tapped', card);
     card.tapped = true;
     saveState();
     render();
