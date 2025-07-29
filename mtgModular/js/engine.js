@@ -117,22 +117,22 @@ export function discardCard(indexOrName) {
   saveState();
 }
 
-// Somma della forza di tutte le creature in gioco
-export function getStrengthTotalCreatures() {
-  return state.battlefield
-    .filter(c => c.type === 'creature')
-    .reduce((sum, c) => sum + (c.strength || 0), 0);
+export function hasCombatModifier(card, modifier) {
+  return card.combatModifiers && card.combatModifiers.includes(modifier);
 }
 
-// Somma della forza di tutte le creature non tappate e senza "defender"
-export function getCombatStrength() {
+// Somma della forza di tutte le creature sul campo
+export function getStrenghtTotalCreatures() {
   return state.battlefield
-    .filter(c =>
-      c.type === 'creature' &&
-      !c.tapped &&
-      !(c.abilities || []).includes('defender')
-    )
-    .reduce((sum, c) => sum + (c.strength || 0), 0);
+    .filter(c => c.type === 'creature')
+    .reduce((sum, c) => sum + c.strength, 0);
+}
+
+// Somma della forza delle creature stappate e senza defender
+export function getCombatStrenght() {
+  return state.battlefield
+    .filter(c => c.type === 'creature' && !c.tapped && !hasCombatModifier(c, 'defender'))
+    .reduce((sum, c) => sum + c.strength, 0);
 }
 
 export function getAvailableMana() {
