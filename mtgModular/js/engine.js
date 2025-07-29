@@ -44,18 +44,37 @@ export function drawCard() {
 export function playTurn() {
   state.turn++;
   state.landsPlayed = 0;
+  state.battlefield.forEach(card => {
+    if (card.type === 'creature' && card.summonSickness) {
+      delete card.summonSickness;
+    }
+  });
   drawCard();
   saveState();
 }
 
+// Gioca una carta dalla mano
 export function playCard(index) {
   const card = state.hand[index];
   if (!card) return;
+
+  // Rimuovi dalla mano
   state.hand.splice(index, 1);
-  state.battlefield.push({ ...card, tapped: false });
-  if (card.onEnter) applyOnEnter(card);
+
+  if (card.type === 'creature') {
+    card.summonSickness = true; // <-- Aggiunge summon sickness
+    state.battlefield.push(card);
+  } else if (card.type === 'land') {
+    if (state.landsPlayed >= 1) {
+      logReasoning('Already played a land this turn');
+      state.hand.push(card); // rimetti in mano se non valido
+      return;
+    }
+    state.battlefield.push(card);
+    state.landsPlayed++;
+  }
+
   saveState();
-  getAvailableMana();
 }
 
 function shadowMulligan() {
@@ -154,6 +173,11 @@ export function untapAll() {
 export function passTurn() {
   state.turn += 1;
   state.landsPlayed = 0;
+    state.battlefield.forEach(card => {
+    if (card.type === 'creature' && card.summonSickness) {
+      delete card.summonSickness;
+    }
+  });
   saveState();
 }
 
