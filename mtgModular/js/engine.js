@@ -147,11 +147,13 @@ export function getStrenghtTotalCreatures() {
     .reduce((sum, c) => sum + c.strength, 0);
 }
 
-// Somma della forza delle creature stappate e senza defender
+// Forza delle creature disponibili per attacco
 export function getCombatStrenght() {
   return state.battlefield
-    .filter(c => c.type === 'creature' && !c.tapped && !hasCombatModifier(c, 'defender'))
-    .reduce((sum, c) => sum + c.strength, 0);
+    .filter(c => c.type === 'creature' && !c.tapped)
+    .filter(c => !c.combatModifiers?.includes('defender'))
+    .filter(c => !c.summonSickness) // <-- Non contare le creature con summon sickness
+    .reduce((total, c) => total + c.strength, 0);
 }
 
 export function getAvailableMana() {
