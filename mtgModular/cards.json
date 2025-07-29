@@ -16,7 +16,7 @@
     "Llanowar Elves": { "type": "creature", "cost": "G", "cmc": 1, "strength": 1, "constitution": 1 },
     "Fountainport Charmer": { "type": "creature", "cost": "2G", "cmc": 3, "strength": 2, "constitution": 3, "onEnter": ["charmEffect"] },
     "Wastewood Verge": { "type": "land" },
-    "Underground Mortuary": { "type": "land", "onEnter": ["surveil"] }
+    "Underground Mortuary": { "type": "land", "onEnter": ["surveil", "entersTapped"] }
   },
   "composition": {
     "Kona, Rescue Beast": 2,
