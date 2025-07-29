@@ -1,4 +1,5 @@
-import { state } from './state.js';
+import { state, saveState } from './state.js';
+import { render } from './ui.js';
 
 // Mappa di effetti attivabili da onEnter, ecc.
 export const effects = {
@@ -54,6 +55,7 @@ export const effects = {
   entersTapped(card) {
     // Quando la carta entra in gioco, viene tappata automaticamente
     card.tapped = true;
+    saveState();
     render();
   }
 };
