@@ -50,14 +50,21 @@ export const effects = {
       console.log(`Surveil: ${topCard.name} was kept on top.`);
     }
   }
+
+  entersTapped(card) {
+    // Quando la carta entra in gioco, viene tappata automaticamente
+    card.tapped = true;
+    saveState();
+    render();
+  }
 };
 
-// Applica tutti gli effetti definiti in card.onEnter
-export function applyOnEnter(card) {
-  (card.onEnter || []).forEach(effectName => {
-    const effect = effects[effectName];
-    if (typeof effect === 'function') {
-      effect();
+// Esegue la lista di effetti onEnter di una carta
+export function triggerOnEnter(card) {
+  if (!card.onEnter) return;
+  card.onEnter.forEach(effectName => {
+    if (effects[effectName]) {
+      effects[effectName](card);
     }
   });
 }
