@@ -1,5 +1,5 @@
 import { state } from './state.js';
-import { drawCards, getAvailableMana, playCard, untapAll, passTurn } from './engine.js';
+import { drawCards, getAvailableMana, getCombatStrenght, playCard, untapAll, passTurn } from './engine.js';
 import { render } from './ui.js';
 
 export const strategy = {
@@ -44,9 +44,12 @@ export function runTurn() {
       }
     }
 
+
     if (action === 'combat') {
-      logReasoning(`Combat phase: (not implemented)`);
+      const combatPower = getCombatStrenght();
+      logReasoning(`Combat phase: total attacking power ${combatPower}`);
     }
+     
 
     if (action === 'end') {
       logReasoning(`End phase`);
