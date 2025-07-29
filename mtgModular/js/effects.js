@@ -60,7 +60,7 @@ export const effects = {
 };
 
 // Esegue la lista di effetti onEnter di una carta
-export function triggerOnEnter(card) {
+export function applyOnEnter(card) {
   if (!card.onEnter) return;
   card.onEnter.forEach(effectName => {
     if (effects[effectName]) {
