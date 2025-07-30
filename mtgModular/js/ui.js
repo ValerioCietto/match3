@@ -1,5 +1,5 @@
 import { state, saveState } from './state.js';
-import { playCard, startGame, playTurn } from './engine.js';
+import { playCard, startGame, playTurn, getCombatStrenght  } from './engine.js';
 import { runTurn } from './ai.js'
 
 export function setupUI() {
