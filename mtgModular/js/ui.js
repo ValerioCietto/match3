@@ -22,6 +22,7 @@ export function render() {
   const graveEl = document.getElementById('graveyard');
   const creatureZone = document.getElementById('creatureZone');
   const landZone = document.getElementById('landZone');
+  const combatEl = document.getElementById('combatStrength');
 
   handEl.innerHTML = '';
   graveEl.innerHTML = '';
@@ -58,6 +59,11 @@ export function render() {
       creatureZone.appendChild(div);
     }
   });
+
+  // Aggiorna Combat Strength
+  if (combatEl) {
+    combatEl.textContent = `Combat Strength: ${getCombatStrenght()}`;
+  }
 }
 
 function createCardDiv(card) {
