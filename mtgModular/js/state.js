@@ -4,6 +4,7 @@ export const composition = {};
 export let state = {
   turn: 0,
   life: 20,
+  opponentHp: 20,
   deck: [],
   hand: [],
   battlefield: [],
