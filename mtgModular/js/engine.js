@@ -176,6 +176,15 @@ export function getAvailableMana() {
   return mana;
 }
 
+// Tappa N terre disponibili
+export function tapAvailableLands(n) {
+  const lands = state.battlefield.filter(c => c.type === 'land' && !c.tapped);
+  for (let i = 0; i < n && i < lands.length; i++) {
+    lands[i].tapped = true;
+  }
+  saveState();
+}
+
 export function untapAll() {
   state.battlefield.forEach(card => {
     card.tapped = false;
