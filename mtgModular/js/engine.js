@@ -69,7 +69,7 @@ export function playCard(index) {
     state.battlefield.push(newCard);
   } else if (newCard.type === 'land') {
     if (state.landsPlayed >= 1) {
-      logReasoning('Already played a land this turn');
+      throw new Error('Cannot play more than one land per turn');
       state.hand.push(card); // rimetti in mano se non valido
       return;
     }
