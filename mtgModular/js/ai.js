@@ -1,5 +1,5 @@
 import { state } from './state.js';
-import { drawCards, getAvailableMana, getCombatStrenght, playCard, untapAll, passTurn } from './engine.js';
+import { drawCards, getAvailableMana, getCombatStrenght, playCard, untapAll, passTurn, tapAvailableLands } from './engine.js';
 import { render } from './ui.js';
 
 export const strategy = {
@@ -61,14 +61,6 @@ export function runTurn() {
       render();
     }
   }
-}
-
-function tapAvailableLands(n) {
-  const lands = state.battlefield.filter(c => c.type === 'land' && !c.tapped);
-  for (let i = 0; i < n && i < lands.length; i++) {
-    lands[i].tapped = true;
-  }
-
 }
 
 function logReasoning(text) {
