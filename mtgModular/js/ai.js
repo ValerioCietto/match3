@@ -24,7 +24,11 @@ export function runTurn() {
       const index = state.hand.findIndex(c => c.type === 'land');
       if (index !== -1) {
         logReasoning(`Playing land: ${state.hand[index].name}`);
-        playCard(index);
+        try {
+          playCard(index);
+        } catch (err) {
+          logReasoning(`AI failed to play card: ${err.message}`);
+        }
         render();
       }
     }
