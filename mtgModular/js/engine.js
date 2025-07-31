@@ -93,12 +93,8 @@ function shadowMulligan() {
 export function playCardName(name) {
   const index = state.hand.findIndex(c => c.name === name);
   if (index !== -1) {
-    const card = state.hand.splice(index, 1)[0];
-    state.battlefield.push({ ...card, tapped: false });
-    if (card.onEnter) applyOnEnter(card);
-    saveState();
+    playCard(index); // usa la logica centralizzata
   }
-  getAvailableMana()
 }
 
 // Pesca un numero di carte
