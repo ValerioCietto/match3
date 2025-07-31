@@ -1,6 +1,6 @@
 import { state, CARD_LIBRARY, composition, saveState } from './state.js';
 import { applyOnEnter } from './effects.js';
-import { render } from '.ui.js';
+import { render } from './ui.js';
 
 export function buildDeck() {
   const deck = [];
