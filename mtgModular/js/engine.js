@@ -61,20 +61,35 @@ export function playCard(index) {
   // Rimuovi dalla mano
   state.hand.splice(index, 1);
 
-  if (card.type === 'creature') {
-    card.summonSickness = true; // <-- Aggiunge summon sickness
-    state.battlefield.push(card);
-  } else if (card.type === 'land') {
+  // Preparazione della carta per il battlefield
+  const newCard = { ...card, tapped: false };
+
+  if (newCard.type === 'creature') {
+    newCard.summonSickness = true;
+    state.battlefield.push(newCard);
+  } else if (newCard.type === 'land') {
     if (state.landsPlayed >= 1) {
       logReasoning('Already played a land this turn');
       state.hand.push(card); // rimetti in mano se non valido
       return;
     }
-    state.battlefield.push(card);
+    // Entra tappata se ha l'effetto entersTapped
+    if (newCard.onEnter?.includes('entersTapped')) {
+      newCard.tapped = true;
+    }
+    state.battlefield.push(newCard);
     state.landsPlayed++;
   }
 
+  // 🔹 Applica effetti onEnter
+  if (newCard.onEnter) {
+    applyOnEnter(newCard);
+  }
+
+  // 🔹 Aggiorna stato e UI
   saveState();
+  getAvailableMana();
+  render();
 }
 
 function shadowMulligan() {
