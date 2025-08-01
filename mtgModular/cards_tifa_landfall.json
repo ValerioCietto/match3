@@ -1,0 +1,34 @@
+{
+  "library": {
+    "Forest": { "type": "land" },
+    "Fabled Passage": { "type": "land" },
+    "Escape Tunnel": { "type": "land" },
+    "Bushwhack": { "type": "sorcery", "cost": "G", "cmc": 1 },
+    "Llanowar Elves": { "type": "creature", "cost": "G", "cmc": 1, "strength": 1, "constitution": 1 },
+    "Tifa Lockhart": { "type": "creature", "cost": "1G", "cmc": 2, "strength": 1, "constitution": 2, "onLandfall": ["double_power"] },
+    "Traveling Chocobo": { "type": "creature", "cost": "2G", "cmc": 3, "strength": 3, "constitution": 2, "onLandfall": ["landfall_trigger"] },
+    "Mossborn Hydra": { "type": "creature", "cost": "2G", "cmc": 3, "strength": 0, "constitution": 0, "onEnter": ["11_counter"], "onLandfall": ["double_11_counters"], "combatModifiers":["trample"]},
+    "Sazh's Chocobo": { "type": "creature", "cost": "G", "cmc": 1, "strength": 0, "constitution": 1, "onLandfall": ["11_counter"] },
+    "Snakeskin Veil": { "type": "instant", "cost": "G", "cmc": 1, "onPlay": [{"onTargetCreature":["11_counter", "hexproof_until_end_of_turn"]}]},
+    "Springbloom Druid": { "type": "creature", "cost": "2G", "cmc": 3, "strength": 1, "constitution": 1, "onEnter": ["sacrifice_land", "search_basic_land_tapped", "search_basic_land_tapped"]},
+    "Ride the Shoopuf": { "type": "enchantment", "cost": "1G", "cmc": 2 },
+    "Hardened Bonds": { "type": "enchantment", "cost": "G", "cmc": 1 },
+    "Biosynthic Burst": { "type": "instant", "cost": "1G", "cmc": 2 }
+  },
+  "composition": {
+    "Forest": 15,
+    "Fabled Passage": 4,
+    "Escape Tunnel": 4,
+    "Bushwhack": 4,
+    "Llanowar Elves": 4,
+    "Tifa Lockhart": 4,
+    "Traveling Chocobo": 4,
+    "Mossborn Hydra": 4,
+    "Sazh's Chocobo": 4,
+    "Snakeskin Veil": 4,
+    "Springbloom Druid": 3,
+    "Ride the Shoopuf": 3,
+    "Hardened Bonds": 2,
+    "Biosynthic Burst": 1
+  }
+}
