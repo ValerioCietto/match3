@@ -11,9 +11,9 @@
     "Sazh's Chocobo": { "type": "creature", "cost": "G", "cmc": 1, "strength": 0, "constitution": 1, "onLandfall": ["11_counter"] },
     "Snakeskin Veil": { "type": "instant", "cost": "G", "cmc": 1, "onPlay": [{"onTargetCreature":["11_counter", "hexproof_until_end_of_turn"]}]},
     "Springbloom Druid": { "type": "creature", "cost": "2G", "cmc": 3, "strength": 1, "constitution": 1, "onEnter": ["sacrifice_land", "search_basic_land_tapped", "search_basic_land_tapped"]},
-    "Ride the Shoopuf": { "type": "enchantment", "cost": "1G", "cmc": 2 },
-    "Hardened Bonds": { "type": "enchantment", "cost": "G", "cmc": 1 },
-    "Biosynthic Burst": { "type": "instant", "cost": "1G", "cmc": 2 }
+    "Ride the Shoopuf": { "type": "enchantment", "cost": "1G", "cmc": 2, "onLandfall": [{"onTargetCreature": ["11_counter"]}]},
+    "Hardened Bonds": { "type": "enchantment", "cost": "G", "cmc": 1, "on11CounterPlaced": ["seekACreatureCardAndGivePerpetually11Max1PerTurn"] },
+    "Biosynthic Burst": { "type": "instant", "cost": "1G", "cmc": 2, "onPlay": [{"onTargetCreature": ["11_counter", "gain_trample_until_end_of_turn", "gain_indestructible_until_end_of_turn", "gain_reach_until_end_of_turn", "untap"]}] }
   },
   "composition": {
     "Forest": 15,
