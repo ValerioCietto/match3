@@ -1,5 +1,5 @@
 import { state, CARD_LIBRARY, composition, saveState } from './state.js';
-import { applyOnEnter } from './effects.js';
+import { applyOnEnter, applyOnLandfall } from './effects.js';
 import { render } from './ui.js';
 
 export function buildDeck() {
@@ -85,6 +85,9 @@ export function playCard(index) {
   // 🔹 Applica effetti onEnter
   if (newCard.onEnter) {
     applyOnEnter(newCard);
+    if (card.type === 'land') {
+      applyOnLandfall();
+    }
   }
 
   // 🔹 Aggiorna stato e UI
