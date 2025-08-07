@@ -70,3 +70,56 @@ export function applyOnEnter(card) {
     }
   });
 }
+
+// Esegue tutti i trigger onLandfall per le carte in gioco
+export function applyOnLandfall() {
+  const triggers = state.battlefield.filter(c => Array.isArray(c.onLandfall));
+
+  if (triggers.length === 0) return;
+
+  console.log(`executing trigger landfall on [${triggers.map(c => `"${c.name}"`).join(', ')}]`);
+
+  triggers.forEach(card => {
+    card.onLandfall.forEach(effect => {
+      executeLandfallEffect(card, effect);
+    });
+  });
+}
+
+// Funzione per gestire singolo effetto Landfall
+function executeLandfallEffect(card, effect) {
+  // Puoi espandere qui la logica dei diversi tipi di effetti
+  switch (effect) {
+    case '11_counter':
+      console.log(`${card.name} gains a +1/+1 counter (Landfall)`);
+      if (card.strength !== undefined && card.constitution !== undefined) {
+        card.strength += 1;
+        card.constitution += 1;
+      }
+      break;
+
+    case 'double_11_counters':
+      console.log(`${card.name} doubles its +1/+1 counters (Landfall)`);
+      // Qui potresti implementare logica per raddoppiare i segnalini reali
+      if (card.strength !== undefined && card.constitution !== undefined) {
+        card.strength *= 2;
+        card.constitution *= 2;
+      }
+      break;
+
+    case 'double_power':
+      console.log(`${card.name} doubles its power (Landfall)`);
+      if (card.strength !== undefined) {
+        card.strength *= 2;
+      }
+      break;
+
+    case 'landfall_trigger':
+      console.log(`${card.name} triggers its landfall ability`);
+      // Qui puoi mettere un effetto generico o un placeholder
+      break;
+
+    default:
+      console.warn(`Unknown Landfall effect: ${effect} on ${card.name}`);
+  }
+}
