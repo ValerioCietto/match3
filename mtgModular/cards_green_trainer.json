@@ -1,0 +1,40 @@
+{
+  "library": {
+    "Jungle Delver": { "type": "creature", "cost": "G", "cmc": 1, "strength": 1, "constitution": 1 },
+    "Woodland Mystic": { "type": "creature", "cost": "1G", "cmc": 2, "strength": 1, "constitution": 1 },
+    "Ilysian Caryatid": { "type": "creature", "cost": "1G", "cmc": 2, "strength": 1, "constitution": 1 },
+    "Wildwood Patrol": { "type": "creature", "cost": "2G", "cmc": 3, "strength": 4, "constitution": 1 },
+    "Baloth Packhunter": { "type": "creature", "cost": "3G", "cmc": 4, "strength": 4, "constitution": 4 },
+    "Rumbling Baloth": { "type": "creature", "cost": "2GG", "cmc": 4, "strength": 4, "constitution": 4 },
+    "World Shaper": { "type": "creature", "cost": "3G", "cmc": 4, "strength": 3, "constitution": 3 },
+    "Prized Unicorn": { "type": "creature", "cost": "3G", "cmc": 4, "strength": 2, "constitution": 2 },
+    "Gigantosaurus": { "type": "creature", "cost": "GGGGG", "cmc": 5, "strength": 10, "constitution": 10 },
+    "Sentinel Spider": { "type": "creature", "cost": "3GG", "cmc": 5, "strength": 4, "constitution": 4 },
+    "Affectionate Indrik": { "type": "creature", "cost": "5G", "cmc": 6, "strength": 4, "constitution": 4 },
+    "Rampaging Brontodon": { "type": "creature", "cost": "4GG", "cmc": 6, "strength": 7, "constitution": 7 },
+    "Stony Strength": { "type": "instant", "cost": "G", "cmc": 1 },
+    "Rabid Bite": { "type": "sorcery", "cost": "1G", "cmc": 2 },
+    "Colossal Majesty": { "type": "enchantment", "cost": "2G", "cmc": 3 },
+    "Epic Proportions": { "type": "enchantment", "cost": "4GG", "cmc": 6 },
+    "Forest": { "type": "land" }
+  },
+  "composition": {
+    "Jungle Delver": 3,
+    "Woodland Mystic": 2,
+    "Ilysian Caryatid": 4,
+    "Wildwood Patrol": 2,
+    "Baloth Packhunter": 4,
+    "Rumbling Baloth": 2,
+    "World Shaper": 1,
+    "Prized Unicorn": 1,
+    "Gigantosaurus": 2,
+    "Sentinel Spider": 2,
+    "Affectionate Indrik": 2,
+    "Rampaging Brontodon": 2,
+    "Stony Strength": 2,
+    "Rabid Bite": 3,
+    "Colossal Majesty": 2,
+    "Epic Proportions": 1,
+    "Forest": 25
+  }
+}
