@@ -1,5 +1,5 @@
 import { state } from './state.js';
-import { drawCards, getAvailableMana, getCombatStrenght, playCard, untapAll, passTurn, tapAvailableLands } from './engine.js';
+import { drawCards, getAvailableMana, getCombatStrenght, playCard, untapAll, passTurn, tapAvailableLands, dealDamageToOpponent } from './engine.js';
 import { render } from './ui.js';
 
 export const strategy = {
@@ -94,6 +94,7 @@ function _playCreaturePhase() {
 
 function _combatPhase() {
   const combatPower = getCombatStrenght();
+  dealDamageToOpponent(combatPower);
   logReasoning(`Combat phase: total attacking power ${combatPower}`);
 }
 
