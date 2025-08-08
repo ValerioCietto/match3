@@ -16,8 +16,7 @@ export function setupUI() {
     render();
   };
   document.getElementById('btnPlayAIGame').onclick = () => {
-    runTurn();
-    render();
+    playAIGame();
   };
 }
 
