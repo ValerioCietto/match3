@@ -28,6 +28,9 @@ export function startGame() {
   state.turn = 1;
   state.landsPlayed = 0;
   state.selectedCardIndex = null;
+  state.opponentHp = 20;
+  state.gameEnded = false;
+  state.gameWon = false;
   for (let i = 0; i < 7; i++) {
     drawCard();
   }
