@@ -23,11 +23,13 @@ export function render() {
   const creatureZone = document.getElementById('creatureZone');
   const landZone = document.getElementById('landZone');
   const combatEl = document.getElementById('combatStrength');
+  const opponentHP = document.getElementById('opponentHp')
 
   handEl.innerHTML = '';
   graveEl.innerHTML = '';
   creatureZone.innerHTML = '';
   landZone.innerHTML = '';
+  opponentHp.innerHTML = state.opponentHp;
 
   // Graveyard
   state.graveyard.forEach(card => {
