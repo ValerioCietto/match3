@@ -168,6 +168,7 @@ export function dealDamageToOpponent(damage) {
     state.gameEnded = true;
     state.gameWon = true;
   }
+  saveState();
 }
 
 // Forza delle creature disponibili per attacco
