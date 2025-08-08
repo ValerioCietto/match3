@@ -15,7 +15,20 @@ export function setupUI() {
     runTurn();
     render();
   };
+  document.getElementById('btnPlayAIGame').onclick = () => {
+    runTurn();
+    render();
+  };
 }
+
+export function playAIGame() {
+  startGame();
+  render();
+  while(!state.gameEnded){
+    runTurn();
+    render();
+  }
+} 
 
 export function render() {
   const handEl = document.getElementById('hand');
