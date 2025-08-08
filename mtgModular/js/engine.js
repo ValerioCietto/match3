@@ -162,6 +162,14 @@ export function getStrenghtTotalCreatures() {
     .reduce((sum, c) => sum + c.strength, 0);
 }
 
+export function dealDamageToOpponent(damage) {
+  state.opponentHp -= damage;
+  if( state.opponentHp <= 0 ) {
+    state.gameEnded = true;
+    state.gameWon = true;
+  }
+}
+
 // Forza delle creature disponibili per attacco
 export function getCombatStrenght() {
   return state.battlefield
