@@ -11,7 +11,7 @@ export let state = {
   graveyard: [],
   landsPlayed: 0,
   gameEnded: false,
-  gameWon: false;
+  gameWon: false,
   selectedCardIndex: null
 };
 
