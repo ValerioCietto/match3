@@ -1,4 +1,4 @@
-import { state, CARD_LIBRARY, composition, saveState } from './state.js';
+import { state, CARD_LIBRARY, composition, saveState, addGameResult } from './state.js';
 import { applyOnEnter, applyOnLandfall } from './effects.js';
 import { render } from './ui.js';
 
@@ -37,6 +37,13 @@ export function startGame() {
   shadowMulligan();
   saveState();
   getAvailableMana();
+}
+
+function endGame(won) {
+  state.gameEnded = true;
+  state.gameWon = won;
+  addGameResult(won, state.turn, state.deckName || "Unknown Deck");
+  saveState();
 }
 
 export function drawCard() {
@@ -170,6 +177,7 @@ export function dealDamageToOpponent(damage) {
   if( state.opponentHp <= 0 ) {
     state.gameEnded = true;
     state.gameWon = true;
+    endGame(true)
   }
   saveState();
   render();
