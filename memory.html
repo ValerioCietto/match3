@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Memory – 24 Tessere (Forme casuali)</title>
+<style>
+  :root{
+    --bg:#0f1220;
+    --card:#1a1f35;
+    --accent:#6bd5ff;
+    --good:#34d399;
+    --bad:#f87171;
+    --text:#e8ecff;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    background: radial-gradient(1200px 800px at 50% -10%, #1b2350 0%, var(--bg) 60%);
+    color:var(--text);
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Apple Color Emoji","Segoe UI Emoji";
+    display:flex; flex-direction:column; align-items:center;
+  }
+  header{
+    width:100%; max-width:900px;
+    padding:12px 16px;
+    display:grid; grid-template-columns:1fr auto auto auto; gap:8px; align-items:center;
+  }
+  h1{font-size:clamp(18px, 4vw, 22px); margin:0; font-weight:700; letter-spacing:.2px}
+  .pill{
+    background:linear-gradient(180deg, #202746, #131a36);
+    border:1px solid #2a335f;
+    padding:8px 10px; border-radius:999px; font-size:14px; white-space:nowrap;
+  }
+  button{
+    appearance:none; border:0; cursor:pointer;
+    background:linear-gradient(180deg, #2c3b6b, #1e2a56);
+    border:1px solid #395095;
+    color:var(--text); padding:10px 14px; border-radius:12px;
+    font-weight:600; font-size:14px;
+    transition: transform .08s ease, filter .2s ease, background .2s ease;
+  }
+  button:active{ transform: scale(.98) }
+  #game-wrap{
+    width:100%;
+    display:flex; justify-content:center;
+  }
+  canvas{
+    background: linear-gradient(180deg, #121735, #0b0f24);
+    border:1px solid #222b55;
+    border-radius:16px;
+    touch-action:none;
+    max-width:min(92vw, 820px);
+    width:min(92vw, 820px);
+    height:auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.04);
+  }
+  footer{
+    width:100%; max-width:900px;
+    padding:10px 16px 28px;
+    display:flex; flex-wrap:wrap; gap:8px; justify-content:space-between; align-items:center;
+    opacity:.9; font-size:13px;
+  }
+  .legend{opacity:.9}
+  .badge{padding:4px 8px; border-radius:8px; background:#1a2143; border:1px solid #27306b}
+  .win-banner{
+    position:fixed; inset:0; display:none; place-items:center; padding:20px;
+    background:rgba(8,12,28,.65); backdrop-filter: blur(6px);
+  }
+  .win-card{
+    width:min(500px, 92vw);
+    background:linear-gradient(180deg, #1a2040, #121735);
+    border:1px solid #2a346b; border-radius:16px; padding:18px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.04);
+  }
+  .win-card h2{margin:.2rem 0 .4rem 0}
+  .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+  .row > *{flex:0 0 auto}
+</style>
+</head>
+<body>
+  <header>
+    <h1>Memory – 24 Tessere</h1>
+    <div class="pill" id="movesPill">Mosse: 0</div>
+    <div class="pill" id="timePill">Tempo: 00:00</div>
+    <button id="restartBtn" title="Nuova partita">↻ Nuova</button>
+  </header>
+
+  <div id="game-wrap">
+    <canvas id="board" width="900" height="600" aria-label="Gioco Memory"></canvas>
+  </div>
+
+  <footer>
+    <div class="legend">Abbina tutte le coppie (12) nel minor numero di mosse e tempo.</div>
+    <div class="row">
+      <div class="badge" id="bestMoves">Best mosse: –</div>
+      <div class="badge" id="bestTime">Best tempo: –</div>
+    </div>
+  </footer>
+
+  <div class="win-banner" id="winBanner" role="dialog" aria-modal="true">
+    <div class="win-card">
+      <h2>🎉 Hai vinto!</h2>
+      <p class="legend" id="summary"></p>
+      <div class="row" style="margin-top:8px">
+        <button id="againBtn">Gioca ancora</button>
+        <button id="closeBtn" style="background:#24305f;border-color:#31407d;">Chiudi</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // ======= Config =======
+  const COLS = 6, ROWS = 4;               // 6x4 = 24
+  const PAIRS = (COLS*ROWS)/2;            // 12
+  const FLIP_BACK_DELAY = 700;            // ms
+  const PADDING = 10;                     // inner padding per tessera
+  const FACE_RADIUS = 12;                 // angoli arrotondati tessera coperta
+  const STORAGE_KEYS = {
+    bestMoves: 'memory24_bestMoves',
+    bestTime:  'memory24_bestTime'
+  };
+
+  // ======= State =======
+  const canvas = document.getElementById('board');
+  const ctx = canvas.getContext('2d');
+  const movesPill = document.getElementById('movesPill');
+  const timePill  = document.getElementById('timePill');
+  const bestMovesEl = document.getElementById('bestMoves');
+  const bestTimeEl  = document.getElementById('bestTime');
+  const winBanner = document.getElementById('winBanner');
+  const summaryEl = document.getElementById('summary');
+  const restartBtn = document.getElementById('restartBtn');
+  const againBtn = document.getElementById('againBtn');
+  const closeBtn = document.getElementById('closeBtn');
+
+  let dpr = window.devicePixelRatio || 1;
+  let logicalWidth = 900, logicalHeight = 600; // base logical size; scaled by CSS & DPR
+  let tileW, tileH, gridOffsetX, gridOffsetY;
+
+  let deck = [];          // array di tile: {id, pairId, revealed, matched}
+  let shapes = [];        // shape descriptors per pairId
+  let firstPick = null, secondPick = null;
+  let lock = false;
+  let moves = 0;
+  let startTime = null;
+  let timerHandle = null;
+  let elapsedMs = 0;
+  let matchedPairs = 0;
+
+  // ======= Utility =======
+  const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+  const now = () => performance.now();
+
+  function shuffle(arr) {
+    for (let i=arr.length-1; i>0; i--) {
+      const j = Math.floor(Math.random()*(i+1));
+      [arr[i],arr[j]] = [arr[j],arr[i]];
+    }
+    return arr;
+  }
+
+  function formatTime(ms){
+    const s = Math.floor(ms/1000);
+    const m = Math.floor(s/60);
+    const ss = s%60;
+    return `${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
+  }
+
+  function randInt(a,b){ return a + Math.floor(Math.random()*(b-a+1)); }
+  function randFloat(a,b){ return a + Math.random()*(b-a); }
+
+  // Pastel-ish random color
+  function randColor() {
+    const h = randInt(0,360);
+    const s = randInt(50,75);
+    const l = randInt(55,70);
+    return `hsl(${h} ${s}% ${l}%)`;
+  }
+
+  // ======= Shape generator & drawer =======
+  // Supported shape types; each returns a draw function using descriptor
+  function makeRandomShapeDescriptor(seedIndex){
+    // type selection
+    const types = ['circle','rect','triangle','diamond','star','ring','hex','pent','bolt','heart','clover','capsule'];
+    const type = types[seedIndex % types.length];
+
+    // common properties
+    const fill = randColor();
+    const stroke = Math.random() < 0.5 ? 'white' : 'rgba(255,255,255,.85)';
+    const strokeW = randInt(2,4);
+    // some shapes benefit from secondary color
+    const fill2 = Math.random()<0.5 ? randColor() : null;
+
+    return { type, fill, stroke, strokeW, fill2 };
+  }
+
+  function drawShape(shape, cx, cy, w, h){
+    const s = shape;
+    ctx.save();
+    ctx.translate(cx, cy);
+
+    const minDim = Math.min(w, h) - PADDING*2;
+    const r = minDim/2;
+
+    ctx.lineWidth = s.strokeW;
+
+    function fillStroke() {
+      if (s.fill) { ctx.fillStyle = s.fill; ctx.fill(); }
+      if (s.stroke) { ctx.strokeStyle = s.stroke; ctx.stroke(); }
+    }
+
+    switch(s.type){
+      case 'circle': {
+        ctx.beginPath();
+        ctx.arc(0,0,r*0.9,0,Math.PI*2);
+        fillStroke();
+        break;
+      }
+      case 'rect': {
+        const rr = Math.min(14, r*0.3);
+        roundedRectPath(-r*0.9, -r*0.6, r*1.8, r*1.2, rr);
+        fillStroke();
+        break;
+      }
+      case 'triangle': {
+        polygonPath(3, r*0.95, -Math.PI/2);
+        fillStroke();
+        break;
+      }
+      case 'diamond': {
+        ctx.beginPath();
+        ctx.moveTo(0,-r*0.95);
+        ctx.lineTo(r*0.75,0);
+        ctx.lineTo(0,r*0.95);
+        ctx.lineTo(-r*0.75,0);
+        ctx.closePath();
+        fillStroke();
+        break;
+      }
+      case 'star': {
+        starPath(r*0.95, 5);
+        if (s.fill2){
+          // ring star
+          ctx.save();
+          ctx.clip();
+          ctx.beginPath();
+          ctx.arc(0,0,r*0.45,0,Math.PI*2);
+          ctx.fillStyle = s.fill2;
+          ctx.fill();
+          ctx.restore();
+        }
+        fillStroke();
+        break;
+      }
+      case 'ring': {
+        ctx.beginPath(); ctx.arc(0,0,r*0.9,0,Math.PI*2);
+        ctx.lineWidth = Math.max(6, r*0.22);
+        ctx.strokeStyle = s.fill || '#fff';
+        ctx.stroke();
+        // inner dot
+        ctx.beginPath(); ctx.arc(0,0,r*0.18,0,Math.PI*2);
+        ctx.fillStyle = s.fill2 || 'white'; ctx.fill();
+        break;
+      }
+      case 'hex': {
+        polygonPath(6, r*0.95, Math.PI/6);
+        fillStroke();
+        break;
+      }
+      case 'pent': {
+        polygonPath(5, r*0.95, -Math.PI/2);
+        fillStroke();
+        break;
+      }
+      case 'bolt': { // lightning
+        ctx.beginPath();
+        const a = r*0.9;
+        ctx.moveTo(-a*0.2,-a*0.9);
+        ctx.lineTo(a*0.1,-a*0.1);
+        ctx.lineTo(-a*0.05,-a*0.1);
+        ctx.lineTo(a*0.2,a*0.9);
+        ctx.lineTo(-a*0.1,a*0.1);
+        ctx.lineTo(a*0.05,a*0.1);
+        ctx.closePath();
+        fillStroke();
+        break;
+      }
+      case 'heart': {
+        heartPath(r*0.9);
+        fillStroke();
+        break;
+      }
+      case 'clover': {
+        cloverPath(r*0.85);
+        fillStroke();
+        break;
+      }
+      case 'capsule': {
+        capsulePath(-r*0.95, -r*0.45, r*1.9, r*0.9, r*0.45);
+        fillStroke();
+        if (s.fill2){
+          ctx.beginPath();
+          capsulePath(-r*0.5, -r*0.25, r*1.0, r*0.5, r*0.25);
+          ctx.fillStyle = s.fill2; ctx.fill();
+        }
+        break;
+      }
+    }
+
+    ctx.restore();
+  }
+
+  function roundedRectPath(x,y,w,h,r){
+    const rr = Math.min(r, Math.min(w,h)/2);
+    ctx.beginPath();
+    ctx.moveTo(x+rr, y);
+    ctx.arcTo(x+w, y,   x+w, y+h, rr);
+    ctx.arcTo(x+w, y+h, x,   y+h, rr);
+    ctx.arcTo(x,   y+h, x,   y,   rr);
+    ctx.arcTo(x,   y,   x+w, y,   rr);
+    ctx.closePath();
+  }
+
+  function polygonPath(n, radius, startAngle=0){
+    ctx.beginPath();
+    for (let i=0;i<n;i++){
+      const a = startAngle + i*2*Math.PI/n;
+      const px = Math.cos(a)*radius;
+      const py = Math.sin(a)*radius;
+      if (i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+    }
+    ctx.closePath();
+  }
+
+  function starPath(radius, points=5){
+    const inner = radius*0.45;
+    ctx.beginPath();
+    for (let i=0;i<points*2;i++){
+      const r = (i%2===0) ? radius : inner;
+      const a = -Math.PI/2 + i*Math.PI/points;
+      const x = Math.cos(a)*r, y = Math.sin(a)*r;
+      if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.closePath();
+  }
+
+  function heartPath(r){
+    ctx.beginPath();
+    ctx.moveTo(0, r*0.5);
+    ctx.bezierCurveTo(r, r*1.2, r*1.3, 0, 0, -r*0.5);
+    ctx.bezierCurveTo(-r*1.3, 0, -r, r*1.2, 0, r*0.5);
+    ctx.closePath();
+  }
+
+  function cloverPath(r){
+    // 3-leaf clover
+    const leafR = r*0.6;
+    ctx.beginPath();
+    // top
+    ctx.arc(0, -leafR*0.8, leafR, 0, Math.PI*2);
+    // left
+    ctx.moveTo(0,0);
+    ctx.arc(-leafR*0.78, 0.3*leafR, leafR, 0, Math.PI*2);
+    // right
+    ctx.moveTo(0,0);
+    ctx.arc(leafR*0.78, 0.3*leafR, leafR, 0, Math.PI*2);
+    // stem
+    ctx.moveTo(0, leafR*0.8);
+    ctx.quadraticCurveTo(leafR*0.2, leafR*1.4, 0, leafR*1.6);
+    ctx.quadraticCurveTo(-leafR*0.2, leafR*1.4, 0, leafR*0.8);
+  }
+
+  function capsulePath(x,y,w,h,r){
+    const rr = Math.min(r, h/2);
+    ctx.moveTo(x+rr,y);
+    ctx.lineTo(x+w-rr,y);
+    ctx.arc(x+w-rr,y+rr,rr,-Math.PI/2,Math.PI/2);
+    ctx.lineTo(x+rr,y+h);
+    ctx.arc(x+rr,y+rr,rr,Math.PI/2, -Math.PI/2);
+    ctx.closePath();
+  }
+
+  // ======= Layout & scaling =======
+  function resizeCanvas(){
+    // Canvas CSS width is controlled by CSS; we read its actual displayed size
+    const rect = canvas.getBoundingClientRect();
+    const cssW = rect.width;
+    // maintain 3:2 aspect (900x600) but scale down to fit viewport height if needed
+    const maxH = window.innerHeight - 160; // leave room for header/footer
+    let cssH = cssW * (2/3);
+    if (cssH > maxH) {
+      cssH = maxH;
+    }
+    // apply backing store size with DPR
+    dpr = window.devicePixelRatio || 1;
+    logicalWidth = Math.round(cssW);
+    logicalHeight = Math.round(cssH);
+    canvas.width = Math.round(logicalWidth * dpr);
+    canvas.height = Math.round(logicalHeight * dpr);
+    canvas.style.height = logicalHeight + 'px';
+
+    ctx.setTransform(dpr,0,0,dpr,0,0); // scale drawing to CSS pixels
+
+    // compute grid cell size centered
+    tileW = Math.floor(logicalWidth / COLS);
+    tileH = Math.floor(logicalHeight / ROWS);
+    const gridW = tileW * COLS;
+    const gridH = tileH * ROWS;
+    gridOffsetX = Math.floor((logicalWidth - gridW)/2);
+    gridOffsetY = Math.floor((logicalHeight - gridH)/2);
+
+    render();
+  }
+
+  // ======= Game setup =======
+  function newGame(){
+    moves = 0;
+    matchedPairs = 0;
+    startTime = null;
+    elapsedMs = 0;
+    firstPick = secondPick = null;
+    lock = false;
+    stopTimer();
+
+    // generate shapes for pairs
+    shapes = Array.from({length: PAIRS}, (_,i)=> makeRandomShapeDescriptor(i + randInt(0, 999)));
+
+    // build deck: 2 tiles per pair
+    deck = [];
+    let idCounter = 0;
+    for (let p=0;p<PAIRS;p++){
+      for (let k=0;k<2;k++){
+        deck.push({ id:idCounter++, pairId:p, revealed:false, matched:false });
+      }
+    }
+    shuffle(deck);
+
+    updateHUD();
+    render();
+  }
+
+  // ======= Timer & HUD =======
+  function startTimer(){
+    if (timerHandle) return;
+    const start = now() - elapsedMs;
+    timerHandle = setInterval(() => {
+      elapsedMs = now() - start;
+      timePill.textContent = `Tempo: ${formatTime(elapsedMs)}`;
+    }, 200);
+  }
+  function stopTimer(){
+    if (timerHandle){
+      clearInterval(timerHandle);
+      timerHandle = null;
+    }
+  }
+  function updateHUD(){
+    movesPill.textContent = `Mosse: ${moves}`;
+    timePill.textContent = `Tempo: ${formatTime(elapsedMs)}`;
+    const bm = localStorage.getItem(STORAGE_KEYS.bestMoves);
+    const bt = localStorage.getItem(STORAGE_KEYS.bestTime);
+    bestMovesEl.textContent = `Best mosse: ${bm ? bm : '–'}`;
+    bestTimeEl.textContent  = `Best tempo: ${bt ? formatTime(+bt) : '–'}`;
+  }
+
+  // ======= Input handling =======
+  function getTileAt(x,y){
+    // convert from client to canvas CSS pixels
+    const rect = canvas.getBoundingClientRect();
+    const px = (x - rect.left);
+    const py = (y - rect.top);
+
+    // in grid?
+    const gx = px - gridOffsetX;
+    const gy = py - gridOffsetY;
+    if (gx<0 || gy<0) return -1;
+    const col = Math.floor(gx / tileW);
+    const row = Math.floor(gy / tileH);
+    if (col<0 || col>=COLS || row<0 || row>=ROWS) return -1;
+    const idx = row * COLS + col;
+    return idx >= 0 && idx < deck.length ? idx : -1;
+  }
+
+  function onPointer(e){
+    e.preventDefault();
+    if (lock) return;
+
+    const isTouch = e.touches && e.touches.length;
+    const clientX = isTouch ? e.touches[0].clientX : (e.clientX ?? e.pageX);
+    const clientY = isTouch ? e.touches[0].clientY : (e.clientY ?? e.pageY);
+
+    const idx = getTileAt(clientX, clientY);
+    if (idx === -1) return;
+
+    const tile = deck[idx];
+    if (tile.matched || tile.revealed) return;
+
+    // start timer at first flip
+    if (!startTime){
+      startTime = now();
+      startTimer();
+    }
+
+    flipUp(idx);
+    render();
+
+    if (firstPick === null){
+      firstPick = idx;
+    } else if (secondPick === null){
+      // ignore double click same card
+      if (idx === firstPick) return;
+      secondPick = idx;
+      moves++;
+      updateHUD();
+
+      const a = deck[firstPick], b = deck[secondPick];
+      if (a.pairId === b.pairId){
+        // match
+        a.matched = b.matched = true;
+        firstPick = secondPick = null;
+        matchedPairs++;
+        render();
+
+        if (matchedPairs === PAIRS){
+          // win
+          stopTimer();
+          checkBests();
+          showWin();
+        }
+      } else {
+        // mismatch: flip back after delay
+        lock = true;
+        setTimeout(() => {
+          flipDown(firstPick);
+          flipDown(secondPick);
+          firstPick = secondPick = null;
+          lock = false;
+          render();
+        }, FLIP_BACK_DELAY);
+      }
+    }
+  }
+
+  function flipUp(i){ deck[i].revealed = true; }
+  function flipDown(i){ deck[i].revealed = false; }
+
+  // ======= Win / Bests =======
+  function checkBests(){
+    const prevMoves = localStorage.getItem(STORAGE_KEYS.bestMoves);
+    const prevTime  = localStorage.getItem(STORAGE_KEYS.bestTime);
+
+    let newBest = [];
+    if (!prevMoves || moves < +prevMoves){
+      localStorage.setItem(STORAGE_KEYS.bestMoves, String(moves));
+      newBest.push('mosse');
+    }
+    if (!prevTime || elapsedMs < +prevTime){
+      localStorage.setItem(STORAGE_KEYS.bestTime, String(elapsedMs));
+      newBest.push('tempo');
+    }
+    updateHUD();
+    const also = newBest.length ? ` (nuovo record: ${newBest.join(' + ')})` : '';
+    summaryEl.textContent = `Completato in ${formatTime(elapsedMs)} con ${moves} mosse${also}.`;
+  }
+
+  function showWin(){ winBanner.style.display = 'grid'; }
+  function hideWin(){ winBanner.style.display = 'none'; }
+
+  // ======= Rendering =======
+  function drawBackTile(x,y,w,h){
+    const r = FACE_RADIUS;
+    // base
+    ctx.save();
+    ctx.translate(x,y);
+    roundedRectPath(4,4,w-8,h-8,r);
+    const grad = ctx.createLinearGradient(0,0,0,h);
+    grad.addColorStop(0,'#1b2247');
+    grad.addColorStop(1,'#101634');
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.strokeStyle = '#2a356e';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // subtle pattern
+    ctx.globalAlpha = .12;
+    ctx.lineWidth = 1;
+    for(let i=8;i<w;i+=10){
+      ctx.beginPath();
+      ctx.moveTo(i,8);
+      ctx.lineTo(i,h-8);
+      ctx.strokeStyle = '#a6b7ff';
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  function drawRevealedTile(x,y,w,h, shape){
+    // face
+    ctx.save();
+    ctx.translate(x,y);
+    roundedRectPath(4,4,w-8,h-8, FACE_RADIUS);
+    const grad = ctx.createLinearGradient(0,0,0,h);
+    grad.addColorStop(0,'#16204a');
+    grad.addColorStop(1,'#0e1434');
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.strokeStyle = '#6bd5ff';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // shape
+    drawShape(shape, (w)/2, (h)/2, w, h);
+
+    ctx.restore();
+  }
+
+  function render(){
+    // clear
+    ctx.clearRect(0,0, logicalWidth, logicalHeight);
+
+    // glow background
+    const g = ctx.createRadialGradient(logicalWidth/2, logicalHeight*0.3, 20, logicalWidth/2, logicalHeight*0.3, Math.max(logicalWidth,logicalHeight));
+    g.addColorStop(0,'rgba(107,213,255,0.08)');
+    g.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle = g; ctx.fillRect(0,0,logicalWidth,logicalHeight);
+
+    // draw grid of tiles
+    for (let r=0;r<ROWS;r++){
+      for (let c=0;c<COLS;c++){
+        const idx = r*COLS + c;
+        const tile = deck[idx];
+        const x = gridOffsetX + c*tileW;
+        const y = gridOffsetY + r*tileH;
+
+        if (tile.revealed || tile.matched){
+          drawRevealedTile(x,y,tileW, tileH, shapes[tile.pairId]);
+        } else {
+          drawBackTile(x,y,tileW, tileH);
+        }
+      }
+    }
+  }
+
+  // ======= Events =======
+  canvas.addEventListener('pointerdown', onPointer, {passive:false});
+  canvas.addEventListener('touchstart', onPointer, {passive:false});
+
+  window.addEventListener('resize', resizeCanvas);
+  restartBtn.addEventListener('click', ()=>{ hideWin(); newGame(); });
+  againBtn.addEventListener('click', ()=>{ hideWin(); newGame(); });
+  closeBtn.addEventListener('click', ()=> hideWin());
+
+  // ======= Bootstrap =======
+  newGame();
+  resizeCanvas();
+
+})();
+</script>
+</body>
+</html>
