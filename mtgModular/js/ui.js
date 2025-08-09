@@ -1,4 +1,4 @@
-import { state, saveState } from './state.js';
+import { state, saveState, loadStats  } from './state.js';
 import { playCard, startGame, playTurn, getCombatStrenght  } from './engine.js';
 import { runTurn } from './ai.js'
 
@@ -78,6 +78,43 @@ export function render() {
   if (combatEl) {
     combatEl.textContent = `Combat Strength: ${getCombatStrenght()}`;
   }
+}
+
+export function drawStatsGraph() {
+  const stats = loadStats();
+  const ctx = document.getElementById('statsGraph').getContext('2d');
+  ctx.clearRect(0,0,300,150);
+
+  const maxTurn = 20;
+  const winCounts = Array(maxTurn).fill(0);
+  const lossCounts = Array(maxTurn).fill(0);
+
+  stats.forEach(s => {
+    if (s.turn <= maxTurn) {
+      if (s.won) winCounts[s.turn-1]++;
+      else lossCounts[s.turn-1]++;
+    }
+  });
+
+  ctx.strokeStyle = "green";
+  ctx.beginPath();
+  winCounts.forEach((v,i) => {
+    const x = (i/(maxTurn-1))*300;
+    const y = 150 - (v * 10); // scale: 10px per game
+    if (i === 0) ctx.moveTo(x,y);
+    else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+
+  ctx.strokeStyle = "red";
+  ctx.beginPath();
+  lossCounts.forEach((v,i) => {
+    const x = (i/(maxTurn-1))*300;
+    const y = 150 - (v * 10);
+    if (i === 0) ctx.moveTo(x,y);
+    else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
 }
 
 function createCardDiv(card) {
