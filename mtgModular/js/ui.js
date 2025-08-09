@@ -78,6 +78,7 @@ export function render() {
   if (combatEl) {
     combatEl.textContent = `Combat Strength: ${getCombatStrenght()}`;
   }
+  drawStatsGraph();
 }
 
 export function drawStatsGraph() {
