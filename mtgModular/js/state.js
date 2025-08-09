@@ -25,3 +25,18 @@ export function loadState() {
     Object.assign(state, JSON.parse(saved));
   }
 }
+
+export function loadStats() {
+  return JSON.parse(localStorage.getItem("mtgStats") || "[]");
+}
+
+export function saveStats(stats) {
+  localStorage.setItem("mtgStats", JSON.stringify(stats));
+}
+
+export function addGameResult(won, turn, deckName) {
+  const stats = loadStats();
+  stats.push({ won, turn, deck: deckName });
+  saveStats(stats);
+}
+
