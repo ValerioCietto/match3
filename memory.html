@@ -494,7 +494,8 @@
     ctx.save();
     ctx.translate(x,y);
     roundedRectPath(4,4,w-8,h-8,r);
-    const grad = ctx.createLinearGradient(0,0,0,h);
+    const H = Math.max(1, h|0);
+    const grad = ctx.createLinearGradient(0,0,0,H);
     grad.addColorStop(0,'#1b2247');
     grad.addColorStop(1,'#101634');
     ctx.fillStyle = grad;
@@ -521,7 +522,8 @@
     ctx.save();
     ctx.translate(x,y);
     roundedRectPath(4,4,w-8,h-8, FACE_RADIUS);
-    const grad = ctx.createLinearGradient(0,0,0,h);
+    const H = Math.max(1, h|0);
+    const grad = ctx.createLinearGradient(0,0,0,H);
     grad.addColorStop(0,'#16204a');
     grad.addColorStop(1,'#0e1434');
     ctx.fillStyle = grad;
@@ -537,6 +539,8 @@
   }
 
   function render(){
+    // Se il layout non è ancora pronto, evita di disegnare
+    if (!tileW || !tileH) return;
     // clear
     ctx.clearRect(0,0, logicalWidth, logicalHeight);
 
@@ -579,4 +583,30 @@
       ctx.fillText('modalità sbirciata', logicalWidth/2 + 2, logicalHeight/2 + 2);
       // red text
       ctx.fillStyle = '#ff4d4d';
-  
+      ctx.fillText('modalità sbirciata', logicalWidth/2, logicalHeight/2);
+      ctx.restore();
+    }
+  }
+
+  // ======= Events =======
+  canvas.addEventListener('pointerdown', onPointer, {passive:false});
+  canvas.addEventListener('touchstart', onPointer, {passive:false});
+
+  window.addEventListener('resize', resizeCanvas);
+  restartBtn.addEventListener('click', ()=>{ hideWin(); newGame(); });
+  againBtn.addEventListener('click', ()=>{ hideWin(); newGame(); });
+  closeBtn.addEventListener('click', ()=> hideWin());
+  helpBtn.addEventListener('click', ()=>{
+    // Rifà il peek con penalità; se già in peek, riavvia la finestra di 2s
+    triggerPeek(2000, {penalize:true});
+  });
+
+  // ======= Bootstrap =======
+  // Prima calcoliamo il layout per evitare NaN nelle dimensioni tile
+  resizeCanvas();
+  newGame();
+
+})();
+</script>
+</body>
+</html>
