@@ -25,7 +25,7 @@
   header{
     width:100%; max-width:900px;
     padding:12px 16px;
-    display:grid; grid-template-columns:1fr auto auto auto; gap:8px; align-items:center;
+    display:grid; grid-template-columns:1fr auto auto auto auto; gap:8px; align-items:center;
   }
   h1{font-size:clamp(18px, 4vw, 22px); margin:0; font-weight:700; letter-spacing:.2px}
   .pill{
@@ -84,6 +84,7 @@
     <h1>Memory – 24 Tessere</h1>
     <div class="pill" id="movesPill">Mosse: 0</div>
     <div class="pill" id="timePill">Tempo: 00:00</div>
+    <button id="helpBtn" title="Rivela per 2s con penalità">🛈 Aiuto</button>
     <button id="restartBtn" title="Nuova partita">↻ Nuova</button>
   </header>
 
@@ -135,6 +136,7 @@
   const restartBtn = document.getElementById('restartBtn');
   const againBtn = document.getElementById('againBtn');
   const closeBtn = document.getElementById('closeBtn');
+  const helpBtn = document.getElementById('helpBtn');
 
   let dpr = window.devicePixelRatio || 1;
   let logicalWidth = 900, logicalHeight = 600; // base logical size; scaled by CSS & DPR
@@ -149,51 +151,25 @@
   let timerHandle = null;
   let elapsedMs = 0;
   let matchedPairs = 0;
+  let peekMode = false;           // blocca input e mostra overlay
+  let peekTimeout = null;         // gestisce la finestra di peek
 
   // ======= Utility =======
-  const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
   const now = () => performance.now();
-
-  function shuffle(arr) {
-    for (let i=arr.length-1; i>0; i--) {
-      const j = Math.floor(Math.random()*(i+1));
-      [arr[i],arr[j]] = [arr[j],arr[i]];
-    }
-    return arr;
-  }
-
-  function formatTime(ms){
-    const s = Math.floor(ms/1000);
-    const m = Math.floor(s/60);
-    const ss = s%60;
-    return `${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
-  }
-
+  function shuffle(arr) { for (let i=arr.length-1; i>0; i--) { const j = Math.floor(Math.random()*(i+1)); [arr[i],arr[j]] = [arr[j],arr[i]]; } return arr; }
+  function formatTime(ms){ const s = Math.floor(ms/1000); const m = Math.floor(s/60); const ss = s%60; return `${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`; }
   function randInt(a,b){ return a + Math.floor(Math.random()*(b-a+1)); }
   function randFloat(a,b){ return a + Math.random()*(b-a); }
-
-  // Pastel-ish random color
-  function randColor() {
-    const h = randInt(0,360);
-    const s = randInt(50,75);
-    const l = randInt(55,70);
-    return `hsl(${h} ${s}% ${l}%)`;
-  }
+  function randColor() { const h = randInt(0,360); const s = randInt(50,75); const l = randInt(55,70); return `hsl(${h} ${s}% ${l}%)`; }
 
   // ======= Shape generator & drawer =======
-  // Supported shape types; each returns a draw function using descriptor
   function makeRandomShapeDescriptor(seedIndex){
-    // type selection
     const types = ['circle','rect','triangle','diamond','star','ring','hex','pent','bolt','heart','clover','capsule'];
     const type = types[seedIndex % types.length];
-
-    // common properties
     const fill = randColor();
     const stroke = Math.random() < 0.5 ? 'white' : 'rgba(255,255,255,.85)';
     const strokeW = randInt(2,4);
-    // some shapes benefit from secondary color
     const fill2 = Math.random()<0.5 ? randColor() : null;
-
     return { type, fill, stroke, strokeW, fill2 };
   }
 
@@ -201,115 +177,28 @@
     const s = shape;
     ctx.save();
     ctx.translate(cx, cy);
-
     const minDim = Math.min(w, h) - PADDING*2;
     const r = minDim/2;
-
     ctx.lineWidth = s.strokeW;
-
-    function fillStroke() {
-      if (s.fill) { ctx.fillStyle = s.fill; ctx.fill(); }
-      if (s.stroke) { ctx.strokeStyle = s.stroke; ctx.stroke(); }
-    }
+    function fillStroke() { if (s.fill) { ctx.fillStyle = s.fill; ctx.fill(); } if (s.stroke) { ctx.strokeStyle = s.stroke; ctx.stroke(); } }
 
     switch(s.type){
-      case 'circle': {
-        ctx.beginPath();
-        ctx.arc(0,0,r*0.9,0,Math.PI*2);
-        fillStroke();
-        break;
-      }
-      case 'rect': {
-        const rr = Math.min(14, r*0.3);
-        roundedRectPath(-r*0.9, -r*0.6, r*1.8, r*1.2, rr);
-        fillStroke();
-        break;
-      }
-      case 'triangle': {
-        polygonPath(3, r*0.95, -Math.PI/2);
-        fillStroke();
-        break;
-      }
-      case 'diamond': {
-        ctx.beginPath();
-        ctx.moveTo(0,-r*0.95);
-        ctx.lineTo(r*0.75,0);
-        ctx.lineTo(0,r*0.95);
-        ctx.lineTo(-r*0.75,0);
-        ctx.closePath();
-        fillStroke();
-        break;
-      }
-      case 'star': {
-        starPath(r*0.95, 5);
-        if (s.fill2){
-          // ring star
-          ctx.save();
-          ctx.clip();
-          ctx.beginPath();
-          ctx.arc(0,0,r*0.45,0,Math.PI*2);
-          ctx.fillStyle = s.fill2;
-          ctx.fill();
-          ctx.restore();
-        }
-        fillStroke();
-        break;
-      }
-      case 'ring': {
-        ctx.beginPath(); ctx.arc(0,0,r*0.9,0,Math.PI*2);
-        ctx.lineWidth = Math.max(6, r*0.22);
-        ctx.strokeStyle = s.fill || '#fff';
-        ctx.stroke();
-        // inner dot
-        ctx.beginPath(); ctx.arc(0,0,r*0.18,0,Math.PI*2);
-        ctx.fillStyle = s.fill2 || 'white'; ctx.fill();
-        break;
-      }
-      case 'hex': {
-        polygonPath(6, r*0.95, Math.PI/6);
-        fillStroke();
-        break;
-      }
-      case 'pent': {
-        polygonPath(5, r*0.95, -Math.PI/2);
-        fillStroke();
-        break;
-      }
-      case 'bolt': { // lightning
-        ctx.beginPath();
-        const a = r*0.9;
-        ctx.moveTo(-a*0.2,-a*0.9);
-        ctx.lineTo(a*0.1,-a*0.1);
-        ctx.lineTo(-a*0.05,-a*0.1);
-        ctx.lineTo(a*0.2,a*0.9);
-        ctx.lineTo(-a*0.1,a*0.1);
-        ctx.lineTo(a*0.05,a*0.1);
-        ctx.closePath();
-        fillStroke();
-        break;
-      }
-      case 'heart': {
-        heartPath(r*0.9);
-        fillStroke();
-        break;
-      }
-      case 'clover': {
-        cloverPath(r*0.85);
-        fillStroke();
-        break;
-      }
-      case 'capsule': {
-        capsulePath(-r*0.95, -r*0.45, r*1.9, r*0.9, r*0.45);
-        fillStroke();
-        if (s.fill2){
-          ctx.beginPath();
-          capsulePath(-r*0.5, -r*0.25, r*1.0, r*0.5, r*0.25);
-          ctx.fillStyle = s.fill2; ctx.fill();
-        }
-        break;
-      }
+      case 'circle': ctx.beginPath(); ctx.arc(0,0,r*0.9,0,Math.PI*2); fillStroke(); break;
+      case 'rect': roundedRectPath(-r*0.9, -r*0.6, r*1.8, r*1.2, Math.min(14, r*0.3)); fillStroke(); break;
+      case 'triangle': polygonPath(3, r*0.95, -Math.PI/2); fillStroke(); break;
+      case 'diamond': ctx.beginPath(); ctx.moveTo(0,-r*0.95); ctx.lineTo(r*0.75,0); ctx.lineTo(0,r*0.95); ctx.lineTo(-r*0.75,0); ctx.closePath(); fillStroke(); break;
+      case 'star': starPath(r*0.95, 5); if (s.fill2){ ctx.save(); ctx.clip(); ctx.beginPath(); ctx.arc(0,0,r*0.45,0,Math.PI*2); ctx.fillStyle = s.fill2; ctx.fill(); ctx.restore(); } fillStroke(); break;
+      case 'ring': ctx.beginPath(); ctx.arc(0,0,r*0.9,0,Math.PI*2); ctx.lineWidth = Math.max(6, r*0.22); ctx.strokeStyle = s.fill || '#fff'; ctx.stroke();
+                   ctx.beginPath(); ctx.arc(0,0,r*0.18,0,Math.PI*2); ctx.fillStyle = s.fill2 || 'white'; ctx.fill(); break;
+      case 'hex': polygonPath(6, r*0.95, Math.PI/6); fillStroke(); break;
+      case 'pent': polygonPath(5, r*0.95, -Math.PI/2); fillStroke(); break;
+      case 'bolt': ctx.beginPath(); const a = r*0.9; ctx.moveTo(-a*0.2,-a*0.9); ctx.lineTo(a*0.1,-a*0.1); ctx.lineTo(-a*0.05,-a*0.1); ctx.lineTo(a*0.2,a*0.9);
+                   ctx.lineTo(-a*0.1,a*0.1); ctx.lineTo(a*0.05,a*0.1); ctx.closePath(); fillStroke(); break;
+      case 'heart': heartPath(r*0.9); fillStroke(); break;
+      case 'clover': cloverPath(r*0.85); fillStroke(); break;
+      case 'capsule': capsulePath(-r*0.95, -r*0.45, r*1.9, r*0.9, r*0.45); fillStroke();
+                      if (s.fill2){ ctx.beginPath(); capsulePath(-r*0.5, -r*0.25, r*1.0, r*0.5, r*0.25); ctx.fillStyle = s.fill2; ctx.fill(); } break;
     }
-
     ctx.restore();
   }
 
@@ -323,7 +212,6 @@
     ctx.arcTo(x,   y,   x+w, y,   rr);
     ctx.closePath();
   }
-
   function polygonPath(n, radius, startAngle=0){
     ctx.beginPath();
     for (let i=0;i<n;i++){
@@ -334,7 +222,6 @@
     }
     ctx.closePath();
   }
-
   function starPath(radius, points=5){
     const inner = radius*0.45;
     ctx.beginPath();
@@ -346,7 +233,6 @@
     }
     ctx.closePath();
   }
-
   function heartPath(r){
     ctx.beginPath();
     ctx.moveTo(0, r*0.5);
@@ -354,25 +240,18 @@
     ctx.bezierCurveTo(-r*1.3, 0, -r, r*1.2, 0, r*0.5);
     ctx.closePath();
   }
-
   function cloverPath(r){
-    // 3-leaf clover
     const leafR = r*0.6;
     ctx.beginPath();
-    // top
     ctx.arc(0, -leafR*0.8, leafR, 0, Math.PI*2);
-    // left
     ctx.moveTo(0,0);
     ctx.arc(-leafR*0.78, 0.3*leafR, leafR, 0, Math.PI*2);
-    // right
     ctx.moveTo(0,0);
     ctx.arc(leafR*0.78, 0.3*leafR, leafR, 0, Math.PI*2);
-    // stem
     ctx.moveTo(0, leafR*0.8);
     ctx.quadraticCurveTo(leafR*0.2, leafR*1.4, 0, leafR*1.6);
     ctx.quadraticCurveTo(-leafR*0.2, leafR*1.4, 0, leafR*0.8);
   }
-
   function capsulePath(x,y,w,h,r){
     const rr = Math.min(r, h/2);
     ctx.moveTo(x+rr,y);
@@ -385,16 +264,13 @@
 
   // ======= Layout & scaling =======
   function resizeCanvas(){
-    // Canvas CSS width is controlled by CSS; we read its actual displayed size
     const rect = canvas.getBoundingClientRect();
     const cssW = rect.width;
-    // maintain 3:2 aspect (900x600) but scale down to fit viewport height if needed
     const maxH = window.innerHeight - 160; // leave room for header/footer
     let cssH = cssW * (2/3);
     if (cssH > maxH) {
       cssH = maxH;
     }
-    // apply backing store size with DPR
     dpr = window.devicePixelRatio || 1;
     logicalWidth = Math.round(cssW);
     logicalHeight = Math.round(cssH);
@@ -404,7 +280,6 @@
 
     ctx.setTransform(dpr,0,0,dpr,0,0); // scale drawing to CSS pixels
 
-    // compute grid cell size centered
     tileW = Math.floor(logicalWidth / COLS);
     tileH = Math.floor(logicalHeight / ROWS);
     const gridW = tileW * COLS;
@@ -424,22 +299,26 @@
     firstPick = secondPick = null;
     lock = false;
     stopTimer();
+    clearPeek();
 
     // generate shapes for pairs
     shapes = Array.from({length: PAIRS}, (_,i)=> makeRandomShapeDescriptor(i + randInt(0, 999)));
 
-    // build deck: 2 tiles per pair
+    // build deck: 2 tiles per pair, inizialmente scoperte per il peek iniziale
     deck = [];
     let idCounter = 0;
     for (let p=0;p<PAIRS;p++){
       for (let k=0;k<2;k++){
-        deck.push({ id:idCounter++, pairId:p, revealed:false, matched:false });
+        deck.push({ id:idCounter++, pairId:p, revealed:true, matched:false });
       }
     }
     shuffle(deck);
 
     updateHUD();
     render();
+
+    // PEAK iniziale 2s, senza far partire il timer
+    triggerPeek(2000, {penalize:false});
   }
 
   // ======= Timer & HUD =======
@@ -457,6 +336,15 @@
       timerHandle = null;
     }
   }
+  function restartTimerBaseline(){
+    // utile quando modifichiamo elapsedMs manualmente (es. penalità)
+    if (timerHandle){
+      stopTimer();
+      startTimer();
+    } else {
+      timePill.textContent = `Tempo: ${formatTime(elapsedMs)}`;
+    }
+  }
   function updateHUD(){
     movesPill.textContent = `Mosse: ${moves}`;
     timePill.textContent = `Tempo: ${formatTime(elapsedMs)}`;
@@ -466,14 +354,49 @@
     bestTimeEl.textContent  = `Best tempo: ${bt ? formatTime(+bt) : '–'}`;
   }
 
+  // ======= Peek handling =======
+  function clearPeek(){
+    if (peekTimeout){ clearTimeout(peekTimeout); peekTimeout = null; }
+    peekMode = false;
+  }
+
+  /**
+   * triggerPeek(ms, {penalize})
+   * - Rivela tutte le tessere per `ms` millisecondi.
+   * - Se penalize=true: +1 mossa, +10s tempo.
+   * - Blocca gli input durante il peek e mostra overlay "modalità sbirciata".
+   * - Alla fine, ricopre solo le tessere non già abbinate.
+   */
+  function triggerPeek(ms=2000, {penalize=true} = {}){
+    // Penalità prima di aprire il peek
+    if (penalize){
+      moves += 1;
+      elapsedMs += 10000; // +10s
+      updateHUD();
+      restartTimerBaseline(); // riallinea il timer se attivo
+    }
+
+    // Se era già in peek, lo riavvio
+    clearPeek();
+
+    // Rivela tutto
+    deck.forEach(t => { t.revealed = true; });
+    peekMode = true;
+    render();
+
+    // Dopo ms ricopro le non-abbinate
+    peekTimeout = setTimeout(() => {
+      deck.forEach(t => { if (!t.matched) t.revealed = false; else t.revealed = true; });
+      clearPeek();
+      render();
+    }, ms);
+  }
+
   // ======= Input handling =======
   function getTileAt(x,y){
-    // convert from client to canvas CSS pixels
     const rect = canvas.getBoundingClientRect();
     const px = (x - rect.left);
     const py = (y - rect.top);
-
-    // in grid?
     const gx = px - gridOffsetX;
     const gy = py - gridOffsetY;
     if (gx<0 || gy<0) return -1;
@@ -486,7 +409,7 @@
 
   function onPointer(e){
     e.preventDefault();
-    if (lock) return;
+    if (lock || peekMode) return;
 
     const isTouch = e.touches && e.touches.length;
     const clientX = isTouch ? e.touches[0].clientX : (e.clientX ?? e.pageX);
@@ -498,7 +421,7 @@
     const tile = deck[idx];
     if (tile.matched || tile.revealed) return;
 
-    // start timer at first flip
+    // start timer al primo flip
     if (!startTime){
       startTime = now();
       startTimer();
@@ -510,7 +433,6 @@
     if (firstPick === null){
       firstPick = idx;
     } else if (secondPick === null){
-      // ignore double click same card
       if (idx === firstPick) return;
       secondPick = idx;
       moves++;
@@ -518,20 +440,17 @@
 
       const a = deck[firstPick], b = deck[secondPick];
       if (a.pairId === b.pairId){
-        // match
         a.matched = b.matched = true;
         firstPick = secondPick = null;
         matchedPairs++;
         render();
 
         if (matchedPairs === PAIRS){
-          // win
           stopTimer();
           checkBests();
           showWin();
         }
       } else {
-        // mismatch: flip back after delay
         lock = true;
         setTimeout(() => {
           flipDown(firstPick);
@@ -572,7 +491,6 @@
   // ======= Rendering =======
   function drawBackTile(x,y,w,h){
     const r = FACE_RADIUS;
-    // base
     ctx.save();
     ctx.translate(x,y);
     roundedRectPath(4,4,w-8,h-8,r);
@@ -600,7 +518,6 @@
   }
 
   function drawRevealedTile(x,y,w,h, shape){
-    // face
     ctx.save();
     ctx.translate(x,y);
     roundedRectPath(4,4,w-8,h-8, FACE_RADIUS);
@@ -644,22 +561,22 @@
         }
       }
     }
-  }
 
-  // ======= Events =======
-  canvas.addEventListener('pointerdown', onPointer, {passive:false});
-  canvas.addEventListener('touchstart', onPointer, {passive:false});
+    // Overlay "modalità sbirciata"
+    if (peekMode){
+      ctx.save();
+      ctx.globalAlpha = 0.18;
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0,0,logicalWidth,logicalHeight);
+      ctx.restore();
 
-  window.addEventListener('resize', resizeCanvas);
-  restartBtn.addEventListener('click', ()=>{ hideWin(); newGame(); });
-  againBtn.addEventListener('click', ()=>{ hideWin(); newGame(); });
-  closeBtn.addEventListener('click', ()=> hideWin());
-
-  // ======= Bootstrap =======
-  newGame();
-  resizeCanvas();
-
-})();
-</script>
-</body>
-</html>
+      ctx.save();
+      ctx.font = `bold ${Math.floor(Math.min(logicalWidth, logicalHeight)/12)}px system-ui`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      // shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx.fillText('modalità sbirciata', logicalWidth/2 + 2, logicalHeight/2 + 2);
+      // red text
+      ctx.fillStyle = '#ff4d4d';
+  
