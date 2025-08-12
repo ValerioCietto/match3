@@ -5,9 +5,7 @@
   <title>Stickman – Corsa realistica</title>
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
   <style>
-    :root{
-      --bg:#0b0d12; --text:#e7ecf3; --panel:#151826; --accent:#7dd3fc;
-    }
+    :root{ --bg:#0b0d12; --text:#e7ecf3; --panel:#151826; --accent:#7dd3fc; }
     *{box-sizing:border-box}
     html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Roboto,Arial}
     .wrap{min-height:100vh;display:flex;flex-direction:column}
@@ -20,7 +18,6 @@
     input[type="range"]{width:100%;accent-color:var(--accent);touch-action:pan-y}
     .stat{font-variant-numeric:tabular-nums}
     canvas{width:100vw;height:62vh;display:block;touch-action:manipulation;background:linear-gradient(#0b0d12 65%, #090b10)}
-    footer{padding:10px 12px;opacity:.7}
     @media (min-width:720px){ canvas{height:66vh} }
   </style>
 </head>
@@ -39,16 +36,19 @@
         <label for="speed">Velocità</label>
         <input id="speed" type="range" min="5" max="100" step="5">
       </div>
+      <small>Velocità salvata (localStorage). Stickman bianco; focus sulla biomeccanica (spalle+gomiti con giunti, corsa realistica).</small>
     </div>
   </div>
 </div>
 
 <script>
 (() => {
-  const LS_KEY = 'stickman.realrun.v1';
+  // ====== LocalStorage ======
+  const LS_KEY = 'stickman.realrun.v3';
   const loadCfg = () => { try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch { return {}; } };
   const saveCfg = (o) => localStorage.setItem(LS_KEY, JSON.stringify(o));
 
+  // ====== DOM & Canvas ======
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
   const speedInput = document.getElementById('speed');
@@ -71,19 +71,21 @@
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
 
+  // ====== World ======
   const world = {
-    speedPx: cfg.speedPx,
+    speedPx: cfg.speedPx,                           // px/s (slider)
     groundY: () => Math.round(canvas.height/(window.devicePixelRatio||1) - 90),
     stripeOffset: 0,
     parallax: 0,
   };
 
   speedInput.addEventListener('input', () => {
-    world.speedPx = +speedInput.value;
+    world.speedPx = +speedInput.value;              // 5..100 step 5
     spdLbl.textContent = world.speedPx;
     saveCfg({ speedPx: world.speedPx });
   });
 
+  // ====== Stickman skeleton ======
   const man = {
     hipX: 220,
     hipY: world.groundY() - 40,
@@ -93,34 +95,43 @@
     cycle: 0, cadence: 2.6, duty: 0.38, bobAmp: 6, color: '#fff'
   };
 
+  // Stride & cadence mapping from speed
+  let strideLen = 90; // px
   function updateTemporalParams(){
     const v = world.speedPx;
     strideLen = Math.max(40, Math.min(160, 0.9*v + 20));
-    man.cadence = 1.6 + 0.8 * Math.log(1 + v/20);
+    man.cadence = 1.6 + 0.8 * Math.log(1 + v/20); // ~1.6..3.0 Hz
   }
-  let strideLen = 90;
   updateTemporalParams();
 
+  // ====== Realism tweaks ======
+  // "Gambe più distese": bias per aumentare l'estensione apparente del ginocchio
+  const KNEE_EXT_STRIDE_BIAS = 6;     // px in più sulla half-stride per aumentare dd (≈ +10° visuali)
+  const LIFT_REDUCTION_FACTOR = 0.9;  // -10% lift in swing per estensioni più lunghe
+
+  // ====== Math helpers ======
   const clamp = (a,b,c)=>Math.max(b,Math.min(c,a));
   const lerp = (a,b,t)=>a+(b-a)*t;
   const smoothstep = (t)=>t*t*(3-2*t);
 
+  // ====== IK / FK ======
   function legIK(hipX, hipY, targetX, targetY, L1, L2){
     const dx = targetX - hipX, dy = targetY - hipY;
     const d = Math.hypot(dx, dy);
     const dd = clamp(d, 1e-4, L1+L2-1e-4);
     const a = Math.acos(clamp((L1*L1 + dd*dd - L2*L2)/(2*L1*dd), -1, 1));
     const base = Math.atan2(dy, dx);
-    const hipA = base - a;
+    const hipA = base - a; // absolute hip angle
     const kneeA = Math.PI - Math.acos(clamp((L1*L1 + L2*L2 - dd*dd)/(2*L1*L2), -1, 1));
     const kneeX = hipX + L1*Math.cos(hipA);
     const kneeY = hipY + L1*Math.sin(hipA);
     return { hipA, kneeA, kneeX, kneeY, footX:targetX, footY:targetY };
   }
 
+  // Shoulders + elbows with requested rotations (shoulder +90°, elbow +180°)
   function armFK(shoulderX, shoulderY, shoulderA, elbowA, L1, L2){
-    shoulderA += Math.PI/2;
-    elbowA += Math.PI;
+    shoulderA += Math.PI/2; // rotate shoulders 90° clockwise
+    elbowA    += Math.PI;   // rotate elbow 180°
     const elbowX = shoulderX + L1*Math.cos(shoulderA);
     const elbowY = shoulderY + L1*Math.sin(shoulderA);
     const handX  = elbowX    + L2*Math.cos(shoulderA + elbowA);
@@ -128,44 +139,50 @@
     return { elbowX, elbowY, handX, handY };
   }
 
+  // ====== Gait generator ======
   function footTarget(which, phase){
     const df = man.duty;
     const gy = world.groundY();
     const hipX = man.hipX;
+    const halfStride = 0.5*strideLen + KNEE_EXT_STRIDE_BIAS; // bias per più estensione
+
     if (phase < df){
+      // stance: foot plants and "slides" backward relative to trunk
       const t = phase/df;
-      const x0 = hipX + 0.5*strideLen;
-      const x1 = hipX - 0.5*strideLen;
+      const x0 = hipX + halfStride;    // initial contact
+      const x1 = hipX - halfStride;    // toe-off
       const x = lerp(x0, x1, t);
       return {x, y: gy, stance:true, lift:0};
     } else {
+      // swing: forward arc with clearance
       const t = (phase - df)/(1-df);
-      const x = lerp(hipX - 0.5*strideLen, hipX + 0.5*strideLen, smoothstep(t));
+      const x = lerp(hipX - halfStride, hipX + halfStride, smoothstep(t));
       const arc = Math.sin(Math.PI*t);
-      const lift = 10 + 14 * arc * (0.5 + world.speedPx/120);
+      const baseLift = 10 + 14 * arc * (0.5 + world.speedPx/120);
+      const lift = baseLift * LIFT_REDUCTION_FACTOR; // meno lift → gamba più distesa
       return {x, y: gy - lift, stance:false, lift};
     }
   }
 
+  // Shoulder/elbow angles (counter-phase to legs)
   function armAngles(globalPhase, side){
-    const shAmp = 25 * Math.PI/180;
-    const elBase = 100 * Math.PI/180;
-    const elAmp  = 20 * Math.PI/180;
+    const shAmp = 25 * Math.PI/180;   // shoulder swing amplitude
+    const elBase = 100 * Math.PI/180; // base elbow bend
+    const elAmp  = 20 * Math.PI/180;  // elbow oscillation
     const shoulderA = (-shAmp) * Math.sin(2*Math.PI*globalPhase + (side?Math.PI:0));
     const elbowA    = elBase + elAmp * Math.sin(2*Math.PI*globalPhase + (side?0:Math.PI));
-    const shoulderX = man.hipX;
-    const shoulderY = man.hipY - man.torso; // attach at top of torso
-    return { shoulderA, elbowA, shoulderX, shoulderY };
+    return { shoulderA, elbowA };
   }
 
+  // ====== Drawing ======
   function drawBackground(){
     const w = canvas.width/(window.devicePixelRatio||1);
     const h = canvas.height/(window.devicePixelRatio||1);
     const g = ctx.createLinearGradient(0,0,0,h);
     g.addColorStop(0,'#0c1221');
     g.addColorStop(1,'#0a0d15');
-    ctx.fillStyle = g;
-    ctx.fillRect(0,0,w,h);
+    ctx.fillStyle = g; ctx.fillRect(0,0,w,h);
+    // ground line
     ctx.strokeStyle = 'rgba(125,211,252,0.35)';
     ctx.lineWidth = 3;
     ctx.beginPath(); ctx.moveTo(0, world.groundY()); ctx.lineTo(w, world.groundY()); ctx.stroke();
@@ -173,55 +190,87 @@
 
   function drawStickman(){
     ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle=man.color; ctx.fillStyle=man.color;
+
+    // Vertical bobbing of the trunk
     const bob = man.bobAmp * Math.sin(2*Math.PI*man.cycle);
+
+    // Hips (reference)
     const hipX = man.hipX;
     const hipY = man.hipY + bob;
+
+    // Neck & head
     const neckX = hipX;
     const neckY = hipY - man.torso;
     const headCX = neckX;
     const headCY = neckY - man.neck - man.headR;
+
+    // >>> Shoulder anchor points (explicit) <<<
+    const shoulderX = neckX;
+    const shoulderY = neckY; // top of torso (follows bob)
+
+    // Leg phases
     const rightPhase = man.cycle % 1;
     const leftPhase  = (man.cycle + 0.5) % 1;
+
+    // Feet targets & IK
     const rt = footTarget(0, rightPhase);
     const lt = footTarget(1, leftPhase);
     const R = legIK(hipX, hipY-10, rt.x, rt.y, man.thigh, man.shin);
     const L = legIK(hipX, hipY-10, lt.x, lt.y, man.thigh, man.shin);
-    const Ra = armAngles(man.cycle, 0);
-    const La = armAngles(man.cycle, 1);
-    const Rarm = armFK(Ra.shoulderX, Ra.shoulderY, Ra.shoulderA, Ra.elbowA, man.upperArm, man.foreArm);
-    const Larm = armFK(La.shoulderX, La.shoulderY, La.shoulderA, La.elbowA, man.upperArm, man.foreArm);
+
+    // Arms angles (counter-phase)
+    const RaA = armAngles(man.cycle, 0);
+    const LaA = armAngles(man.cycle, 1);
+    const Rarm = armFK(shoulderX, shoulderY, RaA.shoulderA, RaA.elbowA, man.upperArm, man.foreArm);
+    const Larm = armFK(shoulderX, shoulderY, LaA.shoulderA, LaA.elbowA, man.upperArm, man.foreArm);
+
+    // Legs
     ctx.lineWidth=4;
     ctx.beginPath(); ctx.moveTo(hipX, hipY-10); ctx.lineTo(R.kneeX, R.kneeY); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(R.kneeX, R.kneeY); ctx.lineTo(R.footX, R.footY); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(hipX, hipY-10); ctx.lineTo(L.kneeX, L.kneeY); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(L.kneeX, L.kneeY); ctx.lineTo(L.footX, L.footY); ctx.stroke();
+
+    // Torso
     ctx.lineWidth=4;
     ctx.beginPath(); ctx.moveTo(hipX, hipY-10); ctx.lineTo(neckX, neckY); ctx.stroke();
+
+    // Arms
     ctx.lineWidth=3.5;
-    ctx.beginPath(); ctx.moveTo(Ra.shoulderX, Ra.shoulderY); ctx.lineTo(Rarm.elbowX, Rarm.elbowY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(shoulderX, shoulderY); ctx.lineTo(Rarm.elbowX, Rarm.elbowY); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(Rarm.elbowX, Rarm.elbowY); ctx.lineTo(Rarm.handX, Rarm.handY); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(La.shoulderX, La.shoulderY); ctx.lineTo(Larm.elbowX, Larm.elbowY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(shoulderX, shoulderY); ctx.lineTo(Larm.elbowX, Larm.elbowY); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(Larm.elbowX, Larm.elbowY); ctx.lineTo(Larm.handX, Larm.handY); ctx.stroke();
+
+    // Head
     ctx.lineWidth=3.5;
     ctx.beginPath(); ctx.arc(headCX, headCY, man.headR, 0, Math.PI*2); ctx.stroke();
     ctx.beginPath(); ctx.arc(headCX+5, headCY-2, 1.6, 0, Math.PI*2); ctx.fill();
   }
 
+  // ====== Main loop ======
   let last = performance.now();
   function frame(now){
     const dt = Math.min(0.05, (now - last)/1000);
     last = now;
+
     updateTemporalParams();
-    man.cycle = (man.cycle + man.cadence*dt) % 1;
-    world.parallax += world.speedPx * dt;
+    man.cycle = (man.cycle + man.cadence*dt) % 1; // advance gait
+
+    world.parallax += world.speedPx * dt;         // for future bg elements
     world.stripeOffset += world.speedPx * dt;
+
+    // keep hips aligned after resizes
     man.hipY = world.groundY() - 40;
+
     ctx.clearRect(0,0,canvas.width,canvas.height);
     drawBackground();
     drawStickman();
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
+
+  // Prevent scroll-jank on mobile while sliding
   speedInput.addEventListener('touchstart', e=>e.stopPropagation(), {passive:true});
 })();
 </script>
