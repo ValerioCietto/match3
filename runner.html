@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <title>Stickman Runner</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+  <style>
+    :root {
+      --bg:#0e0f14;
+      --panel:#151826;
+      --text:#e7ecf3;
+      --accent:#7dd3fc;
+      --accent2:#a78bfa;
+      --danger:#ef4444;
+      --ok:#22c55e;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,"Helvetica Neue",Arial}
+    .wrap{display:flex;flex-direction:column;min-height:100vh}
+    header{padding:10px 12px;display:flex;gap:8px;align-items:center;justify-content:space-between;background:linear-gradient(180deg,rgba(255,255,255,0.04),transparent)}
+    .brand{font-weight:700;letter-spacing:.3px}
+    .stats{display:flex;gap:10px;font-variant-numeric:tabular-nums}
+    .pill{background:var(--panel);border:1px solid rgba(255,255,255,.08);padding:6px 10px;border-radius:999px}
+    canvas{width:100vw;height:58vh;max-height:68vh;display:block;touch-action:manipulation;background:linear-gradient(#0b0d12 60%, #0a0b10)}
+    .controls{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:12px}
+    .btn{
+      background:var(--panel);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:16px;padding:12px 10px;
+      text-align:center;font-weight:600;
+      box-shadow:0 2px 10px rgba(0,0,0,.25);
+      transition:transform .06s ease, background .2s ease;
+      user-select:none;
+    }
+    .btn:active{transform:scale(.98)}
+    .btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#0b0b0f;border:none}
+    .row{display:flex;gap:10px;align-items:center;padding:0 12px 12px}
+    select, input[type="range"]{
+      width:100%;background:var(--panel);color:var(--text);
+      border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:8px 10px
+    }
+    footer{padding:8px 12px;opacity:.7;font-size:.9rem}
+    @media (min-width:720px){
+      .controls{grid-template-columns:repeat(5,1fr)}
+      canvas{height:62vh}
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">🏃‍♂️ Stickman Runner</div>
+    <div class="stats">
+      <div class="pill">Distanza: <span id="dist">0.0</span> m</div>
+      <div class="pill">Record: <span id="best">0.0</span> m</div>
+    </div>
+  </header>
+
+  <canvas id="game" width="900" height="500" aria-label="Stickman Runner"></canvas>
+
+  <div class="controls">
+    <div class="btn" id="slower">⏪ Lento</div>
+    <div class="btn" id="jump">🦘 Salta</div>
+    <div class="btn" id="faster">⏩ Veloce</div>
+    <div class="btn primary" id="toggle">⏸️ Pausa</div>
+  </div>
+
+  <div class="row">
+    <label style="min-width:110px">Colore stickman</label>
+    <select id="color">
+      <option value="#eaeaea">Bianco</option>
+      <option value="#22c55e">Verde</option>
+      <option value="#60a5fa">Azzurro</option>
+      <option value="#f59e0b">Arancio</option>
+      <option value="#ef4444">Rosso</option>
+      <option value="#a78bfa">Lilla</option>
+    </select>
+  </div>
+
+  <div class="row">
+    <label style="min-width:110px">Velocità</label>
+    <input id="speed" type="range" min="0.6" max="3.0" step="0.1">
+  </div>
+
+  <footer>
+    Tocca il canvas per saltare. Le preferenze (colore, velocità) e il record vengono salvati nel tuo dispositivo.
+  </footer>
+</div>
+
+<script>
+(() => {
+  // ======= LocalStorage helpers =======
+  const LS_SETTINGS_KEY = 'stickmanSettings.v1';
+  const LS_BEST_KEY = 'stickmanBest.v1';
+  const loadSettings = () => {
+    try { return JSON.parse(localStorage.getItem(LS_SETTINGS_KEY)) || {}; }
+    catch { return {}; }
+  };
+  const saveSettings = (obj) => {
+    localStorage.setItem(LS_SETTINGS_KEY, JSON.stringify(obj));
+  };
+  const loadBest = () => {
+    const v = localStorage.getItem(LS_BEST_KEY);
+    return v ? +v : 0;
+  };
+  const saveBest = (v) => localStorage.setItem(LS_BEST_KEY, String(v));
+
+  // ======= Canvas setup (responsive) =======
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+
+  function resizeCanvas() {
+    // Match device pixels for crisp lines
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    const logicalW = Math.min(window.innerWidth, 1100);
+    const logicalH = Math.round(window.innerHeight * 0.60);
+    canvas.style.width = logicalW + 'px';
+    canvas.style.height = logicalH + 'px';
+    canvas.width = Math.floor(logicalW * dpr);
+    canvas.height = Math.floor(logicalH * dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  // ======= UI =======
+  const elDist = document.getElementById('dist');
+  const elBest = document.getElementById('best');
+  const elJump = document.getElementById('jump');
+  const elFaster = document.getElementById('faster');
+  const elSlower = document.getElementById('slower');
+  const elToggle = document.getElementById('toggle');
+  const elSpeed = document.getElementById('speed');
+  const elColor = document.getElementById('color');
+
+  const settings = Object.assign({ color:'#eaeaea', speed:1.4 }, loadSettings());
+  elSpeed.value = settings.speed;
+  elColor.value = settings.color;
+
+  let bestDistance = loadBest();
+  elBest.textContent = bestDistance.toFixed(1);
+
+  // ======= World state =======
+  const world = {
+    t: 0,
+    speed: +elSpeed.value,      // base ground speed (m/s scaled)
+    paused: false,
+    distance: 0,
+    gravity: 55,
+    groundY: () => Math.round(canvas.height / (window.devicePixelRatio||1) - 80),
+    // parallax layers (x offsets)
+    layer: [0,0,0],
+  };
+
+  // Stickman physical state
+  const man = {
+    x: 160,
+    y: world.groundY(),
+    vy: 0,
+    runningPhase: 0,      // increases with speed
+    color: elColor.value,
+    // proportions (in pixels)
+    headR: 14,
+    bodyLen: 38,
+    armLen: 30,
+    legLen: 36,
+  };
+
+  // ======= Input =======
+  function requestJump() {
+    // allow small double-jump window if desired; here single jump
+    const onGround = Math.abs(man.y - world.groundY()) < 0.5 && man.vy === 0;
+    if (onGround) {
+      man.vy = -Math.max(18, 12 + world.speed*3);
+    }
+  }
+  canvas.addEventListener('pointerdown', (e) => { e.preventDefault(); requestJump(); });
+  elJump.addEventListener('click', requestJump);
+
+  elFaster.addEventListener('click', () => {
+    world.speed = Math.min(3.0, +(world.speed + 0.1).toFixed(1));
+    elSpeed.value = world.speed;
+    persist();
+  });
+  elSlower.addEventListener('click', () => {
+    world.speed = Math.max(0.6, +(world.speed - 0.1).toFixed(1));
+    elSpeed.value = world.speed;
+    persist();
+  });
+  elSpeed.addEventListener('input', () => {
+    world.speed = +elSpeed.value;
+    persist();
+  });
+  elColor.addEventListener('change', () => {
+    man.color = elColor.value;
+    persist();
+  });
+  elToggle.addEventListener('click', () => {
+    world.paused = !world.paused;
+    elToggle.textContent = world.paused ? '▶️ Riprendi' : '⏸️ Pausa';
+  });
+
+  function persist() {
+    saveSettings({ color: man.color, speed: world.speed });
+  }
+
+  // ======= Ground & background =======
+  function drawBackground() {
+    const w = canvas.width / (window.devicePixelRatio||1);
+    const h = canvas.height / (window.devicePixelRatio||1);
+
+    // Sky gradient (fixed finite values)
+    const g = ctx.createLinearGradient(0,0,0,h);
+    g.addColorStop(0,'#0b1221');
+    g.addColorStop(1,'#0a0d15');
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,w,h);
+
+    // distant mountains (parallax 0)
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 2;
+    const mY = h - 180;
+    ctx.beginPath();
+    let x0 = - (world.layer[0] % w);
+    for (let x = x0 - 200; x <= w+200; x += 140) {
+      ctx.moveTo(x, mY + 40);
+      ctx.lineTo(x+50, mY - 20);
+      ctx.lineTo(x+100, mY + 40);
+    }
+    ctx.stroke();
+
+    // mid hills (parallax 1)
+    ctx.strokeStyle = 'rgba(255,255,255,0.09)';
+    const m2Y = h - 120;
+    ctx.beginPath();
+    x0 = - (world.layer[1] % w);
+    for (let x = x0 - 200; x <= w+200; x += 110) {
+      ctx.moveTo(x, m2Y + 30);
+      ctx.lineTo(x+40, m2Y - 10);
+      ctx.lineTo(x+80, m2Y + 30);
+    }
+    ctx.stroke();
+
+    // ground line
+    const gy = world.groundY();
+    ctx.fillStyle = '#0f1420';
+    ctx.fillRect(0, gy + 16, w, h - gy - 16);
+    ctx.strokeStyle = 'rgba(125,211,252,0.35)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(0, gy);
+    ctx.lineTo(w, gy);
+    ctx.stroke();
+
+    // road stripes (parallax 2)
+    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+    ctx.lineWidth = 4;
+    const off = world.layer[2] % 60;
+    for (let x = -off; x < w; x += 60) {
+      ctx.beginPath();
+      ctx.moveTo(x, gy + 8);
+      ctx.lineTo(x + 30, gy + 8);
+      ctx.stroke();
+    }
+  }
+
+  // ======= Stickman drawing =======
+  function drawStickman() {
+    const ctx2 = ctx;
+    const x = man.x;
+    const baseY = man.y;
+
+    ctx2.lineCap = 'round';
+    ctx2.lineJoin = 'round';
+    ctx2.strokeStyle = man.color;
+    ctx2.fillStyle = man.color;
+
+    const swing = Math.sin(man.runningPhase) ; // [-1,1]
+    const swing2 = Math.sin(man.runningPhase + Math.PI); // opposite leg
+    const headR = man.headR;
+    const bodyLen = man.bodyLen;
+    const armLen = man.armLen;
+    const legLen = man.legLen;
+
+    // Head
+    ctx2.beginPath();
+    ctx2.arc(x, baseY - bodyLen - headR - 6, headR, 0, Math.PI*2);
+    ctx2.stroke();
+
+    // Body
+    ctx2.lineWidth = 4;
+    ctx2.beginPath();
+    ctx2.moveTo(x, baseY - bodyLen);
+    ctx2.lineTo(x, baseY - 10);
+    ctx2.stroke();
+
+    // Arms (simple shoulder at upper body)
+    const shoulderY = baseY - bodyLen + 6;
+    const armSwing = swing * 0.9;
+    const armSwingOpp = swing2 * 0.9;
+
+    ctx2.lineWidth = 3.5;
+    // Right arm (front)
+    ctx2.beginPath();
+    ctx2.moveTo(x, shoulderY);
+    ctx2.lineTo(x + armLen * Math.cos(0.2 + armSwing), shoulderY + armLen * Math.sin(0.2 + armSwing));
+    ctx2.stroke();
+
+    // Left arm (back)
+    ctx2.beginPath();
+    ctx2.moveTo(x, shoulderY);
+    ctx2.lineTo(x + armLen * Math.cos(-0.2 + armSwingOpp), shoulderY + armLen * Math.sin(-0.2 + armSwingOpp));
+    ctx2.stroke();
+
+    // Hips joint
+    const hipY = baseY - 10;
+    // Legs
+    const stepA = swing * 0.8;
+    const stepB = swing2 * 0.8;
+
+    // Right leg
+    ctx2.lineWidth = 4;
+    ctx2.beginPath();
+    ctx2.moveTo(x, hipY);
+    const kneeAx = x + legLen * 0.55 * Math.sin(stepA);
+    const kneeAy = hipY + legLen * 0.55;
+    ctx2.lineTo(kneeAx, kneeAy);
+    const footAx = kneeAx + legLen * 0.7 * Math.sin(stepA);
+    const footAy = kneeAy + legLen * 0.7;
+    ctx2.lineTo(footAx, footAy);
+    ctx2.stroke();
+
+    // Left leg
+    ctx2.beginPath();
+    ctx2.moveTo(x, hipY);
+    const kneeBx = x + legLen * 0.55 * Math.sin(stepB);
+    const kneeBy = hipY + legLen * 0.55;
+    ctx2.lineTo(kneeBx, kneeBy);
+    const footBx = kneeBx + legLen * 0.7 * Math.sin(stepB);
+    const footBy = kneeBy + legLen * 0.7;
+    ctx2.lineTo(footBx, footBy);
+    ctx2.stroke();
+
+    // Simple eye when "on ground"
+    const onGround = Math.abs(man.y - world.groundY()) < 1;
+    if (onGround) {
+      ctx2.beginPath();
+      ctx2.arc(x + 6, baseY - bodyLen - headR - 6, 1.8, 0, Math.PI*2);
+      ctx2.fill();
+    }
+  }
+
+  // ======= Physics & update =======
+  let last = performance.now();
+
+  function tick(now) {
+    const dt = Math.min(0.032, (now - last)/1000); // clamp for tab switches
+    last = now;
+
+    if (!world.paused) {
+      world.t += dt;
+
+      // Parallax scroll (different factors)
+      const px = world.speed * 120 * dt;
+      world.layer[0] += px * 0.15;
+      world.layer[1] += px * 0.35;
+      world.layer[2] += px * 1.0;
+
+      // Distance (meters-ish)
+      world.distance += world.speed * dt * 3.2;
+      elDist.textContent = world.distance.toFixed(1);
+
+      // Running phase
+      man.runningPhase += world.speed * 10 * dt;
+
+      // Gravity / jump
+      const gy = world.groundY();
+      man.vy += world.gravity * dt;
+      man.y += man.vy;
+      if (man.y > gy) { man.y = gy; man.vy = 0; }
+    }
+
+    // Rendering
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    drawBackground();
+    drawStickman();
+
+    // Update best
+    if (world.distance > bestDistance) {
+      bestDistance = world.distance;
+      elBest.textContent = bestDistance.toFixed(1);
+      saveBest(bestDistance);
+    }
+
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  // Keyboard (desktop)
+  window.addEventListener('keydown', (e)=>{
+    if (e.code === 'Space' || e.key === ' ') { requestJump(); }
+    if (e.key === 'ArrowRight') { world.speed = Math.min(3.0, +(world.speed + 0.1).toFixed(1)); elSpeed.value = world.speed; persist(); }
+    if (e.key === 'ArrowLeft') { world.speed = Math.max(0.6, +(world.speed - 0.1).toFixed(1)); elSpeed.value = world.speed; persist(); }
+    if (e.key === 'p') { elToggle.click(); }
+  });
+
+  // Prevent accidental scroll on touch controls
+  ['jump','faster','slower','toggle'].forEach(id=>{
+    const el = document.getElementById(id);
+    el.addEventListener('touchstart', e=>e.preventDefault(), {passive:false});
+  });
+
+})();
+</script>
+</body>
+</html>
