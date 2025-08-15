@@ -43,11 +43,12 @@
     padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
     background: linear-gradient(180deg, rgba(0,0,0,0.0), rgba(0,0,0,0.35));
     backdrop-filter: blur(4px);
-    transform: translateY(-20px); /* pulsanti 20px più in alto */
+    /* Sposta i pulsanti 20px più in alto rispetto al bordo inferiore */
+    transform: translateY(-20px);
   }
   .btn {
     min-height: 50px;
-    padding: 20px;
+    padding: 20px; /* include già il +10px extra precedente */
     border-radius: 14px;
     border: 1px solid rgba(255,255,255,0.18);
     background: rgba(255,255,255,0.06);
@@ -62,6 +63,7 @@
   .col.center { justify-content: center; }
   .col.right { justify-content: flex-end; }
 
+  /* Spazio riservato ai due pulsanti centrali nascosti */
   .ghost-spot {
     width: 46%;
     min-height: 50px;
@@ -75,6 +77,7 @@
 </head>
 <body>
   <div class="topbar">
+    <!-- Link alle upgrades -->
     <a class="upgrades" href="/match3/upgrades.html">upgrades ↗</a>
   </div>
   <div class="hud" id="hud">§0 • 0:00</div>
@@ -109,22 +112,19 @@
     "boost unlocked": false,
     "boost type": "none",
     "enemies unlocked": { basic: true, betterVisible: false },
-    "level data": { level: 1, difficulty: 1, score: 0, bossesKilled: 0 }, // bossesKilled NEW
+    "level data": { level: 1, difficulty: 1, score: 0 },
     "bullet type": "round",
     "bullet number": 1,
     "bullet spread": 0,    // degrees
     "bullet fire rate": 0.5, // shots/sec
-    "spawn every": 1.2,
-    "boss unlocked": false
   };
 
   function loadSave() {
     try {
       const raw = localStorage.getItem(LS_KEY);
       let save = raw ? JSON.parse(raw) : {};
-      // merge level data explicitly to preserve subkeys
-      save["level data"] = { ...defaultSave["level data"], ...(save["level data"]||{}) };
       save = { ...defaultSave, ...save };
+      // mirror requested simple keys
       for (const k of Object.keys(save)) {
         const v = save[k];
         localStorage.setItem(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
@@ -143,16 +143,11 @@
 
   function commitSave(partial) {
     const save = { ...state.save, ...partial };
-    // deep merge for level data
-    if (partial["level data"]) {
-      save["level data"] = { ...(state.save["level data"]||{}), ...partial["level data"] };
-    }
     state.save = save;
     for (const [k, v] of Object.entries(partial)) {
-      const val = (k === "level data") ? state.save["level data"] : v;
-      localStorage.setItem(k, typeof val === 'object' ? JSON.stringify(val) : String(val));
+      localStorage.setItem(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
     }
-    localStorage.setItem(LS_KEY, JSON.stringify(state.save));
+    localStorage.setItem(LS_KEY, JSON.stringify(save));
   }
 
   // ---------- Canvas ----------
@@ -181,11 +176,7 @@
       moveLeft: false, moveRight: false,
     },
     bullets: [],
-    enemyBullets: [], // boss bullets
     enemies: [],
-    boss: null,            // <- current boss (or null)
-    bossSpawnTimer: 0,     // seconds since last boss spawn attempt
-    bossSpawnEvery: 10,    // spawn interval if unlocked and no boss present
     stars: [],
     lastShotAt: 0,
     spawnTimer: 0,
@@ -195,12 +186,12 @@
     playtimeAccumulator: 0,
 
     // Bomb
-    bombCooldownSec: 10,   // (rimasto come nel tuo aggiornamento)
-    bombReadyAt: 0,
+    bombCooldownSec: 60,
+    bombReadyAt: 0, // timestamp (seconds)
   };
 
-  // initialize spawnEvery from LS if present
-  state.spawnEvery = Number(localStorage.getItem("spawn every")) || state.save["spawn every"] || 1.2;
+  // Ensure bombReadyAt uses saved clock if present (not persisted previously)
+  if (!state.bombReadyAt) state.bombReadyAt = 0;
 
   // ---------- Input ----------
   const btnLeft = document.getElementById('btnLeft');
@@ -248,67 +239,9 @@
     });
   }
 
-  // ---------- Boss ----------
-  function spawnBoss() {
-    // Base stats affected by kills so far
-    const kills = state.save["level data"].bossesKilled || 0;
-    const hp = 80 + kills;              // +1 HP per boss ucciso
-    const reward = 200 + 5*kills;       // +5 § per kill precedente
-    const bulletDmg = 10 + 5*kills;     // +5 danno per kill precedente
-
-    state.boss = {
-      x: canvas.clientWidth * 0.5,
-      y: canvas.clientHeight * 0.25,   // 1/4 dall'alto
-      r: 25,                           // diametro 50
-      speedX: 60,                      // px/s, lento
-      dir: 1,                          // 1 → destra, -1 → sinistra
-      hp,
-      maxHp: hp,
-      reward,
-      bulletDmg,
-      lastShotAt: state.t
-    };
-  }
-
-  function drawHexagon(cx, cy, r, fill, stroke) {
-    const sides = 6;
-    ctx.beginPath();
-    for (let i=0;i<sides;i++){
-      const ang = -Math.PI/2 + i*(2*Math.PI/sides);
-      const x = cx + Math.cos(ang)*r;
-      const y = cy + Math.sin(ang)*r;
-      if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-    }
-    ctx.closePath();
-    if (fill){ ctx.fillStyle = fill; ctx.fill(); }
-    if (stroke){ ctx.lineWidth = 2; ctx.strokeStyle = stroke; ctx.stroke(); }
-  }
-
-  function bossCircleHit(boss, bullet) {
-    const dx = bullet.x - boss.x, dy = bullet.y - boss.y;
-    return dx*dx + dy*dy <= (boss.r*boss.r);
-  }
-
-  function spawnBossBullet() {
-    if (!state.boss) return;
-    // bullet aimed at player center
-    const px = state.player.x * canvas.clientWidth;
-    const py = state.player.y * canvas.clientHeight - state.player.size;
-    const dx = px - state.boss.x, dy = py - state.boss.y;
-    const len = Math.hypot(dx,dy) || 1;
-    const speed = 220; // px/s
-    state.enemyBullets.push({
-      x: state.boss.x,
-      y: state.boss.y,
-      vx: (dx/len)*speed,
-      vy: (dy/len)*speed,
-      r: 4,
-      dmg: state.boss.bulletDmg
-    });
-  }
-
   // ---------- Shooting ----------
   function shootFan(centerX, centerY, count, stepDeg, speed=320) {
+    // Ventaglio centrato verso l’alto (-90°), passo in gradi
     const center = -Math.PI/2; // -90°
     const total = (count-1) * (stepDeg * Math.PI/180);
     const start = center - total/2;
@@ -339,8 +272,8 @@
         state.bullets.push({
           x: state.player.x * canvas.clientWidth,
           y: state.player.y * canvas.clientHeight - state.player.size - 4,
-          vx: Math.cos(angle) * 200,
-          vy: Math.sin(angle) * 300,
+          vx: Math.cos(angle) * 200, // orizzontale
+          vy: Math.sin(angle) * 300, // verticale
           r: 4,
         });
       }
@@ -348,7 +281,9 @@
   }
 
   // ---------- Bomb logic ----------
-  function bombReady() { return state.t >= state.bombReadyAt; }
+  function bombReady() {
+    return state.t >= state.bombReadyAt;
+  }
 
   function triggerBomb() {
     if (!bombReady()) return;
@@ -358,14 +293,21 @@
     const py = state.player.y * canvas.clientHeight - state.player.size - 6;
 
     if (type === "screen") {
+      // 90 bullet, spread step 1°
       shootFan(px, py, 90, 1, 360);
     } else if (type === "smart") {
-      // NOTE: specifica originale: 50; nel tuo aggiornamento c'era 500.
-      // Riporto a 50 come da specifica precedente del design.
+      // spawn 50 enemies
       for (let i=0;i<50;i++) spawnEnemy();
     }
+    // set cooldown
     state.bombReadyAt = state.t + state.bombCooldownSec;
   }
+
+  btnBomb?.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (!bombReady()) return;
+    triggerBomb();
+  });
 
   // ---------- Collisions ----------
   function bulletHitsEnemy(b, e) {
@@ -376,15 +318,6 @@
     return (dx*dx + dy*dy) <= (b.r*b.r);
   }
 
-  function bulletHitsPlayer(b) {
-    // approx triangle as circle around the tip/center
-    const px = state.player.x * canvas.clientWidth;
-    const py = state.player.y * canvas.clientHeight - state.player.size/2;
-    const pr = state.player.size; // conservative
-    const dx = b.x - px, dy = b.y - py;
-    return (dx*dx + dy*dy) <= (pr*pr);
-  }
-
   // ---------- Loop ----------
   function update() {
     const now = performance.now();
@@ -393,10 +326,6 @@
     state.t += dt;
     state.playtimeAccumulator += dt;
 
-    // keep reading spawnEvery if user upgraded in another tab
-    const se = Number(localStorage.getItem("spawn every"));
-    if (!Number.isNaN(se) && se > 0) state.spawnEvery = se;
-
     // player move
     const move = (state.player.moveRight ? 1 : 0) - (state.player.moveLeft ? 1 : 0);
     if (move) {
@@ -404,97 +333,46 @@
       state.player.x = Math.max(0.05, Math.min(0.95, state.player.x));
     }
 
-    // spawn normal enemies
+    // spawn enemies
     state.spawnTimer += dt;
     if (state.spawnTimer >= state.spawnEvery) {
       state.spawnTimer = 0;
       spawnEnemy();
     }
 
-    // boss spawning
-    if (state.save["boss unlocked"]) {
-      if (!state.boss) {
-        state.bossSpawnTimer += dt;
-        if (state.bossSpawnTimer >= state.bossSpawnEvery) {
-          state.bossSpawnTimer = 0;
-          spawnBoss();
-        }
-      } else {
-        // boss movement left-right
-        state.boss.x += state.boss.dir * state.boss.speedX * dt;
-        const margin = state.boss.r + 8;
-        if (state.boss.x < margin) { state.boss.x = margin; state.boss.dir = 1; }
-        if (state.boss.x > canvas.clientWidth - margin) { state.boss.x = canvas.clientWidth - margin; state.boss.dir = -1; }
-        // boss shooting every 1s
-        if (state.t - state.boss.lastShotAt >= 1) {
-          state.boss.lastShotAt = state.t;
-          spawnBossBullet();
-        }
-      }
-    }
-
-    // player bullets
+    // bullets
     for (let i=state.bullets.length-1;i>=0;i--){
       const b = state.bullets[i];
       b.x += b.vx * dt;
       b.y += b.vy * dt;
-      if (b.y < -10 || b.x < -10 || b.x > canvas.clientWidth+10) { state.bullets.splice(i,1); continue; }
-
-      // hit boss?
-      if (state.boss && bossCircleHit(state.boss, b)) {
-        state.bullets.splice(i,1);
-        state.boss.hp -= 1;
-        if (state.boss.hp <= 0) {
-          // reward
-          commitSave({
-            money: (state.save.money||0) + state.boss.reward,
-            "level data": { ...state.save["level data"], bossesKilled: (state.save["level data"].bossesKilled||0) + 1 }
-          });
-          state.boss = null;
-        }
-        continue;
-      }
-
-      // hit normal enemy?
-      for (let j=state.enemies.length-1;j>=0;j--){
-        const e = state.enemies[j];
-        if (bulletHitsEnemy(b, e)) {
-          state.bullets.splice(i,1);
-          e.hp -= 1;
-          if (e.hp <= 0) {
-            commitSave({
-              money: (state.save.money||0)+1,
-              "level data": { ...state.save["level data"], score: (state.save["level data"].score||0)+1 }
-            });
-            state.enemies.splice(j,1);
-          } else {
-            e.color = '#5e0000';
-          }
-          break;
-        }
-      }
+      if (b.y < -10 || b.x < -10 || b.x > canvas.clientWidth+10) state.bullets.splice(i,1);
     }
 
-    // enemies move down
+    // enemies
     for (let i=state.enemies.length-1;i>=0;i--){
       const e = state.enemies[i];
       e.y += e.speed * dt;
       if (e.y - e.size/2 > canvas.clientHeight + 40) state.enemies.splice(i,1);
     }
 
-    // enemy (boss) bullets update & hit player
-    for (let i=state.enemyBullets.length-1;i>=0;i--){
-      const eb = state.enemyBullets[i];
-      eb.x += eb.vx * dt;
-      eb.y += eb.vy * dt;
-      if (eb.x < -20 || eb.x > canvas.clientWidth+20 || eb.y < -20 || eb.y > canvas.clientHeight+20) {
-        state.enemyBullets.splice(i,1); continue;
+    // collisions bullet-enemy
+    for (let i=state.enemies.length-1;i>=0;i--){
+      const e = state.enemies[i];
+      let hitIndex = -1;
+      for (let j=state.bullets.length-1;j>=0;j--){
+        if (bulletHitsEnemy(state.bullets[j], e)) { hitIndex = j; break; }
       }
-      if (bulletHitsPlayer(eb)) {
-        // damage as loss of money
-        const newMoney = Math.max(0, (state.save.money||0) - eb.dmg);
-        commitSave({ money: newMoney });
-        state.enemyBullets.splice(i,1);
+      if (hitIndex >= 0) {
+        state.bullets.splice(hitIndex,1);
+        e.hp -= 1;
+        if (e.hp <= 0) {
+          commitSave({ money: (state.save.money||0)+1,
+            "level data": { ...state.save["level data"], score: (state.save["level data"].score||0)+1 }
+          });
+          state.enemies.splice(i,1);
+        } else {
+          e.color = '#5e0000';
+        }
       }
     }
 
@@ -504,7 +382,7 @@
       if (s.y > canvas.clientHeight) { s.y = -2; s.x = Math.random()*canvas.clientWidth; }
     }
 
-    // player shooting
+    // shooting
     maybeShoot();
 
     // time persistence
@@ -535,7 +413,7 @@
     ctx.closePath();
     ctx.fill();
 
-    // player bullets
+    // bullets
     ctx.fillStyle = '#f5f7ff';
     for (const b of state.bullets) {
       ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill();
@@ -562,29 +440,67 @@
         ctx.fillStyle = e.color;
         ctx.fillRect(e.x - e.size/2, e.y - e.size/2, e.size, e.size);
       }
-      // HP pips (small squares above)
+      // HP pips
       ctx.fillStyle = 'rgba(255,255,255,0.25)';
       for (let i=0;i<e.hp;i++){
         ctx.fillRect(e.x - 6 + i*6 - 3, e.y - e.size/2 - 6, 4, 4);
       }
     }
 
-    // boss
-    if (state.boss) {
-      // body
-      const fill = '#7f1d1d';
-      const stroke = '#ffffff';
-      if (betterVisible) {
-        ctx.save();
-        ctx.shadowColor = 'rgba(255,255,255,0.7)';
-        ctx.shadowBlur = 10;
-        drawHexagon(state.boss.x, state.boss.y, state.boss.r, fill, stroke);
-        ctx.restore();
-      } else {
-        drawHexagon(state.boss.x, state.boss.y, state.boss.r, fill, stroke);
-      }
+    // HUD
+    const m = state.save.money || 0;
+    const ts = state.save.timeSec || 0;
+    const mm = Math.floor(ts/60), ss = ts % 60;
+    hudEl.textContent = `§${m} • ${mm}:${String(ss).padStart(2,'0')}`;
 
-      // HP indicator: one tick per 10 HP remaining (maxHp/10)
-      const ticksTotal = Math.ceil(state.boss.maxHp / 10);
-      const ticksLeft = Math.ceil(Math.max(0, state.boss.hp) / 10);
-      const barW = 6
+    // Bomb button UI (cooldown)
+    if (btnBomb) {
+      const unlocked = !!state.save["bomb unlocked"];
+      const type = state.save["bomb type"] || "screen";
+      const cd = Math.ceil(Math.max(0, state.bombReadyAt - state.t));
+      if (unlocked) {
+        btnBomb.style.display = 'flex';
+        btnBomb.textContent = bombReady() ? `💣 BOMB (${type})` : `💣 ${type} (${cd}s)`;
+        btnBomb.style.opacity = bombReady() ? '1' : '0.6';
+      } else {
+        btnBomb.style.display = 'none';
+      }
+    }
+  }
+
+  function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  // Hidden central buttons visibility (in caso di sblocco futuro)
+  function checkUnlocksAndToggleButtons() {
+    const bombUnlocked = !!state.save["bomb unlocked"];
+    const boostUnlocked = !!state.save["boost unlocked"];
+    document.getElementById('btnBomb').style.display = bombUnlocked ? 'flex' : 'none';
+    document.getElementById('btnBoost').style.display = boostUnlocked ? 'flex' : 'none';
+  }
+
+  checkUnlocksAndToggleButtons();
+  loop();
+
+  // reset frame timer after tab switch
+  document.addEventListener('visibilitychange', () => {
+    state.lastFrame = performance.now();
+  });
+
+  // Debug helpers
+  window.vscroll = {
+    addMoney(n=1){ commitSave({ money: (state.save.money||0)+n }); },
+    setFireRate(r){ commitSave({ "bullet fire rate": r }); },
+    setBullets(n, spread=0){ commitSave({ "bullet number": n, "bullet spread": spread }); },
+    unlockBomb(type="screen"){ commitSave({ "bomb unlocked": true, "bomb type": type }); checkUnlocksAndToggleButtons(); },
+    unlockBoost(type="speed"){ commitSave({ "boost unlocked": true, "boost type": type }); checkUnlocksAndToggleButtons(); },
+    setBombType(t="screen"){ commitSave({ "bomb type": t }); },
+    save: ()=>state.save
+  };
+})();
+</script>
+</body>
+</html>
