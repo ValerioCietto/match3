@@ -3,338 +3,333 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Canvas Starship Demo (CTX Draw + Bullets)</title>
+<title>Starship — Vertical Scroll, Wing Cannons, Shield & Overdrive</title>
 <style>
   :root {
-    --ui-bg: rgba(20,20,28,.85);
+    --ui-bg: rgba(16,18,26,.85);
     --ui-fg: #e9eef5;
-    --accent: #5ee1ff;
+    --accent: #58d6ff;
   }
-  html, body {
-    margin: 0;
-    height: 100%;
-    background: #0b0e17;
-    color: var(--ui-fg);
-    font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-    touch-action: none; /* prevenire zoom/pan su gesti */
-  }
-  #wrap {
-    position: fixed; inset: 0;
-    display: grid;
-    grid-template-rows: 1fr auto;
-  }
-  canvas { width: 100%; height: 100%; display: block; }
+  html, body { margin:0; height:100%; background:#0a0f18; color:var(--ui-fg); font-family:system-ui,Segoe UI,Roboto,sans-serif; touch-action:none; }
+  #wrap { position:fixed; inset:0; display:grid; grid-template-rows:1fr auto; }
+  canvas { width:100%; height:100%; display:block; }
   .hud {
-    position: absolute; left: 8px; top: env(safe-area-inset-top,8px);
-    background: var(--ui-bg);
-    padding: 8px 10px; border-radius: 10px; font-size: 12px;
-    line-height: 1.2; backdrop-filter: blur(6px);
-    border: 1px solid rgba(255,255,255,.08);
+    position:absolute; left:8px; top:env(safe-area-inset-top,8px);
+    background:var(--ui-bg); padding:8px 10px; border-radius:12px; font-size:12px;
+    border:1px solid rgba(255,255,255,.08); backdrop-filter:blur(6px);
   }
-  .hud .row { display: flex; gap: 10px; align-items: center; }
-  .hud .dot { width: 8px; height: 8px; border-radius: 50%; background: #14f195; box-shadow: 0 0 8px #14f195aa; }
+  .hud .row { display:flex; gap:10px; align-items:center; }
   .controls {
-    display: grid; grid-template-columns: 1fr 1fr 1fr;
-    gap: 10px; padding: 10px env(safe-area-inset-right,10px) calc(10px + env(safe-area-inset-bottom,0)) env(safe-area-inset-left,10px);
-    background: linear-gradient(to top, rgba(0,0,0,.55), rgba(0,0,0,0));
+    display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px;
+    padding:10px env(safe-area-inset-right,10px) calc(10px + env(safe-area-inset-bottom,0)) env(safe-area-inset-left,10px);
+    background:linear-gradient(to top, rgba(0,0,0,.55), rgba(0,0,0,0));
   }
   .btn {
-    appearance: none; -webkit-tap-highlight-color: transparent;
-    background: var(--ui-bg); color: var(--ui-fg);
-    border: 1px solid rgba(255,255,255,.08);
-    border-radius: 16px; padding: 14px 10px; font-size: 16px;
-    font-weight: 600; letter-spacing: .2px;
-    box-shadow: 0 8px 24px rgba(0,0,0,.25);
+    appearance:none; -webkit-tap-highlight-color:transparent;
+    background:var(--ui-bg); color:var(--ui-fg);
+    border:1px solid rgba(255,255,255,.08); border-radius:16px;
+    padding:14px 10px; font-size:15px; font-weight:700; letter-spacing:.2px;
+    box-shadow:0 8px 24px rgba(0,0,0,.25);
   }
+  .btn.primary { border-color:#29a8ff; box-shadow:0 0 0 2px rgba(0,153,255,.15), 0 12px 28px rgba(0,153,255,.18) inset; }
   .btn:active { transform: translateY(1px); }
-  .btn.primary { border-color: #2af; box-shadow: 0 0 0 2px rgba(0,153,255,.15), 0 12px 28px rgba(0,153,255,.18) inset; }
   .hint {
-    position: absolute; right: 8px; top: env(safe-area-inset-top,8px);
-    background: var(--ui-bg); border: 1px solid rgba(255,255,255,.08);
-    padding: 8px 10px; border-radius: 10px; font-size: 12px; max-width: 52ch;
+    position:absolute; right:8px; top:env(safe-area-inset-top,8px);
+    background:var(--ui-bg); border:1px solid rgba(255,255,255,.08);
+    padding:8px 10px; border-radius:12px; font-size:12px; max-width:52ch;
   }
-  @media (min-width: 860px) {
-    .controls { max-width: 800px; margin-inline: auto; }
-  }
+  @media (min-width: 880px) { .controls { max-width:820px; margin-inline:auto; } }
 </style>
 </head>
 <body>
 <div id="wrap">
   <canvas id="game"></canvas>
 
-  <div class="hud" id="hud">
-    <div class="row"><div class="dot"></div><div><strong>Starship Demo</strong></div></div>
-    <div class="row" style="margin-top:6px;">
-      <div>FPS: <span id="fps">0</span></div>
-      <div>Shots: <span id="shots">0</span></div>
-      <div>Total: <span id="totalShots">0</span></div>
-    </div>
-    <div class="row" style="margin-top:2px;">
-      <div>Autofire: <span id="autoStatus">off</span></div>
-    </div>
+  <div class="hud">
+    <div class="row"><strong>Starship</strong> <span>•</span> <span>FPS: <span id="fps">0</span></span></div>
+    <div class="row"><span>Shots: <span id="shots">0</span></span> <span>Total: <span id="total">0</span></span> <span>Overdrive: <span id="ov">off</span></span></div>
   </div>
-
-  <div class="hint">
-    Drag per muovere l’astronave • 🎯 Fire per sparare • 🔁 Autofire on/off • ⏹ Reset dati
-  </div>
+  <div class="hint">Trascina per muovere • 🎯 tieni premuto per auto‑fuoco • 🛡️ scudo • 🚀 overdrive</div>
 
   <div class="controls">
     <button id="btnFire" class="btn primary">🎯 Fire</button>
-    <button id="btnAuto" class="btn">🔁 Autofire</button>
-    <button id="btnReset" class="btn">⏹ Reset</button>
+    <button id="btnShield" class="btn">🛡️ Simulate shield hit</button>
+    <button id="btnOver" class="btn">🚀 Engine Overdrive</button>
   </div>
 </div>
 
 <script>
 (() => {
   // ---------- Persistence ----------
-  const STORAGE_KEY = 'starship-demo-v1';
-  const defaultSave = { totalShots: 0, autofire: false };
-  const loadSave = () => {
-    try { return Object.assign({}, defaultSave, JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')); }
-    catch { return { ...defaultSave }; }
-  };
-  const saveState = (patch={}) => {
-    save = { ...save, ...patch };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(save));
-    updateHUD();
-  };
-  let save = loadSave();
+  const STORAGE_KEY = 'starship-vertical-v1';
+  const defaults = { totalShots: 0, overdrive: false };
+  let save = load();
+  function load() { try { return Object.assign({}, defaults, JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')); } catch { return {...defaults}; } }
+  function persist(patch={}) { save = { ...save, ...patch }; localStorage.setItem(STORAGE_KEY, JSON.stringify(save)); updateHUD(); }
 
-  // ---------- Canvas setup ----------
+  // ---------- Canvas ----------
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
-
-  function fitCanvas() {
-    const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+  function fit() {
+    const dpr = Math.max(1, Math.min(3, window.devicePixelRatio||1));
     const w = Math.floor(canvas.clientWidth * dpr);
     const h = Math.floor(canvas.clientHeight * dpr);
-    if (canvas.width !== w || canvas.height !== h) {
-      canvas.width = w; canvas.height = h;
-    }
+    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; rebuildStars(); }
   }
-  window.addEventListener('resize', fitCanvas, { passive: true });
-  fitCanvas();
+  window.addEventListener('resize', fit, { passive:true }); fit();
 
-  // ---------- Game State ----------
-  const state = {
-    ship: {
-      x: 160, y: 160, r: 1, // scale
-      vx: 0, vy: 0,
-      noseLen: 42,
-    },
-    bullets: [],
-    input: { touching: false, tx: 0, ty: 0, firing: false },
-    shots: 0,
-    lastShotAt: 0,
-    shotIntervalMs: 125, // 8 shots/sec
-    time: 0, dt: 0, lastTs: 0,
-    fps: 0,
-  };
-
-  // Start ship near left-center
-  state.ship.x = 0.18 * canvas.width;
-  state.ship.y = 0.5 * canvas.height;
-
-  // ---------- Input (mouse & touch) ----------
-  const setTouch = (x, y) => {
-    state.input.touching = true;
-    state.input.tx = x; state.input.ty = y;
-  };
-  const clearTouch = () => state.input.touching = false;
-
-  canvas.addEventListener('pointerdown', e => {
-    const rect = canvas.getBoundingClientRect();
-    setTouch((e.clientX - rect.left) * (canvas.width/rect.width),
-             (e.clientY - rect.top)  * (canvas.height/rect.height));
-  });
-  canvas.addEventListener('pointermove', e => {
-    if (!state.input.touching) return;
-    const rect = canvas.getBoundingClientRect();
-    setTouch((e.clientX - rect.left) * (canvas.width/rect.width),
-             (e.clientY - rect.top)  * (canvas.height/rect.height));
-  });
-  window.addEventListener('pointerup', clearTouch);
-
-  // Buttons
-  const btnFire = document.getElementById('btnFire');
-  const btnAuto = document.getElementById('btnAuto');
-  const btnReset = document.getElementById('btnReset');
-  btnFire.addEventListener('pointerdown', () => { state.input.firing = true; });
-  btnFire.addEventListener('pointerup',   () => { state.input.firing = false; });
-  btnAuto.addEventListener('click', () => saveState({ autofire: !save.autofire }));
-  btnReset.addEventListener('click', () => { save = { ...defaultSave }; localStorage.setItem(STORAGE_KEY, JSON.stringify(save)); state.shots = 0; updateHUD(); });
-
-  // Keyboard (desktop)
-  window.addEventListener('keydown', (e) => {
-    if (e.code === 'Space') state.input.firing = true;
-  });
-  window.addEventListener('keyup', (e) => {
-    if (e.code === 'Space') state.input.firing = false;
-  });
-
-  // ---------- HUD ----------
+  // ---------- UI ----------
   const elFPS = document.getElementById('fps');
   const elShots = document.getElementById('shots');
-  const elTotal = document.getElementById('totalShots');
-  const elAuto = document.getElementById('autoStatus');
-  function updateHUD() {
-    elShots.textContent = state.shots;
-    elTotal.textContent = save.totalShots;
-    elAuto.textContent = save.autofire ? 'on' : 'off';
-  }
+  const elTotal = document.getElementById('total');
+  const elOV = document.getElementById('ov');
+  const btnFire = document.getElementById('btnFire');
+  const btnShield = document.getElementById('btnShield');
+  const btnOver = document.getElementById('btnOver');
+  function updateHUD(){ elShots.textContent = state.shots; elTotal.textContent = save.totalShots; elOV.textContent = save.overdrive ? 'on' : 'off'; }
   updateHUD();
 
-  // ---------- Rendering helpers ----------
-  function withTransform(x, y, rot, scale, fn) {
-    ctx.save();
-    ctx.translate(x, y);
-    if (rot) ctx.rotate(rot);
-    if (scale !== undefined) ctx.scale(scale, scale);
-    fn();
-    ctx.restore();
+  // ---------- State ----------
+  const state = {
+    time: 0, dt: 0, last: 0, fps: 0,
+    shots: 0,
+    input: { touching:false, tx:0, ty:0, firing:false },
+    scroll: 0, // vertical world scroll
+    baseScrollSpeed: 1.1, // px per frame unit (scaled below)
+    ship: { x: 0.25, y: 0.6, nose: 46, scale: 1.25 }, // relative positions (0..1) for init
+    bullets: [],
+    shieldFx: [], // {t:0..1}
+  };
+
+  // place ship
+  function shipPx() { return { x: state.shipX, y: state.shipY }; }
+  function initShip() {
+    state.shipX = canvas.width * state.ship.x;
+    state.shipY = canvas.height * state.ship.y;
+  }
+  initShip();
+
+  // ---------- Input ----------
+  function canvasCoords(e){
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (e.clientX - rect.left) * (canvas.width/rect.width),
+      y: (e.clientY - rect.top ) * (canvas.height/rect.height),
+    };
+  }
+  canvas.addEventListener('pointerdown', e => { const p = canvasCoords(e); state.input.touching = true; state.input.tx=p.x; state.input.ty=p.y; });
+  canvas.addEventListener('pointermove', e => { if(!state.input.touching) return; const p = canvasCoords(e); state.input.tx=p.x; state.input.ty=p.y; });
+  window.addEventListener('pointerup', () => { state.input.touching=false; });
+
+  btnFire.addEventListener('pointerdown', () => state.input.firing = true);
+  btnFire.addEventListener('pointerup',   () => state.input.firing = false);
+  window.addEventListener('keydown', e => { if(e.code==='Space') state.input.firing=true; if(e.code==='KeyO') toggleOverdrive(); if(e.code==='KeyS') triggerShield(); });
+  window.addEventListener('keyup',   e => { if(e.code==='Space') state.input.firing=false; });
+
+  btnShield.addEventListener('click', () => triggerShield());
+  btnOver.addEventListener('click', () => toggleOverdrive());
+
+  function toggleOverdrive(){ persist({ overdrive: !save.overdrive }); }
+  function triggerShield(){ state.shieldFx.push({ t:0 }); }
+
+  // ---------- Starfield (vertical) ----------
+  let stars = [];
+  function rebuildStars(){
+    const count = Math.floor(Math.min(280, (canvas.width*canvas.height)/20000));
+    stars = Array.from({length: count}, () => ({
+      x: Math.random()*canvas.width,
+      y: Math.random()*canvas.height,
+      r: Math.random()*1.6 + 0.4,
+      s: Math.random()*0.8 + 0.3, // speed multiplier
+      tw: Math.random()*1.2 + 0.3, // twinkle
+    }));
+  }
+  rebuildStars();
+
+  // ---------- Drawing helpers ----------
+  function withTX(x,y,rot=0,scale=1,draw){
+    ctx.save(); ctx.translate(x,y); if(rot) ctx.rotate(rot); if(scale!==1) ctx.scale(scale,scale); draw(); ctx.restore();
   }
 
-  // Starship drawing: fuselage + cockpit + wings + gun + engine flame
-  function drawShip(s, t) {
-    const scale = 1.2;
-    withTransform(s.x, s.y, 0, scale, () => {
-      // subtle engine bob
-      const bob = Math.sin(t*6.28) * 0.5;
+  // Ship drawing with wider wings and two wing cannons + nose cannon
+  function drawShip(t, overdrive=false){
+    const s = state.ship;
+    const scale = s.scale;
+    const bob = Math.sin(t*6.28)*0.6;
 
-      // Fuselage body
-      ctx.lineJoin = 'round';
-      ctx.lineCap = 'round';
-      ctx.fillStyle = '#b7c4d6';
-      ctx.strokeStyle = '#89a1b7';
-      ctx.lineWidth = 2.5;
-
+    withTX(state.shipX, state.shipY, 0, scale, () => {
+      // body
+      ctx.lineJoin='round'; ctx.lineCap='round'; ctx.lineWidth=2.5;
+      ctx.fillStyle='#b7c4d6'; ctx.strokeStyle='#89a1b7';
       ctx.beginPath();
-      // main hull (rounded dart)
-      ctx.moveTo(-28, -10);
-      ctx.quadraticCurveTo(  8, -18,  s.noseLen, 0); // nose
-      ctx.quadraticCurveTo(  8,  18, -28, 10);
-      ctx.quadraticCurveTo(-34,  4,  -34, 0);
-      ctx.quadraticCurveTo(-34, -4, -28, -10);
-      ctx.closePath();
-      ctx.fill(); ctx.stroke();
+      ctx.moveTo(-30, -12);
+      ctx.quadraticCurveTo(  8, -20, s.nose, 0);
+      ctx.quadraticCurveTo(  8,  20, -30, 12);
+      ctx.quadraticCurveTo( -38,  5, -40, 0);
+      ctx.quadraticCurveTo( -38, -5, -30, -12);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
 
-      // Wings (two)
-      ctx.fillStyle = '#9fb3c9';
-      ctx.strokeStyle = '#7d93a8';
-      ctx.beginPath(); // top wing
-      ctx.moveTo(-12, -10);
-      ctx.lineTo(-24, -26);
-      ctx.lineTo( 10, -14);
-      ctx.closePath();
-      ctx.fill(); ctx.stroke();
-
-      ctx.beginPath(); // bottom wing
-      ctx.moveTo(-12,  10);
-      ctx.lineTo(-24,  26);
-      ctx.lineTo( 10,  14);
-      ctx.closePath();
-      ctx.fill(); ctx.stroke();
-
-      // Cockpit (glass dome)
-      const grad = ctx.createLinearGradient(-2, -14, 12, 6);
-      grad.addColorStop(0, '#3bc7ff');
-      grad.addColorStop(1, '#0b6a93');
-      ctx.fillStyle = grad;
-      ctx.strokeStyle = '#89d6ff';
+      // WINGS (wider)
+      ctx.fillStyle = '#9fb3c9'; ctx.strokeStyle = '#7d93a8';
+      // top wing
       ctx.beginPath();
-      ctx.ellipse(2, -2, 12, 10, 0, 0, Math.PI*2);
+      ctx.moveTo(-10, -12);
+      ctx.lineTo(-40, -42);     // wider span
+      ctx.lineTo( 16, -18);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      // bottom wing
+      ctx.beginPath();
+      ctx.moveTo(-10,  12);
+      ctx.lineTo(-40,  42);
+      ctx.lineTo( 16,  18);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+
+      // Cockpit
+      const g = ctx.createLinearGradient(-2,-15, 12,8);
+      g.addColorStop(0,'#3bd1ff'); g.addColorStop(1,'#0b6a93');
+      ctx.fillStyle=g; ctx.strokeStyle='#89d6ff';
+      ctx.beginPath(); ctx.ellipse(2,-2, 13,11, 0, 0, Math.PI*2);
       ctx.fill(); ctx.stroke();
 
-      // Front gun (barrel)
-      ctx.strokeStyle = '#49586a';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.moveTo(s.noseLen-8, 0);
-      ctx.lineTo(s.noseLen+10, 0);
-      ctx.stroke();
+      // Cannons (nose + wing tips)
+      // nose barrel
+      ctx.strokeStyle='#49586a'; ctx.lineWidth=4;
+      ctx.beginPath(); ctx.moveTo(s.nose-8,0); ctx.lineTo(s.nose+12,0); ctx.stroke();
+
+      // wing cannons (little barrels near wing tips)
+      ctx.lineWidth=3.5; ctx.strokeStyle='#4b5a6d';
+      // top wing cannon at approx (-28, -30) to (-18,-26)
+      ctx.beginPath(); ctx.moveTo(-28,-30); ctx.lineTo(-14,-24); ctx.stroke();
+      // bottom wing cannon
+      ctx.beginPath(); ctx.moveTo(-28, 30); ctx.lineTo(-14, 24); ctx.stroke();
 
       // Engine nozzle
-      ctx.lineWidth = 2;
-      ctx.fillStyle = '#8da0b5';
-      ctx.strokeStyle = '#6a7c90';
-      ctx.beginPath();
-      ctx.moveTo(-34, -8);
-      ctx.lineTo(-42, -6);
-      ctx.lineTo(-42,  6);
-      ctx.lineTo(-34,  8);
-      ctx.closePath();
-      ctx.fill(); ctx.stroke();
+      ctx.lineWidth=2; ctx.fillStyle='#8da0b5'; ctx.strokeStyle='#6a7c90';
+      ctx.beginPath(); ctx.moveTo(-40,-8); ctx.lineTo(-50,-6); ctx.lineTo(-50,6); ctx.lineTo(-40,8); ctx.closePath(); ctx.fill(); ctx.stroke();
 
-      // Engine flame (animated)
-      const flameLen = 18 + 6*Math.sin(t*20 + bob);
-      const gradFlame = ctx.createLinearGradient(-42, 0, -42 - flameLen, 0);
-      gradFlame.addColorStop(0, 'rgba(255,230,120,0.95)');
-      gradFlame.addColorStop(0.6, 'rgba(255,140,40,0.8)');
-      gradFlame.addColorStop(1, 'rgba(255,60,20,0)');
-      ctx.fillStyle = gradFlame;
+      // Engine flame (normal vs overdrive)
+      const baseLen = overdrive ? 38 : 20;
+      const pulse = overdrive ? 10 : 6;
+      const flameLen = baseLen + pulse * Math.sin(t*22 + bob);
+      const gradFlame = ctx.createLinearGradient(-50,0, -50 - flameLen, 0);
+      if (overdrive) {
+        gradFlame.addColorStop(0.00,'rgba(140,220,255,1)');
+        gradFlame.addColorStop(0.45,'rgba( 60,160,255,.85)');
+        gradFlame.addColorStop(1.00,'rgba( 30,100,255,0)');
+      } else {
+        gradFlame.addColorStop(0.00,'rgba(255,230,120,.95)');
+        gradFlame.addColorStop(0.60,'rgba(255,140, 40,.80)');
+        gradFlame.addColorStop(1.00,'rgba(255, 60, 20,0)');
+      }
+      ctx.fillStyle=gradFlame;
       ctx.beginPath();
-      ctx.moveTo(-42, -6);
-      ctx.lineTo(-42 - flameLen, -2);
-      ctx.lineTo(-42,  6);
+      ctx.moveTo(-50,-6);
+      ctx.lineTo(-50 - flameLen, -2);
+      ctx.lineTo(-50, 6);
       ctx.closePath();
       ctx.fill();
     });
   }
 
   // ---------- Bullets ----------
-  function fire() {
-    const now = performance.now();
-    if (now - state.lastShotAt < state.shotIntervalMs) return; // rate limit
-    state.lastShotAt = now;
-    const s = state.ship;
-    // Spawn at tip of gun
-    const x = s.x + (s.noseLen + 10) * 1.2; // match scale
-    const y = s.y;
-    state.bullets.push({ x, y, vx: 12, vy: 0, life: 1600 }); // life ms
-    state.shots++;
-    saveState({ totalShots: save.totalShots + 1 });
+  const RATE_MS = 120; // 8.3/s
+  let lastShot = 0;
+  function fire(ts){
+    if (ts - lastShot < RATE_MS) return;
+    lastShot = ts;
+    const { x, y } = shipPx();
+    // positions matching drawn barrels (scaled)
+    const sc = state.ship.scale;
+    // nose
+    const noseX = x + (state.ship.nose + 12) * sc;
+    const noseY = y;
+    // wing cannons approx at (-14,-24) and (-14,24), shooting forward (to the right)
+    const wcx = x + (-14 + 5) * sc; // push slightly forward
+    const wcyTop = y + (-24) * sc;
+    const wcyBot = y + ( 24) * sc;
+
+    const speed = 13; // px per frame unit (scaled with dt below)
+    const life = 1600;
+
+    state.bullets.push({ x:noseX, y:noseY, vx:speed, vy:0, life });
+    state.bullets.push({ x:wcx,   y:wcyTop, vx:speed, vy:0, life });
+    state.bullets.push({ x:wcx,   y:wcyBot, vx:speed, vy:0, life });
+
+    state.shots++; persist({ totalShots: save.totalShots + 1 });
   }
 
-  // ---------- Update / Loop ----------
-  function step(ts) {
-    if (!state.lastTs) state.lastTs = ts;
-    state.dt = Math.min(40, ts - state.lastTs);
-    state.lastTs = ts;
+  // ---------- Shield FX ----------
+  function drawShieldFX(){
+    if (!state.shieldFx.length) return;
+    for (let i = state.shieldFx.length-1; i>=0; i--){
+      const fx = state.shieldFx[i];
+      fx.t += state.dt / 600; // total ~600ms
+      const t = Math.min(1, fx.t);
+      const ease = t<0.5 ? (2*t*t) : (1 - Math.pow(-2*t+2,2)/2); // ease in-out quad
+      const radius = 70 + 30*ease;
+      const alpha = 0.55 * (1 - ease);
+
+      const { x, y } = shipPx();
+      const rg = ctx.createRadialGradient(x,y, radius*0.2, x,y, radius);
+      rg.addColorStop(0, `rgba(120,200,255,${alpha})`);
+      rg.addColorStop(0.6, `rgba( 70,160,255,${alpha*0.6})`);
+      rg.addColorStop(1, `rgba( 40,120,255,0)`);
+
+      ctx.fillStyle = rg;
+      ctx.beginPath(); ctx.arc(x,y,radius,0,Math.PI*2); ctx.fill();
+
+      // outline shimmer
+      ctx.strokeStyle = `rgba(140,220,255,${alpha*0.8})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(x,y,radius,0,Math.PI*2); ctx.stroke();
+
+      if (t >= 1) state.shieldFx.splice(i,1);
+    }
+  }
+
+  // ---------- Loop ----------
+  function step(ts){
+    if (!state.last) state.last = ts;
+    state.dt = Math.min(40, ts - state.last);
+    state.last = ts;
     state.time += state.dt/1000;
+    state.fps = state.fps*0.9 + (1000/state.dt)*0.1;
 
-    // FPS (EMA)
-    state.fps = (state.fps * 0.9) + (1000/state.dt) * 0.1;
-
-    // Move ship toward touch (drag)
-    if (state.input.touching) {
-      // smooth follow
+    // Input follow (drag)
+    if (state.input.touching){
       const k = 0.18;
-      state.ship.x += (state.input.tx - state.ship.x) * k;
-      state.ship.y += (state.input.ty - state.ship.y) * k;
+      state.shipX += (state.input.tx - state.shipX) * k;
+      state.shipY += (state.input.ty - state.shipY) * k;
     }
 
-    // Clamp to screen
-    state.ship.x = Math.max(40, Math.min(canvas.width - 40, state.ship.x));
-    state.ship.y = Math.max(40, Math.min(canvas.height - 40, state.ship.y));
+    // Vertical scroll speed (faster in overdrive)
+    const speed = (state.baseScrollSpeed * (save.overdrive ? 2.5 : 1.0)) * (state.dt/16.6667);
+    state.scroll += speed;
 
-    // Autofire or button/space
-    if (save.autofire || state.input.firing) fire();
+    // Give ship a subtle vertical drift with the world scroll (moves “with” the scenery)
+    state.shipY -= speed * 0.35;
 
-    // Update bullets
-    for (let i = state.bullets.length - 1; i >= 0; i--) {
+    // Clamp ship on screen
+    state.shipX = Math.max(50, Math.min(canvas.width - 50, state.shipX));
+    state.shipY = Math.max(50, Math.min(canvas.height - 50, state.shipY));
+
+    // Firing
+    if (state.input.firing) fire(ts);
+
+    // Bullets update
+    for (let i=state.bullets.length-1;i>=0;i--){
       const b = state.bullets[i];
       b.x += b.vx * (state.dt/16.6667);
       b.y += b.vy * (state.dt/16.6667);
       b.life -= state.dt;
-      if (b.x > canvas.width + 20 || b.life <= 0) state.bullets.splice(i,1);
+      if (b.x > canvas.width + 30 || b.y < -30 || b.y > canvas.height + 30 || b.life<=0) state.bullets.splice(i,1);
     }
 
     // Render
     render();
 
-    // HUD
-    if ((Math.floor(ts/250) !== Math.floor((ts-state.dt)/250))) {
+    // HUD (quarter second)
+    if ((Math.floor(ts/250)!==Math.floor((ts-state.dt)/250))) {
       elFPS.textContent = Math.round(state.fps);
       elShots.textContent = state.shots;
     }
@@ -342,68 +337,45 @@
     requestAnimationFrame(step);
   }
 
-  function render() {
+  function render(){
     // background
-    ctx.clearRect(0,0,canvas.width, canvas.height);
-    // starfield
     drawStarfield();
 
+    // shield FX under bullets for nice layering glow
+    drawShieldFX();
+
     // bullets
-    ctx.lineCap = 'round';
     for (const b of state.bullets) {
       const g = ctx.createLinearGradient(b.x-18, b.y, b.x+2, b.y);
       g.addColorStop(0, 'rgba(100,200,255,0)');
       g.addColorStop(1, '#def8ff');
-      ctx.strokeStyle = g;
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(b.x-18, b.y);
-      ctx.lineTo(b.x+2, b.y);
-      ctx.stroke();
-
-      // bullet tip
-      ctx.fillStyle = '#fff';
-      ctx.beginPath();
-      ctx.arc(b.x+2, b.y, 2, 0, Math.PI*2);
-      ctx.fill();
+      ctx.strokeStyle = g; ctx.lineWidth = 3; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(b.x-18, b.y); ctx.lineTo(b.x+2, b.y); ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(b.x+2, b.y, 2, 0, Math.PI*2); ctx.fill();
     }
 
-    // ship
-    drawShip(state.ship, state.time);
+    // ship (overdrive affects flame)
+    drawShip(state.time, save.overdrive);
   }
 
-  // Pretty starfield
-  let stars = [];
-  function initStars() {
-    const count = Math.floor(Math.min(220, (canvas.width*canvas.height)/25000));
-    stars = Array.from({length: count}, () => ({
-      x: Math.random()*canvas.width,
-      y: Math.random()*canvas.height,
-      r: Math.random()*1.5 + 0.3,
-      s: Math.random()*0.6 + 0.2
-    }));
-  }
-  function drawStarfield() {
-    if (!stars.length) initStars();
-    ctx.fillStyle = '#060912';
+  function drawStarfield(){
+    // clear
+    ctx.fillStyle = '#070b12';
     ctx.fillRect(0,0,canvas.width,canvas.height);
-    ctx.save();
-    for (const st of stars) {
-      st.x -= st.s; if (st.x < -2) st.x = canvas.width + 2;
-      ctx.globalAlpha = 0.5 + 0.5*Math.sin((st.x+st.y+state.time*1000)*0.002);
-      ctx.beginPath();
-      ctx.arc(st.x, st.y, st.r, 0, Math.PI*2);
-      ctx.fillStyle = '#9dcfff';
-      ctx.fill();
-    }
-    ctx.restore();
-  }
 
-  // Re-init stars on resize
-  window.addEventListener('resize', () => { initStars(); });
+    // parallax layers via star speed
+    for (const st of stars){
+      st.y += st.s * (save.overdrive ? 2.5 : 1.0); // faster when overdrive
+      if (st.y > canvas.height + 2) { st.y = -2; st.x = Math.random()*canvas.width; }
+      const tw = 0.5 + 0.5*Math.sin((st.x + st.y + state.time*1000)*0.003*st.tw);
+      ctx.globalAlpha = tw * 0.9;
+      ctx.beginPath(); ctx.arc(st.x, st.y, st.r, 0, Math.PI*2);
+      ctx.fillStyle = '#9dcfff'; ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
 
   // Kickoff
-  initStars();
   requestAnimationFrame(step);
 })();
 </script>
