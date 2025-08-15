@@ -73,7 +73,7 @@
     "bomb types owned": { screen: false, smart: false }, // NEW
     "boost unlocked": false,
     "boost type": "none",
-    "enemies unlocked": { basic: true, betterVisible: false },
+    "enemies unlocked": { basic: true, betterVisible: true },
     "level data": { level: 1, difficulty: 1, score: 0 },
     "bullet type": "round",
     "bullet number": 1,
@@ -115,7 +115,7 @@
 
   // -------- Pricing / progression (più dolci) --------
   // Fire rate: base 5, x1.15 per livello, +0.1 sps
-  // Bullet number: base 10, x1.3 per livello, +1 bullet, NO max
+  // Bullet number: base 10, x1.2 per livello, +1 bullet, NO max
   // Spread: lasciamo come prima (cap 45°, 8 * 1.35^lv)
   // More basic enemies (spawn every): base 40, x1.4 per livello, -0.1s (min 0.1s)
 
@@ -130,7 +130,7 @@
   // Bullet number (no max)
   function bulletNumberLevelFromValue(v){ return Math.max(0, Math.floor(v - 1)); }
   function bulletNumberValueFromLevel(lv){ return 1 + lv; }
-  function bulletNumberCost(level){ return round(10 * Math.pow(1.3, level)); }
+  function bulletNumberCost(level){ return round(10 * Math.pow(1.2, level)); }
 
   // Spread
   function spreadLevelFromValue(v){ return Math.max(0, Math.round(v / 5)); }
@@ -312,19 +312,19 @@
     {
       grid.appendChild(elCard({
         name: 'New Game Plus',
-        desc: 'Restart without upgrades but begin with §10000.',
+        desc: 'Restart without upgrades but begin with §1000000.',
         stat: `This will reset bullets, spread, fire rate, bombs/boosts, enemy visibility, spawn rate, score and level.`,
         price: fmtMoney(1000),
         canBuy: (save.money||0) >= 1000,
         onBuy: () => {
-          // Keep timeSec, reset upgrades/progress, set money 10000
+          // Keep timeSec, reset upgrades/progress, set money 1000000
           const keepTime = save.timeSec || 0;
           const fresh = {
             ...defaults,
             timeSec: keepTime,
-            money: 10000,
+            money: 1000000,
             "level data": { level: 1, difficulty: 1, score: 0 },
-            "enemies unlocked": { basic: true, betterVisible: false },
+            "enemies unlocked": { basic: true, betterVisible: true },
             "bomb unlocked": false,
             "bomb type": "none",
             "bomb types owned": { screen:false, smart:false },
