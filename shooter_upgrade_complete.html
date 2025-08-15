@@ -43,12 +43,12 @@
     padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
     background: linear-gradient(180deg, rgba(0,0,0,0.0), rgba(0,0,0,0.35));
     backdrop-filter: blur(4px);
-    /* Pulsanti 20px più in alto */
+    /* Sposta i pulsanti 20px più in alto rispetto al bordo inferiore */
     transform: translateY(-20px);
   }
   .btn {
     min-height: 50px;
-    padding: 20px; /* +10px su tutti i lati già incluso */
+    padding: 20px; /* include già il +10px extra precedente */
     border-radius: 14px;
     border: 1px solid rgba(255,255,255,0.18);
     background: rgba(255,255,255,0.06);
@@ -77,6 +77,7 @@
 </head>
 <body>
   <div class="topbar">
+    <!-- Link alle upgrades -->
     <a class="upgrades" href="/match3/upgrades.html">upgrades ↗</a>
   </div>
   <div class="hud" id="hud">§0 • 0:00</div>
@@ -114,10 +115,8 @@
     "level data": { level: 1, difficulty: 1, score: 0 },
     "bullet type": "round",
     "bullet number": 1,
-    "bullet spread": 0,        // degrees
-    "bullet fire rate": 0.5,   // shots/sec
-    "spawn every": 1.2,        // seconds (let upgrades set this)
-    "boss unlocked": false
+    "bullet spread": 0,    // degrees
+    "bullet fire rate": 0.5, // shots/sec
   };
 
   function loadSave() {
@@ -181,7 +180,7 @@
     stars: [],
     lastShotAt: 0,
     spawnTimer: 0,
-    spawnEvery: 1.2, // default, but we will read from save each frame
+    spawnEvery: 1.2,
     t: 0,
     lastFrame: performance.now(),
     playtimeAccumulator: 0,
@@ -189,12 +188,10 @@
     // Bomb
     bombCooldownSec: 60,
     bombReadyAt: 0, // timestamp (seconds)
-
-    // Boss
-    boss: null, // {x,y,size,hp,speed}
-    bossSpawnTimer: 0,
-    moneyDamageAccumulator: 0, // for laser -1§/s accumulation
   };
+
+  // Ensure bombReadyAt uses saved clock if present (not persisted previously)
+  if (!state.bombReadyAt) state.bombReadyAt = 0;
 
   // ---------- Input ----------
   const btnLeft = document.getElementById('btnLeft');
@@ -242,97 +239,9 @@
     });
   }
 
-  // ---------- Boss spawn / update ----------
-  function spawnBoss() {
-    state.boss = {
-      x: canvas.clientWidth * 0.5,
-      y: -50,
-      size: 50,     // flat-to-flat
-      hp: 80,
-      speed: 40,    // px/s downward
-      drift: (Math.random()<0.5?-1:1)*(30+Math.random()*30) // horizontal sway px/s
-    };
-  }
-
-  function updateBoss(dt) {
-    const b = state.boss;
-    if (!b) return;
-
-    // Move boss: down then slight horizontal sway
-    b.y += b.speed * dt;
-    b.x += b.drift * dt;
-    if (b.x < 40 || b.x > canvas.clientWidth-40) b.drift *= -1; // bounce horizontally
-    // Stop moving down after entering screen a bit
-    if (b.y > canvas.clientHeight*0.18) b.speed = 0;
-
-    // Laser damage: -1 § / second while boss exists
-    if (state.save.money > 0) {
-      state.moneyDamageAccumulator += dt;
-      while (state.moneyDamageAccumulator >= 1 && state.save.money > 0) {
-        state.moneyDamageAccumulator -= 1;
-        commitSave({ money: Math.max(0, (state.save.money||0) - 1) });
-      }
-    }
-  }
-
-  function drawBoss() {
-    const b = state.boss;
-    if (!b) return;
-
-    // Draw red laser from boss to player
-    const px = state.player.x * canvas.clientWidth;
-    const py = state.player.y * canvas.clientHeight;
-    ctx.save();
-    ctx.strokeStyle = 'rgba(255,30,30,0.9)';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(b.x, b.y);
-    ctx.lineTo(px, py);
-    ctx.stroke();
-    ctx.restore();
-
-    // Draw hexagon
-    const r = b.size/2; // approximate radial size (flat-to-flat/2)
-    const sides = 6;
-    ctx.save();
-    ctx.fillStyle = '#222'; // body
-    ctx.strokeStyle = '#ff4040';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    for (let i=0;i<sides;i++){
-      const ang = -Math.PI/2 + i*(Math.PI*2/sides);
-      const vx = b.x + r*Math.cos(ang);
-      const vy = b.y + r*Math.sin(ang);
-      if (i===0) ctx.moveTo(vx,vy); else ctx.lineTo(vx,vy);
-    }
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-    ctx.restore();
-
-    // Boss HP squares (1 per 10 HP) — big squares centered top
-    const squares = Math.max(0, Math.floor(b.hp / 10));
-    const size = 14; // pixel
-    const gap = 6;
-    const totalW = squares*size + (squares-1)*gap;
-    const startX = (canvas.clientWidth - totalW)/2;
-    const y = 8 + 10; // top margin
-    for (let i=0;i<squares;i++){
-      ctx.fillStyle = '#ff6b6b';
-      ctx.fillRect(startX + i*(size+gap), y, size, size);
-    }
-  }
-
-  // Bullet vs Boss collision (approx with circle)
-  function bulletHitsBoss(bul, boss) {
-    const r = boss.size/2;
-    const dx = bul.x - boss.x;
-    const dy = bul.y - boss.y;
-    return (dx*dx + dy*dy) <= (r*r);
-  }
-
   // ---------- Shooting ----------
   function shootFan(centerX, centerY, count, stepDeg, speed=320) {
+    // Ventaglio centrato verso l’alto (-90°), passo in gradi
     const center = -Math.PI/2; // -90°
     const total = (count-1) * (stepDeg * Math.PI/180);
     const start = center - total/2;
@@ -363,8 +272,8 @@
         state.bullets.push({
           x: state.player.x * canvas.clientWidth,
           y: state.player.y * canvas.clientHeight - state.player.size - 4,
-          vx: Math.cos(angle) * 200,
-          vy: Math.sin(angle) * 300,
+          vx: Math.cos(angle) * 200, // orizzontale
+          vy: Math.sin(angle) * 300, // verticale
           r: 4,
         });
       }
@@ -372,20 +281,25 @@
   }
 
   // ---------- Bomb logic ----------
-  function bombReady() { return state.t >= state.bombReadyAt; }
+  function bombReady() {
+    return state.t >= state.bombReadyAt;
+  }
 
   function triggerBomb() {
     if (!bombReady()) return;
+
     const type = state.save["bomb type"] || "screen";
     const px = state.player.x * canvas.clientWidth;
     const py = state.player.y * canvas.clientHeight - state.player.size - 6;
 
     if (type === "screen") {
-      // 90 bullets, step 1°
+      // 90 bullet, spread step 1°
       shootFan(px, py, 90, 1, 360);
     } else if (type === "smart") {
+      // spawn 50 enemies
       for (let i=0;i<50;i++) spawnEnemy();
     }
+    // set cooldown
     state.bombReadyAt = state.t + state.bombCooldownSec;
   }
 
@@ -412,9 +326,6 @@
     state.t += dt;
     state.playtimeAccumulator += dt;
 
-    // Read spawnEvery from save if present
-    const spawnEvery = Number(state.save["spawn every"] ?? state.spawnEvery) || state.spawnEvery;
-
     // player move
     const move = (state.player.moveRight ? 1 : 0) - (state.player.moveLeft ? 1 : 0);
     if (move) {
@@ -422,22 +333,11 @@
       state.player.x = Math.max(0.05, Math.min(0.95, state.player.x));
     }
 
-    // spawn enemies (basic)
+    // spawn enemies
     state.spawnTimer += dt;
-    if (state.spawnTimer >= spawnEvery) {
+    if (state.spawnTimer >= state.spawnEvery) {
       state.spawnTimer = 0;
       spawnEnemy();
-    }
-
-    // boss spawn
-    const bossAllowed = !!state.save["boss unlocked"];
-    if (!state.boss && bossAllowed) {
-      state.bossSpawnTimer += dt;
-      const bossPeriod = Math.max(0.1, spawnEvery) * 10; // 10× the basic cooldown
-      if (state.bossSpawnTimer >= bossPeriod) {
-        state.bossSpawnTimer = 0;
-        spawnBoss();
-      }
     }
 
     // bullets
@@ -473,31 +373,6 @@
         } else {
           e.color = '#5e0000';
         }
-      }
-    }
-
-    // boss update & collisions
-    if (state.boss) {
-      updateBoss(dt);
-
-      // bullets vs boss
-      for (let j=state.bullets.length-1;j>=0;j--){
-        const b = state.bullets[j];
-        if (bulletHitsBoss(b, state.boss)) {
-          state.bullets.splice(j,1);
-          state.boss.hp -= 1;
-          if (state.boss.hp <= 0) {
-            // reward
-            commitSave({ money: (state.save.money||0) + 200 });
-            state.boss = null;
-            break;
-          }
-        }
-      }
-
-      // remove boss if leaves screen bottom (unlikely)
-      if (state.boss && state.boss.y - state.boss.size/2 > canvas.clientHeight + 60) {
-        state.boss = null;
       }
     }
 
@@ -572,9 +447,6 @@
       }
     }
 
-    // boss draw (laser + hexagon + HP squares)
-    drawBoss();
-
     // HUD
     const m = state.save.money || 0;
     const ts = state.save.timeSec || 0;
@@ -618,4 +490,17 @@
     state.lastFrame = performance.now();
   });
 
-  // Optional: aggiorna in tempo reale se un'altra tab cambia i salvatagg
+  // Debug helpers
+  window.vscroll = {
+    addMoney(n=1){ commitSave({ money: (state.save.money||0)+n }); },
+    setFireRate(r){ commitSave({ "bullet fire rate": r }); },
+    setBullets(n, spread=0){ commitSave({ "bullet number": n, "bullet spread": spread }); },
+    unlockBomb(type="screen"){ commitSave({ "bomb unlocked": true, "bomb type": type }); checkUnlocksAndToggleButtons(); },
+    unlockBoost(type="speed"){ commitSave({ "boost unlocked": true, "boost type": type }); checkUnlocksAndToggleButtons(); },
+    setBombType(t="screen"){ commitSave({ "bomb type": t }); },
+    save: ()=>state.save
+  };
+})();
+</script>
+</body>
+</html>
