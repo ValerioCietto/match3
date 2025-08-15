@@ -12,9 +12,9 @@
     --accent: #35c3ff;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { height: 100%; margin: 0; background: var(--bg); color: var(--ink); font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji"; }
+  html, body { height: 100%; margin: 0; background: var(--bg); color: var(--ink); font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans"; }
   body { display: flex; flex-direction: column; overflow: hidden; }
-  /* Layout: canvas full height minus controls */
+
   .topbar{
     position: fixed; inset: env(safe-area-inset-top) 0 auto 0;
     height: 44px; display: flex; align-items: center; justify-content: flex-end;
@@ -54,32 +54,27 @@
     user-select: none;
   }
   .btn:active { transform: scale(0.98); }
-  /* Left and Right are visible, center contains reserved space + hidden buttons */
   .col { display: flex; gap: 8px; }
   .col.left { justify-content: flex-start; }
   .col.center { justify-content: center; }
   .col.right { justify-content: flex-end; }
 
-  /* Reserve space for two hidden buttons (layout placeholder) */
+  /* Spazio riservato ai due pulsanti centrali nascosti */
   .ghost-spot {
-    width: 46%; /* two spots roughly side-by-side */
+    width: 46%;
     min-height: 50px;
     border-radius: 14px;
     border: 1px dashed rgba(255,255,255,0.12);
     background: rgba(255,255,255,0.02);
-    visibility: hidden; /* keeps the space */
+    visibility: hidden;
   }
-
-  /* Hidden actual buttons (ready to be revealed later by code if unlocked) */
   .hidden-btn { display: none; }
-
-  /* Mobile-friendly hit areas */
-  .btn, .ghost-spot { touch-action: manipulation; }
 </style>
 </head>
 <body>
   <div class="topbar">
-    <a class="upgrades" href="/upgrades.html">upgrades ↗</a>
+    <!-- Aggiornato: redirect a /match3/upgrades.html -->
+    <a class="upgrades" href="/match3/upgrades.html">upgrades ↗</a>
   </div>
   <div class="hud" id="hud">§0 • 0:00</div>
   <div id="wrap">
@@ -91,10 +86,8 @@
       <div class="btn" id="btnLeft">⟵ LEFT</div>
     </div>
     <div class="col center">
-      <!-- keep space for two middle buttons (bomb/boost) even if hidden -->
       <div class="ghost-spot"></div>
       <div class="ghost-spot"></div>
-
       <div class="btn hidden-btn" id="btnBomb">💣 BOMB</div>
       <div class="btn hidden-btn" id="btnBoost">⚡ BOOST</div>
     </div>
@@ -105,46 +98,36 @@
 
 <script>
 (() => {
-  // ---------- Persistent Storage Helpers ----------
-  const LS_KEY = 'vscroll.shooter.v1'; // pack everything in one object *and* mirror named keys for direct reads
+  // ---------- Persistent Storage ----------
+  const LS_KEY = 'vscroll.shooter.v1';
   const defaultSave = {
-    money: 0,                 // integer "§"
-    timeSec: 0,               // total play time
-    // meta / unlocks
+    money: 0,
+    timeSec: 0,
     "bomb unlocked": false,
-    "bomb type": "none",      // e.g., "smart","screen","nuke"
+    "bomb type": "none",
     "boost unlocked": false,
-    "boost type": "none",     // e.g., "speed","shield"
-    "enemies unlocked": { basic: true }, // structure expandable
+    "boost type": "none",
+    "enemies unlocked": { basic: true, betterVisible: false },
     "level data": { level: 1, difficulty: 1, score: 0 },
-    // bullets config
     "bullet type": "round",
-    "bullet number": 1,       // parallel bullets per shot
-    "bullet spread": 0,       // degrees total spread
-    "bullet fire rate": 0.5,  // shots per second (default = 0.5 => every 2s)
+    "bullet number": 1,
+    "bullet spread": 0,
+    "bullet fire rate": 0.5,
   };
 
   function loadSave() {
     try {
       const raw = localStorage.getItem(LS_KEY);
       let save = raw ? JSON.parse(raw) : {};
-      // Also mirror legacy/simple keys if present
       save = { ...defaultSave, ...save };
-      // expose mirror keys as separate entries (as requested)
-      for (const k of Object.keys(defaultSave)) {
+      // mirror keys richiesti
+      for (const k of Object.keys(save)) {
         const v = save[k];
-        if (typeof v === 'object') {
-          localStorage.setItem(k, JSON.stringify(v));
-        } else {
-          localStorage.setItem(k, String(v));
-        }
+        localStorage.setItem(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
       }
-      // also keep the packed object
       localStorage.setItem(LS_KEY, JSON.stringify(save));
       return save;
     } catch(e) {
-      console.warn('Load save failed, resetting', e);
-      localStorage.clear();
       localStorage.setItem(LS_KEY, JSON.stringify(defaultSave));
       for (const k of Object.keys(defaultSave)) {
         const v = defaultSave[k];
@@ -157,15 +140,13 @@
   function commitSave(partial) {
     const save = { ...state.save, ...partial };
     state.save = save;
-    // mirror simple keys
     for (const [k, v] of Object.entries(partial)) {
-      if (typeof v === 'object') localStorage.setItem(k, JSON.stringify(v));
-      else localStorage.setItem(k, String(v));
+      localStorage.setItem(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
     }
     localStorage.setItem(LS_KEY, JSON.stringify(save));
   }
 
-  // ---------- Canvas + DPR ----------
+  // ---------- Canvas ----------
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
 
@@ -175,7 +156,7 @@
     const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
     canvas.width = Math.floor(cssW * dpr);
     canvas.height = Math.floor(cssH * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // so we can draw in CSS pixels
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
   window.addEventListener('resize', resizeCanvas, { passive: true });
   resizeCanvas();
@@ -185,10 +166,10 @@
   const state = {
     save: loadSave(),
     player: {
-      x: 0.5, // normalized [0..1] of canvas width
-      y: 0.85, // relative to canvas height
-      speed: 0.5, // in screen widths per second
-      size: 20, // triangle half-base in px
+      x: 0.5,
+      y: 0.85,
+      speed: 0.5, // screen widths per second
+      size: 20,
       moveLeft: false,
       moveRight: false,
     },
@@ -197,36 +178,31 @@
     stars: [],
     lastShotAt: 0,
     spawnTimer: 0,
-    spawnEvery: 1.2, // seconds between spawns
+    spawnEvery: 1.2,
     t: 0,
     lastFrame: performance.now(),
-    playtimeAccumulator: 0, // accumulate and flush to save once per second
+    playtimeAccumulator: 0,
   };
 
   // ---------- Input ----------
   const btnLeft = document.getElementById('btnLeft');
   const btnRight = document.getElementById('btnRight');
 
-  function pressLeft(v){ state.player.moveLeft = v; }
-  function pressRight(v){ state.player.moveRight = v; }
+  const press = (setter, val) => (e)=>{ e.preventDefault(); setter(val); };
 
-  // Touch & mouse handlers
-  const press = (fn) => (e) => { e.preventDefault(); fn(true); };
-  const release = (fn) => (e) => { e.preventDefault(); fn(false); };
+  btnLeft.addEventListener('touchstart', press(v=>state.player.moveLeft=v,true), { passive:false });
+  btnLeft.addEventListener('touchend',   press(v=>state.player.moveLeft=v,false), { passive:false });
+  btnLeft.addEventListener('mousedown',  press(v=>state.player.moveLeft=v,true));
+  btnLeft.addEventListener('mouseup',    press(v=>state.player.moveLeft=v,false));
+  btnLeft.addEventListener('mouseleave', press(v=>state.player.moveLeft=v,false));
 
-  btnLeft.addEventListener('touchstart', press(pressLeft), { passive: false });
-  btnLeft.addEventListener('touchend', release(pressLeft), { passive: false });
-  btnLeft.addEventListener('mousedown', press(pressLeft));
-  btnLeft.addEventListener('mouseup', release(pressLeft));
-  btnLeft.addEventListener('mouseleave', release(pressLeft));
+  btnRight.addEventListener('touchstart', press(v=>state.player.moveRight=v,true), { passive:false });
+  btnRight.addEventListener('touchend',   press(v=>state.player.moveRight=v,false), { passive:false });
+  btnRight.addEventListener('mousedown',  press(v=>state.player.moveRight=v,true));
+  btnRight.addEventListener('mouseup',    press(v=>state.player.moveRight=v,false));
+  btnRight.addEventListener('mouseleave', press(v=>state.player.moveRight=v,false));
 
-  btnRight.addEventListener('touchstart', press(pressRight), { passive: false });
-  btnRight.addEventListener('touchend', release(pressRight), { passive: false });
-  btnRight.addEventListener('mousedown', press(pressRight));
-  btnRight.addEventListener('mouseup', release(pressRight));
-  btnRight.addEventListener('mouseleave', release(pressRight));
-
-  // ---------- Stars (scrolling background) ----------
+  // ---------- Stars ----------
   function initStars() {
     state.stars = [];
     const count = Math.floor((canvas.clientWidth * canvas.clientHeight) / 8000);
@@ -241,22 +217,22 @@
   }
   initStars();
 
-  // ---------- Enemy spawning ----------
+  // ---------- Enemy spawn ----------
   function spawnEnemy() {
     const size = 24;
     const x = Math.random()*(canvas.clientWidth - size) + size/2;
     state.enemies.push({
       x, y: -size, size,
-      speed: 70, // px/s downward
+      speed: 70,
       hp: 2,
-      color: '#000', // black initially
+      color: '#000',
     });
   }
 
   // ---------- Shooting ----------
-  function maybeShoot(dt) {
-    const rate = state.save["bullet fire rate"]; // shots per second
-    const interval = 1 / Math.max(0.05, rate); // protect from zero/neg
+  function maybeShoot() {
+    const rate = state.save["bullet fire rate"]; // shots/sec
+    const interval = 1 / Math.max(0.05, rate);
     if (state.t - state.lastShotAt >= interval) {
       state.lastShotAt = state.t;
       const num = Math.max(1, Math.floor(state.save["bullet number"]));
@@ -269,8 +245,8 @@
         state.bullets.push({
           x: state.player.x * canvas.clientWidth,
           y: state.player.y * canvas.clientHeight - state.player.size - 4,
-          vx: Math.cos(angle)*0, // mostly vertical shot
-          vy: Math.sin(angle)*300, // negative (upwards), but sin(-90°) = -1
+          vx: Math.cos(angle)*0,
+          vy: Math.sin(angle)*300,
           r: 4,
         });
       }
@@ -279,55 +255,44 @@
 
   // ---------- Collisions ----------
   function bulletHitsEnemy(b, e) {
-    // Circle-rectangle overlap (AABB)
-    const rx = e.x - e.size/2;
-    const ry = e.y - e.size/2;
-    const rw = e.size;
-    const rh = e.size;
+    const rx = e.x - e.size/2, ry = e.y - e.size/2, rw = e.size, rh = e.size;
     const cx = Math.max(rx, Math.min(b.x, rx+rw));
     const cy = Math.max(ry, Math.min(b.y, ry+rh));
-    const dx = b.x - cx;
-    const dy = b.y - cy;
+    const dx = b.x - cx, dy = b.y - cy;
     return (dx*dx + dy*dy) <= (b.r*b.r);
   }
 
   // ---------- Loop ----------
   function update() {
     const now = performance.now();
-    const dt = Math.min(0.033, (now - state.lastFrame)/1000); // clamp
+    const dt = Math.min(0.033, (now - state.lastFrame)/1000);
     state.lastFrame = now;
     state.t += dt;
     state.playtimeAccumulator += dt;
 
-    // player move
     const move = (state.player.moveRight ? 1 : 0) - (state.player.moveLeft ? 1 : 0);
-    if (move !== 0) {
+    if (move) {
       state.player.x += move * state.player.speed * dt;
       state.player.x = Math.max(0.05, Math.min(0.95, state.player.x));
     }
 
-    // spawn enemies
     state.spawnTimer += dt;
     if (state.spawnTimer >= state.spawnEvery) {
       state.spawnTimer = 0;
       spawnEnemy();
     }
 
-    // bullets
     for (let i=state.bullets.length-1;i>=0;i--){
       const b = state.bullets[i];
       b.x += b.vx * dt;
-      b.y += b.vy * dt; // vy is negative (up)
-      if (b.y < -10) { state.bullets.splice(i,1); continue; }
+      b.y += b.vy * dt;
+      if (b.y < -10) state.bullets.splice(i,1);
     }
 
-    // enemies
     for (let i=state.enemies.length-1;i>=0;i--){
       const e = state.enemies[i];
       e.y += e.speed * dt;
-      if (e.y - e.size/2 > canvas.clientHeight + 40) {
-        state.enemies.splice(i,1); continue;
-      }
+      if (e.y - e.size/2 > canvas.clientHeight + 40) state.enemies.splice(i,1);
     }
 
     // collisions bullet-enemy
@@ -338,17 +303,15 @@
         if (bulletHitsEnemy(state.bullets[j], e)) { hitIndex = j; break; }
       }
       if (hitIndex >= 0) {
-        // consume bullet
         state.bullets.splice(hitIndex,1);
-        // damage enemy
         e.hp -= 1;
         if (e.hp <= 0) {
-          // dead -> money +1§
-          const newMoney = (state.save.money||0) + 1;
-          commitSave({ money: newMoney, "level data": { ...state.save["level data"], score: (state.save["level data"].score||0) + 1 } });
+          commitSave({ money: (state.save.money||0)+1,
+            "level data": { ...state.save["level data"], score: (state.save["level data"].score||0)+1 }
+          });
           state.enemies.splice(i,1);
         } else {
-          e.color = '#5e0000'; // dark red
+          e.color = '#5e0000';
         }
       }
     }
@@ -360,9 +323,9 @@
     }
 
     // shooting
-    maybeShoot(dt);
+    maybeShoot();
 
-    // playtime persistence every ~1s
+    // time persistence
     if (state.playtimeAccumulator >= 1) {
       state.playtimeAccumulator -= 1;
       commitSave({ timeSec: (state.save.timeSec||0) + 1 });
@@ -370,43 +333,62 @@
   }
 
   function draw() {
-    // clear
     ctx.clearRect(0,0,canvas.clientWidth, canvas.clientHeight);
 
-    // background
+    // bg + stars
     ctx.fillStyle = '#0b0e13';
     ctx.fillRect(0,0,canvas.clientWidth, canvas.clientHeight);
     ctx.fillStyle = 'rgba(255,255,255,0.9)';
-    for (const s of state.stars) {
-      ctx.fillRect(s.x, s.y, s.s, s.s);
-    }
+    for (const s of state.stars) ctx.fillRect(s.x, s.y, s.s, s.s);
 
-    // player (triangle up)
+    // player
     const px = state.player.x * canvas.clientWidth;
     const py = state.player.y * canvas.clientHeight;
     const a = state.player.size;
     ctx.fillStyle = '#35c3ff';
     ctx.beginPath();
-    ctx.moveTo(px, py - a);     // top
-    ctx.lineTo(px - a, py + a); // bottom-left
-    ctx.lineTo(px + a, py + a); // bottom-right
+    ctx.moveTo(px, py - a);
+    ctx.lineTo(px - a, py + a);
+    ctx.lineTo(px + a, py + a);
     ctx.closePath();
     ctx.fill();
 
-    // bullets (round)
+    // bullets
     ctx.fillStyle = '#f5f7ff';
     for (const b of state.bullets) {
-      ctx.beginPath();
-      ctx.arc(b.x, b.y, b.r, 0, Math.PI*2);
-      ctx.fill();
+      ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill();
     }
 
-    // enemies
+    // enemies (supporto Better Visible Enemies)
+    const enemiesCfg = (function(){
+      try { return JSON.parse(localStorage.getItem("enemies unlocked")||'{}'); }
+      catch { return {}; }
+    })();
+    const betterVisible = !!enemiesCfg.betterVisible;
+
     for (const e of state.enemies) {
-      ctx.fillStyle = e.color;
-      ctx.fillRect(e.x - e.size/2, e.y - e.size/2, e.size, e.size);
-      // small HP pip
-      ctx.fillStyle = 'rgba(255,255,255,0.2)';
+      if (betterVisible) {
+        // Glow/outline leggero
+        ctx.save();
+        ctx.shadowColor = 'rgba(255,255,255,0.6)';
+        ctx.shadowBlur = 8;
+        ctx.fillStyle = e.color;
+        ctx.fillRect(e.x - e.size/2, e.y - e.size/2, e.size, e.size);
+        ctx.restore();
+
+        // Outline chiaro
+        ctx.save();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+        ctx.strokeRect(e.x - e.size/2, e.y - e.size/2, e.size, e.size);
+        ctx.restore();
+      } else {
+        ctx.fillStyle = e.color;
+        ctx.fillRect(e.x - e.size/2, e.y - e.size/2, e.size, e.size);
+      }
+
+      // HP pips
+      ctx.fillStyle = 'rgba(255,255,255,0.25)';
       for (let i=0;i<e.hp;i++){
         ctx.fillRect(e.x - 6 + i*6 - 3, e.y - e.size/2 - 6, 4, 4);
       }
@@ -425,35 +407,36 @@
     requestAnimationFrame(loop);
   }
 
-  // ---------- Ensure middle hidden buttons can be revealed later ----------
+  // Hidden central buttons visibility (in caso di sblocco futuro)
   function checkUnlocksAndToggleButtons() {
     const bombUnlocked = !!state.save["bomb unlocked"];
     const boostUnlocked = !!state.save["boost unlocked"];
     const btnBomb = document.getElementById('btnBomb');
     const btnBoost = document.getElementById('btnBoost');
-
-    // Show/hide with layout preserved (we already have ghost spots to keep space pre-allocated)
     btnBomb.style.display = bombUnlocked ? 'flex' : 'none';
     btnBoost.style.display = boostUnlocked ? 'flex' : 'none';
   }
-  checkUnlocksAndToggleButtons();
 
-  // ---------- Start ----------
+  checkUnlocksAndToggleButtons();
   loop();
 
-  // ---------- Visibility handling (optional small optimization) ----------
+  // reset frame timer after tab switch
   document.addEventListener('visibilitychange', () => {
     state.lastFrame = performance.now();
   });
 
-  // ---------- Expose a tiny debug API in console ----------
+  // Debug helpers
   window.vscroll = {
     addMoney(n=1){ commitSave({ money: (state.save.money||0)+n }); },
     setFireRate(r){ commitSave({ "bullet fire rate": r }); },
     setBullets(n, spread=0){ commitSave({ "bullet number": n, "bullet spread": spread }); },
     unlockBomb(type="screen"){ commitSave({ "bomb unlocked": true, "bomb type": type }); checkUnlocksAndToggleButtons(); },
     unlockBoost(type="speed"){ commitSave({ "boost unlocked": true, "boost type": type }); checkUnlocksAndToggleButtons(); },
-    save: () => state.save
+    toggleBetterEnemies(){ 
+      const cur = state.save["enemies unlocked"] || { basic:true };
+      commitSave({ "enemies unlocked": { ...cur, betterVisible: !cur.betterVisible } });
+    },
+    save: ()=>state.save
   };
 })();
 </script>
