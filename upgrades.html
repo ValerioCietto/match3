@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Shooter — Upgrades</title>
+<style>
+  :root{
+    --bg:#0b0e13; --ink:#e6e6e6; --muted:#9aa3ad; --card:#10151f; --line:#1e2633; --accent:#35c3ff;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:system-ui,Segoe UI,Roboto,Arial}
+  header{
+    position:sticky; top:0; z-index:5; background:rgba(0,0,0,.35);
+    border-bottom:1px solid var(--line); padding:12px max(12px, env(safe-area-inset-right)) 12px max(12px, env(safe-area-inset-left));
+    display:flex; align-items:center; justify-content:space-between; backdrop-filter:blur(6px);
+  }
+  .title{font-weight:700; letter-spacing:.3px}
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center;
+    min-height:44px; padding:10px 14px; border-radius:12px;
+    border:1px solid rgba(255,255,255,.15); background:rgba(255,255,255,.06);
+    color:var(--ink); font-weight:600; text-decoration:none; user-select:none;
+  }
+  .btn:disabled{opacity:.5}
+  main{max-width:720px; margin:0 auto; padding:16px 12px 32px}
+  .money{
+    margin:12px 0 8px; font-size:14px; color:var(--muted);
+  }
+  .grid{
+    display:grid; gap:10px;
+    grid-template-columns:1fr;
+  }
+  @media (min-width:700px){
+    .grid{ grid-template-columns:1fr 1fr; }
+  }
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px;
+    display:flex; flex-direction:column; gap:8px;
+  }
+  .row{display:flex; align-items:center; justify-content:space-between; gap:10px}
+  .name{font-weight:700}
+  .desc{font-size:13px; color:var(--muted)}
+  .stat{font-size:13px; color:#cfd6df}
+  .actions{display:flex; gap:8px; flex-wrap:wrap}
+  .price{font-size:12px; color:#c8f0ff; padding:2px 6px; border:1px solid rgba(53,195,255,.3); border-radius:999px; background:rgba(53,195,255,.08)}
+  .inline{display:inline-flex; align-items:center; gap:8px}
+  .small{font-size:12px; padding:8px 10px; min-height:36px}
+  footer{margin-top:18px; font-size:12px; color:var(--muted); text-align:center}
+</style>
+</head>
+<body>
+  <header>
+    <div class="title">Upgrades</div>
+    <a class="btn" href="/shooter_upgrade_complete.html">Return to Game ↩</a>
+  </header>
+
+  <main>
+    <div class="money" id="money">Money: §0</div>
+
+    <section class="grid" id="upgradesGrid">
+      <!-- Cards generate via JS -->
+    </section>
+
+    <footer>
+      Changes are saved automatically in your browser (localStorage).
+    </footer>
+  </main>
+
+<script>
+(() => {
+  // -------- Storage helpers (aligned to the game) --------
+  const LS_KEY = 'vscroll.shooter.v1';
+  const defaults = {
+    money: 0,
+    timeSec: 0,
+    "bomb unlocked": false,
+    "bomb type": "none",
+    "boost unlocked": false,
+    "boost type": "none",
+    "enemies unlocked": { basic: true, betterVisible: false },
+    "level data": { level: 1, difficulty: 1, score: 0 },
+    "bullet type": "round",
+    "bullet number": 1,
+    "bullet spread": 0,         // degrees (0..45)
+    "bullet fire rate": 0.5,    // shots/sec
+  };
+  function loadSave(){
+    try{
+      const raw = localStorage.getItem(LS_KEY);
+      let save = raw ? JSON.parse(raw) : {};
+      save = { ...defaults, ...save };
+      mirrorAll(save);
+      localStorage.setItem(LS_KEY, JSON.stringify(save));
+      return save;
+    }catch(e){
+      localStorage.setItem(LS_KEY, JSON.stringify(defaults));
+      mirrorAll(defaults);
+      return structuredClone(defaults);
+    }
+  }
+  function mirrorAll(obj){
+    for (const [k,v] of Object.entries(obj)){
+      localStorage.setItem(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
+    }
+  }
+  function commit(partial){
+    save = { ...save, ...partial };
+    // mirror changed keys
+    for (const [k,v] of Object.entries(partial)){
+      localStorage.setItem(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
+    }
+    localStorage.setItem(LS_KEY, JSON.stringify(save));
+    refreshUI();
+  }
+
+  let save = loadSave();
+
+  // -------- Pricing / progression helpers --------
+  // Geometric-ish costs, simple and predictable:
+  // - fire rate: starts 5, grows ×1.3 per step
+  // - bullet number: starts 20, grows ×1.8 per step (max 5)
+  // - spread: starts 8, grows ×1.35 per step (max 45°, step 5°)
+  // - bomb unlock: flat 50 (one-time). Types free cycle.
+  // - boost unlock: flat 50 (one-time). Types free cycle.
+  // - better visible enemies: flat 10 (one-time).
+  function toFixed(n){ return Math.round(n); }
+
+  function fireRateLevelFromValue(v){
+    // base 0.5 sps; each level +0.1
+    return Math.max(0, Math.round((v - 0.5)/0.1));
+  }
+  function fireRateValueFromLevel(lv){ return 0.5 + lv*0.1; }
+  function fireRateCost(level){ return toFixed(5 * Math.pow(1.3, level)); }
+
+  function bulletNumberLevelFromValue(v){ return Math.max(0, v - 1); } // base 1 bullets
+  function bulletNumberValueFromLevel(lv){ return 1 + lv; }            // +1 per level
+  function bulletNumberCost(level){ return toFixed(20 * Math.pow(1.8, level)); }
+  const bulletNumberMax = 5;
+
+  function spreadLevelFromValue(v){ return Math.max(0, Math.round(v / 5)); } // 5° per level
+  function spreadValueFromLevel(lv){ return Math.min(45, lv*5); }
+  function spreadCost(level){ return toFixed(8 * Math.pow(1.35, level)); }
+  const spreadMax = 9; // 9*5 = 45°
+
+  // One-time prices
+  const BOMB_UNLOCK_PRICE = 50;
+  const BOOST_UNLOCK_PRICE = 50;
+  const ENEMY_VISIBLE_PRICE = 10;
+
+  // Types (basic placeholder)
+  const BOMB_TYPES = ['screen', 'smart'];
+  const BOOST_TYPES = ['speed', 'shield'];
+
+  // -------- UI Builders --------
+  const grid = document.getElementById('upgradesGrid');
+  const moneyEl = document.getElementById('money');
+
+  function fmtMoney(n){ return `§${n|0}`; }
+
+  function refreshUI(){
+    moneyEl.textContent = `Money: ${fmtMoney(save.money||0)}`;
+    grid.innerHTML = '';
+
+    // FIRE RATE
+    {
+      const lv = fireRateLevelFromValue(save["bullet fire rate"]);
+      const nextLv = lv + 1;
+      const nextVal = fireRateValueFromLevel(nextLv);
+      const price = fireRateCost(lv);
+      const card = elCard({
+        name: 'Fire Rate',
+        desc: 'Increase shots per second (+0.1 per level).',
+        stat: `Current: ${save["bullet fire rate"].toFixed(2)} sps`,
+        price: fmtMoney(price),
+        canBuy: (save.money||0) >= price,
+        onBuy: () => {
+          commit({
+            "bullet fire rate": nextVal,
+            money: (save.money||0) - price
+          });
+        }
+      });
+      grid.appendChild(card);
+    }
+
+    // BULLET NUMBER
+    {
+      const lv = bulletNumberLevelFromValue(save["bullet number"]);
+      const capped = lv >= (bulletNumberMax - 1);
+      const price = bulletNumberCost(lv);
+      const nextVal = bulletNumberValueFromLevel(lv+1);
+      const card = elCard({
+        name: 'Bullet Number',
+        desc: `More parallel bullets per shot (max ${bulletNumberMax}).`,
+        stat: `Current: ${save["bullet number"]}`,
+        price: capped ? 'MAX' : fmtMoney(price),
+        canBuy: !capped && (save.money||0) >= price,
+        onBuy: () => {
+          if (capped) return;
+          commit({
+            "bullet number": nextVal,
+            money: (save.money||0) - price
+          });
+        }
+      });
+      grid.appendChild(card);
+    }
+
+    // BULLET SPREAD
+    {
+      const lv = spreadLevelFromValue(save["bullet spread"]);
+      const capped = lv >= spreadMax;
+      const price = spreadCost(lv);
+      const nextVal = spreadValueFromLevel(lv+1);
+      const card = elCard({
+        name: 'Bullet Spread',
+        desc: 'Wider cone, easier to hit multiple enemies (+5° per level, up to 45°).',
+        stat: `Current: ${save["bullet spread"]}°`,
+        price: capped ? 'MAX' : fmtMoney(price),
+        canBuy: !capped && (save.money||0) >= price,
+        onBuy: () => {
+          if (capped) return;
+          commit({
+            "bullet spread": nextVal,
+            money: (save.money||0) - price
+          });
+        }
+      });
+      grid.appendChild(card);
+    }
+
+    // BOMB UNLOCK + TYPE
+    {
+      const unlocked = !!save["bomb unlocked"];
+      const price = BOMB_UNLOCK_PRICE;
+      const type = save["bomb type"] || 'none';
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <div class="row"><div class="name">Bomb</div> <div class="price">${unlocked ? 'Unlocked' : fmtMoney(price)}</div></div>
+        <div class="desc">Unlock a special bomb button in game. Cycle basic bomb type.</div>
+        <div class="row">
+          <div class="stat">Type: ${type}</div>
+          <div class="actions"></div>
+        </div>
+      `;
+      const actions = card.querySelector('.actions');
+
+      const buyBtn = document.createElement('button');
+      buyBtn.className = 'btn small';
+      buyBtn.textContent = unlocked ? 'Purchased' : 'Buy';
+      buyBtn.disabled = unlocked || (save.money||0) < price;
+      buyBtn.onclick = () => {
+        if (unlocked) return;
+        commit({
+          "bomb unlocked": true,
+          "bomb type": 'screen',
+          money: (save.money||0) - price
+        });
+      };
+      actions.appendChild(buyBtn);
+
+      const cycleBtn = document.createElement('button');
+      cycleBtn.className = 'btn small';
+      cycleBtn.textContent = 'Cycle Type';
+      cycleBtn.disabled = !unlocked;
+      cycleBtn.onclick = () => {
+        const idx = Math.max(0, BOMB_TYPES.indexOf(save["bomb type"]));
+        const next = BOMB_TYPES[(idx+1)%BOMB_TYPES.length];
+        commit({ "bomb type": next });
+      };
+      actions.appendChild(cycleBtn);
+
+      grid.appendChild(card);
+    }
+
+    // BOOST UNLOCK + TYPE
+    {
+      const unlocked = !!save["boost unlocked"];
+      const price = BOOST_UNLOCK_PRICE;
+      const type = save["boost type"] || 'none';
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <div class="row"><div class="name">Boost</div> <div class="price">${unlocked ? 'Unlocked' : fmtMoney(price)}</div></div>
+        <div class="desc">Unlock a temporary boost button in game. Cycle basic boost type.</div>
+        <div class="row">
+          <div class="stat">Type: ${type}</div>
+          <div class="actions"></div>
+        </div>
+      `;
+      const actions = card.querySelector('.actions');
+
+      const buyBtn = document.createElement('button');
+      buyBtn.className = 'btn small';
+      buyBtn.textContent = unlocked ? 'Purchased' : 'Buy';
+      buyBtn.disabled = unlocked || (save.money||0) < price;
+      buyBtn.onclick = () => {
+        if (unlocked) return;
+        commit({
+          "boost unlocked": true,
+          "boost type": 'speed',
+          money: (save.money||0) - price
+        });
+      };
+      actions.appendChild(buyBtn);
+
+      const cycleBtn = document.createElement('button');
+      cycleBtn.className = 'btn small';
+      cycleBtn.textContent = 'Cycle Type';
+      cycleBtn.disabled = !unlocked;
+      cycleBtn.onclick = () => {
+        const idx = Math.max(0, BOOST_TYPES.indexOf(save["boost type"]));
+        const next = BOOST_TYPES[(idx+1)%BOOST_TYPES.length];
+        commit({ "boost type": next });
+      };
+      actions.appendChild(cycleBtn);
+
+      grid.appendChild(card);
+    }
+
+    // BETTER VISIBLE ENEMIES
+    {
+      const enemies = save["enemies unlocked"] || { basic:true };
+      const better = !!enemies.betterVisible;
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <div class="row"><div class="name">Better Visible Enemies</div> <div class="price">${better ? 'Enabled' : fmtMoney(ENEMY_VISIBLE_PRICE)}</div></div>
+        <div class="desc">Add outline/glow to enemies to improve visibility.</div>
+        <div class="row">
+          <div class="stat">Status: ${better ? 'ON' : 'OFF'}</div>
+          <div class="actions"></div>
+        </div>
+      `;
+      const actions = card.querySelector('.actions');
+
+      const buyBtn = document.createElement('button');
+      buyBtn.className = 'btn small';
+      buyBtn.textContent = better ? 'Enabled' : 'Buy';
+      buyBtn.disabled = better || (save.money||0) < ENEMY_VISIBLE_PRICE;
+      buyBtn.onclick = () => {
+        if (better) return;
+        const next = { ...enemies, betterVisible: true };
+        commit({
+          "enemies unlocked": next,
+          money: (save.money||0) - ENEMY_VISIBLE_PRICE
+        });
+      };
+      actions.appendChild(buyBtn);
+
+      // Optional toggle off (free) if already bought
+      const toggleBtn = document.createElement('button');
+      toggleBtn.className = 'btn small';
+      toggleBtn.textContent = 'Toggle';
+      toggleBtn.disabled = !better;
+      toggleBtn.onclick = () => {
+        const e = save["enemies unlocked"] || {};
+        const next = { ...e, betterVisible: !e.betterVisible };
+        commit({ "enemies unlocked": next });
+      };
+      actions.appendChild(toggleBtn);
+
+      grid.appendChild(card);
+    }
+  }
+
+  function elCard({name, desc, stat, price, canBuy, onBuy}){
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="row"><div class="name">${name}</div><div class="price">${price}</div></div>
+      <div class="desc">${desc}</div>
+      <div class="row">
+        <div class="stat">${stat}</div>
+        <div class="actions"></div>
+      </div>
+    `;
+    const actions = card.querySelector('.actions');
+    const buy = document.createElement('button');
+    buy.className = 'btn small';
+    buy.textContent = 'Buy';
+    buy.disabled = !canBuy;
+    buy.onclick = onBuy;
+    actions.appendChild(buy);
+    return card;
+  }
+
+  // Initial UI
+  refreshUI();
+
+  // Expose tiny debug helpers in console
+  window.upg = {
+    addMoney(n=10){ commit({ money: (save.money||0)+n }); },
+    save: ()=>save
+  };
+})();
+</script>
+</body>
+</html>
