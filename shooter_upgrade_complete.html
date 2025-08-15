@@ -10,6 +10,7 @@
     --bg: #0b0e13;
     --ink: #e6e6e6;
     --accent: #35c3ff;
+    --lift: 20px; /* controls raised by 20px */
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; margin: 0; background: var(--bg); color: var(--ink); font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans"; }
@@ -32,8 +33,8 @@
     padding: 6px 8px; background: rgba(0,0,0,0.25); border-radius: 8px; border: 1px solid rgba(255,255,255,0.12);
   }
   #wrap { flex: 1; position: relative; }
-  canvas { position: absolute; inset: 0; width: 100vw; height: calc(100dvh - var(--controls-h)); touch-action: none; display: block; }
-
+  /* Raise controls visually by 20px and give that 20px back to the canvas to avoid a gap */
+  canvas { position: absolute; inset: 0; width: 100vw; height: calc(100dvh - var(--controls-h) + var(--lift)); touch-action: none; display: block; }
   .controls {
     height: var(--controls-h);
     width: 100vw;
@@ -43,12 +44,11 @@
     padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
     background: linear-gradient(180deg, rgba(0,0,0,0.0), rgba(0,0,0,0.35));
     backdrop-filter: blur(4px);
-    /* Pulsanti 20px più in alto */
-    transform: translateY(-20px);
+    transform: translateY(calc(-1 * var(--lift))); /* visually 20px higher */
   }
   .btn {
     min-height: 50px;
-    padding: 20px; /* +10px su tutti i lati già incluso */
+    padding: 20px; /* larger touch targets */
     border-radius: 14px;
     border: 1px solid rgba(255,255,255,0.18);
     background: rgba(255,255,255,0.06);
@@ -63,7 +63,7 @@
   .col.center { justify-content: center; }
   .col.right { justify-content: flex-end; }
 
-  /* Spazio riservato ai due pulsanti centrali nascosti */
+  /* reserved space for future middle buttons */
   .ghost-spot {
     width: 46%;
     min-height: 50px;
@@ -116,7 +116,7 @@
     "bullet number": 1,
     "bullet spread": 0,        // degrees
     "bullet fire rate": 0.5,   // shots/sec
-    "spawn every": 1.2,        // seconds (let upgrades set this)
+    "spawn every": 1.2,        // seconds (upgrades can change this)
     "boss unlocked": false
   };
 
@@ -125,7 +125,6 @@
       const raw = localStorage.getItem(LS_KEY);
       let save = raw ? JSON.parse(raw) : {};
       save = { ...defaultSave, ...save };
-      // mirror requested simple keys
       for (const k of Object.keys(save)) {
         const v = save[k];
         localStorage.setItem(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
@@ -181,7 +180,6 @@
     stars: [],
     lastShotAt: 0,
     spawnTimer: 0,
-    spawnEvery: 1.2, // default, but we will read from save each frame
     t: 0,
     lastFrame: performance.now(),
     playtimeAccumulator: 0,
@@ -191,9 +189,9 @@
     bombReadyAt: 0, // timestamp (seconds)
 
     // Boss
-    boss: null, // {x,y,size,hp,speed}
-    bossSpawnTimer: 0,
-    moneyDamageAccumulator: 0, // for laser -1§/s accumulation
+    boss: null,         // {x,y,flat,hp,speed,drift}
+    bossSpawnTimer: 0,  // seconds since last eligible spawn
+    moneyDamageAccumulator: 0 // for laser -1§/s
   };
 
   // ---------- Input ----------
@@ -244,12 +242,14 @@
 
   // ---------- Boss spawn / update ----------
   function spawnBoss() {
+    // Boss with exact flat-to-flat = 50px
+    const flat = 50;
     state.boss = {
       x: canvas.clientWidth * 0.5,
-      y: -50,
-      size: 50,     // flat-to-flat
+      y: -flat,
+      flat,             // flat-to-flat distance
       hp: 80,
-      speed: 40,    // px/s downward
+      speed: 40,        // downward until in place
       drift: (Math.random()<0.5?-1:1)*(30+Math.random()*30) // horizontal sway px/s
     };
   }
@@ -262,15 +262,15 @@
     b.y += b.speed * dt;
     b.x += b.drift * dt;
     if (b.x < 40 || b.x > canvas.clientWidth-40) b.drift *= -1; // bounce horizontally
-    // Stop moving down after entering screen a bit
+    // Stop vertical descent after entering the screen a bit
     if (b.y > canvas.clientHeight*0.18) b.speed = 0;
 
     // Laser damage: -1 § / second while boss exists
-    if (state.save.money > 0) {
+    if ((state.save.money|0) > 0) {
       state.moneyDamageAccumulator += dt;
-      while (state.moneyDamageAccumulator >= 1 && state.save.money > 0) {
+      while (state.moneyDamageAccumulator >= 1 && (state.save.money|0) > 0) {
         state.moneyDamageAccumulator -= 1;
-        commitSave({ money: Math.max(0, (state.save.money||0) - 1) });
+        commitSave({ money: Math.max(0, (state.save.money|0) - 1) });
       }
     }
   }
@@ -279,7 +279,7 @@
     const b = state.boss;
     if (!b) return;
 
-    // Draw red laser from boss to player
+    // laser from boss to player
     const px = state.player.x * canvas.clientWidth;
     const py = state.player.y * canvas.clientHeight;
     ctx.save();
@@ -291,18 +291,20 @@
     ctx.stroke();
     ctx.restore();
 
-    // Draw hexagon
-    const r = b.size/2; // approximate radial size (flat-to-flat/2)
+    // Draw regular hexagon with flat-to-flat = b.flat
+    // For a regular hexagon: apothem a = flat/2; circumradius R = a / (√3/2) = flat / √3
+    const a = b.flat / 2;
+    const R = b.flat / Math.sqrt(3);
     const sides = 6;
     ctx.save();
-    ctx.fillStyle = '#222'; // body
+    ctx.fillStyle = '#222';
     ctx.strokeStyle = '#ff4040';
     ctx.lineWidth = 2;
     ctx.beginPath();
     for (let i=0;i<sides;i++){
-      const ang = -Math.PI/2 + i*(Math.PI*2/sides);
-      const vx = b.x + r*Math.cos(ang);
-      const vy = b.y + r*Math.sin(ang);
+      const ang = -Math.PI/2 + i*(Math.PI*2/sides); // point-up orientation
+      const vx = b.x + R*Math.cos(ang);
+      const vy = b.y + R*Math.sin(ang);
       if (i===0) ctx.moveTo(vx,vy); else ctx.lineTo(vx,vy);
     }
     ctx.closePath();
@@ -310,25 +312,24 @@
     ctx.stroke();
     ctx.restore();
 
-    // Boss HP squares (1 per 10 HP) — big squares centered top
+    // HP squares (1 per 10 HP) centered at top
     const squares = Math.max(0, Math.floor(b.hp / 10));
-    const size = 14; // pixel
-    const gap = 6;
+    const size = 14, gap = 6;
     const totalW = squares*size + (squares-1)*gap;
     const startX = (canvas.clientWidth - totalW)/2;
-    const y = 8 + 10; // top margin
+    const y = 8 + 10;
     for (let i=0;i<squares;i++){
       ctx.fillStyle = '#ff6b6b';
       ctx.fillRect(startX + i*(size+gap), y, size, size);
     }
   }
 
-  // Bullet vs Boss collision (approx with circle)
+  // Bullet vs Boss collision (approx circle using circumradius R)
   function bulletHitsBoss(bul, boss) {
-    const r = boss.size/2;
+    const R = boss.flat / Math.sqrt(3);
     const dx = bul.x - boss.x;
     const dy = bul.y - boss.y;
-    return (dx*dx + dy*dy) <= (r*r);
+    return (dx*dx + dy*dy) <= (R*R);
   }
 
   // ---------- Shooting ----------
@@ -363,8 +364,8 @@
         state.bullets.push({
           x: state.player.x * canvas.clientWidth,
           y: state.player.y * canvas.clientHeight - state.player.size - 4,
-          vx: Math.cos(angle) * 200,
-          vy: Math.sin(angle) * 300,
+          vx: Math.cos(angle) * 200, // allow lateral component for spread
+          vy: Math.sin(angle) * 300, // upward (negative)
           r: 4,
         });
       }
@@ -389,12 +390,6 @@
     state.bombReadyAt = state.t + state.bombCooldownSec;
   }
 
-  btnBomb?.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (!bombReady()) return;
-    triggerBomb();
-  });
-
   // ---------- Collisions ----------
   function bulletHitsEnemy(b, e) {
     const rx = e.x - e.size/2, ry = e.y - e.size/2, rw = e.size, rh = e.size;
@@ -412,8 +407,8 @@
     state.t += dt;
     state.playtimeAccumulator += dt;
 
-    // Read spawnEvery from save if present
-    const spawnEvery = Number(state.save["spawn every"] ?? state.spawnEvery) || state.spawnEvery;
+    // current spawn cadence from save
+    const spawnEvery = Number(state.save["spawn every"] ?? 1.2) || 1.2;
 
     // player move
     const move = (state.player.moveRight ? 1 : 0) - (state.player.moveLeft ? 1 : 0);
@@ -422,18 +417,17 @@
       state.player.x = Math.max(0.05, Math.min(0.95, state.player.x));
     }
 
-    // spawn enemies (basic)
+    // spawn basic enemies
     state.spawnTimer += dt;
     if (state.spawnTimer >= spawnEvery) {
       state.spawnTimer = 0;
       spawnEnemy();
     }
 
-    // boss spawn
-    const bossAllowed = !!state.save["boss unlocked"];
-    if (!state.boss && bossAllowed) {
+    // boss spawn (only if unlocked and none present)
+    if (!state.boss && !!state.save["boss unlocked"]) {
       state.bossSpawnTimer += dt;
-      const bossPeriod = Math.max(0.1, spawnEvery) * 10; // 10× the basic cooldown
+      const bossPeriod = Math.max(0.1, spawnEvery) * 10; // 10× basic cooldown
       if (state.bossSpawnTimer >= bossPeriod) {
         state.bossSpawnTimer = 0;
         spawnBoss();
@@ -442,10 +436,10 @@
 
     // bullets
     for (let i=state.bullets.length-1;i>=0;i--){
-      const b = state.bullets[i];
-      b.x += b.vx * dt;
-      b.y += b.vy * dt;
-      if (b.y < -10 || b.x < -10 || b.x > canvas.clientWidth+10) state.bullets.splice(i,1);
+      const bl = state.bullets[i];
+      bl.x += bl.vx * dt;
+      bl.y += bl.vy * dt;
+      if (bl.y < -10 || bl.x < -10 || bl.x > canvas.clientWidth+10) state.bullets.splice(i,1);
     }
 
     // enemies
@@ -466,7 +460,7 @@
         state.bullets.splice(hitIndex,1);
         e.hp -= 1;
         if (e.hp <= 0) {
-          commitSave({ money: (state.save.money||0)+1,
+          commitSave({ money: (state.save.money|0)+1,
             "level data": { ...state.save["level data"], score: (state.save["level data"].score||0)+1 }
           });
           state.enemies.splice(i,1);
@@ -476,27 +470,25 @@
       }
     }
 
-    // boss update & collisions
+    // boss update & bullet collisions
     if (state.boss) {
       updateBoss(dt);
 
-      // bullets vs boss
       for (let j=state.bullets.length-1;j>=0;j--){
-        const b = state.bullets[j];
-        if (bulletHitsBoss(b, state.boss)) {
+        const bl = state.bullets[j];
+        if (bulletHitsBoss(bl, state.boss)) {
           state.bullets.splice(j,1);
           state.boss.hp -= 1;
           if (state.boss.hp <= 0) {
-            // reward
-            commitSave({ money: (state.save.money||0) + 200 });
+            commitSave({ money: (state.save.money|0) + 200 });
             state.boss = null;
             break;
           }
         }
       }
 
-      // remove boss if leaves screen bottom (unlikely)
-      if (state.boss && state.boss.y - state.boss.size/2 > canvas.clientHeight + 60) {
+      // remove boss if it somehow leaves the screen at bottom
+      if (state.boss && state.boss.y - state.boss.flat/2 > canvas.clientHeight + 60) {
         state.boss = null;
       }
     }
@@ -513,7 +505,7 @@
     // time persistence
     if (state.playtimeAccumulator >= 1) {
       state.playtimeAccumulator -= 1;
-      commitSave({ timeSec: (state.save.timeSec||0) + 1 });
+      commitSave({ timeSec: (state.save.timeSec|0) + 1 });
     }
   }
 
@@ -602,7 +594,7 @@
     requestAnimationFrame(loop);
   }
 
-  // Hidden central buttons visibility (in caso di sblocco futuro)
+  // Show bomb/boost buttons if unlocked
   function checkUnlocksAndToggleButtons() {
     const bombUnlocked = !!state.save["bomb unlocked"];
     const boostUnlocked = !!state.save["boost unlocked"];
@@ -611,11 +603,6 @@
   }
 
   checkUnlocksAndToggleButtons();
-  loop();
 
-  // reset frame timer after tab switch
-  document.addEventListener('visibilitychange', () => {
-    state.lastFrame = performance.now();
-  });
-
-  // Optional: aggiorna in tempo reale se un'altra tab cambia i salvatagg
+  // Bomb click (after toggle)
+  document.getElementById('btnBomb')?.addEventListener('click', (e
