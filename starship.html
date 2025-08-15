@@ -3,379 +3,383 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Starship — Vertical Scroll, Wing Cannons, Shield & Overdrive</title>
+<title>Canvas Starship – Vertical Scroll + Shield + Overdrive</title>
 <style>
-  :root {
-    --ui-bg: rgba(16,18,26,.85);
-    --ui-fg: #e9eef5;
-    --accent: #58d6ff;
-  }
-  html, body { margin:0; height:100%; background:#0a0f18; color:var(--ui-fg); font-family:system-ui,Segoe UI,Roboto,sans-serif; touch-action:none; }
-  #wrap { position:fixed; inset:0; display:grid; grid-template-rows:1fr auto; }
-  canvas { width:100%; height:100%; display:block; }
-  .hud {
-    position:absolute; left:8px; top:env(safe-area-inset-top,8px);
-    background:var(--ui-bg); padding:8px 10px; border-radius:12px; font-size:12px;
-    border:1px solid rgba(255,255,255,.08); backdrop-filter:blur(6px);
-  }
-  .hud .row { display:flex; gap:10px; align-items:center; }
-  .controls {
-    display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px;
-    padding:10px env(safe-area-inset-right,10px) calc(10px + env(safe-area-inset-bottom,0)) env(safe-area-inset-left,10px);
-    background:linear-gradient(to top, rgba(0,0,0,.55), rgba(0,0,0,0));
-  }
-  .btn {
-    appearance:none; -webkit-tap-highlight-color:transparent;
-    background:var(--ui-bg); color:var(--ui-fg);
-    border:1px solid rgba(255,255,255,.08); border-radius:16px;
-    padding:14px 10px; font-size:15px; font-weight:700; letter-spacing:.2px;
-    box-shadow:0 8px 24px rgba(0,0,0,.25);
-  }
-  .btn.primary { border-color:#29a8ff; box-shadow:0 0 0 2px rgba(0,153,255,.15), 0 12px 28px rgba(0,153,255,.18) inset; }
-  .btn:active { transform: translateY(1px); }
-  .hint {
-    position:absolute; right:8px; top:env(safe-area-inset-top,8px);
-    background:var(--ui-bg); border:1px solid rgba(255,255,255,.08);
-    padding:8px 10px; border-radius:12px; font-size:12px; max-width:52ch;
-  }
-  @media (min-width: 880px) { .controls { max-width:820px; margin-inline:auto; } }
+  :root { --ui-bg: rgba(20,20,28,.85); --ui-fg:#e9eef5; --accent:#5ee1ff; }
+  html,body{margin:0;height:100%;background:#0b0e17;color:var(--ui-fg);font-family:system-ui, -apple-system, Segoe UI, Roboto, sans-serif;touch-action:none}
+  #wrap{position:fixed;inset:0;display:grid;grid-template-rows:1fr auto}
+  canvas{width:100%;height:100%;display:block}
+  .hud{position:absolute;left:8px;top:env(safe-area-inset-top,8px);background:var(--ui-bg);padding:8px 10px;border-radius:10px;font-size:12px;line-height:1.2;border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(6px)}
+  .hud .row{display:flex;gap:10px;align-items:center}
+  .controls{display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:10px;padding:10px env(safe-area-inset-right,10px) calc(10px + env(safe-area-inset-bottom,0)) env(safe-area-inset-left,10px);background:linear-gradient(to top, rgba(0,0,0,.55), rgba(0,0,0,0))}
+  .btn{appearance:none;-webkit-tap-highlight-color:transparent;background:var(--ui-bg);color:var(--ui-fg);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:12px 8px;font-size:14px;font-weight:600;letter-spacing:.2px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+  .btn:active{transform:translateY(1px)}
+  .btn.primary{border-color:#2af;box-shadow:0 0 0 2px rgba(0,153,255,.15),0 12px 28px rgba(0,153,255,.18) inset}
+  .hint{position:absolute;right:8px;top:env(safe-area-inset-top,8px);background:var(--ui-bg);border:1px solid rgba(255,255,255,.08);padding:8px 10px;border-radius:10px;font-size:12px;max-width:56ch}
+  @media (min-width:860px){.controls{max-width:900px;margin-inline:auto}}
 </style>
 </head>
 <body>
 <div id="wrap">
   <canvas id="game"></canvas>
 
-  <div class="hud">
-    <div class="row"><strong>Starship</strong> <span>•</span> <span>FPS: <span id="fps">0</span></span></div>
-    <div class="row"><span>Shots: <span id="shots">0</span></span> <span>Total: <span id="total">0</span></span> <span>Overdrive: <span id="ov">off</span></span></div>
+  <div class="hud" id="hud">
+    <div class="row"><strong>Starship Demo</strong></div>
+    <div class="row" style="margin-top:6px;">
+      <div>FPS: <span id="fps">0</span></div>
+      <div>Shots: <span id="shots">0</span></div>
+      <div>Total: <span id="totalShots">0</span></div>
+    </div>
+    <div class="row" style="margin-top:2px;">
+      <div>Autofire: <span id="autoStatus">off</span></div>
+      <div>Overdrive: <span id="odStatus">off</span></div>
+      <div>Scroll: <span id="scrollSpd">0</span></div>
+    </div>
   </div>
-  <div class="hint">Trascina per muovere • 🎯 tieni premuto per auto‑fuoco • 🛡️ scudo • 🚀 overdrive</div>
+
+  <div class="hint">
+    Drag per muovere • 🎯 Fire per sparare • 🛡️ Shield per effetto scudo • ⚡ Overdrive per spinta extra
+  </div>
 
   <div class="controls">
     <button id="btnFire" class="btn primary">🎯 Fire</button>
-    <button id="btnShield" class="btn">🛡️ Simulate shield hit</button>
-    <button id="btnOver" class="btn">🚀 Engine Overdrive</button>
+    <button id="btnAuto" class="btn">🔁 Autofire</button>
+    <button id="btnShield" class="btn">🛡️ Simulate Shield Hit</button>
+    <button id="btnOD" class="btn">⚡ Engine Overdrive</button>
+    <button id="btnReset" class="btn">⏹ Reset</button>
   </div>
 </div>
 
 <script>
 (() => {
   // ---------- Persistence ----------
-  const STORAGE_KEY = 'starship-vertical-v1';
-  const defaults = { totalShots: 0, overdrive: false };
-  let save = load();
-  function load() { try { return Object.assign({}, defaults, JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')); } catch { return {...defaults}; } }
-  function persist(patch={}) { save = { ...save, ...patch }; localStorage.setItem(STORAGE_KEY, JSON.stringify(save)); updateHUD(); }
+  const STORAGE_KEY = 'starship-vert-v1';
+  const defaultSave = { totalShots: 0, autofire: false, overdrive: false };
+  const loadSave = () => { try { return Object.assign({}, defaultSave, JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')); } catch { return { ...defaultSave }; } };
+  let save = loadSave();
+  const persist = (patch={}) => { save = {...save, ...patch}; localStorage.setItem(STORAGE_KEY, JSON.stringify(save)); updateHUD(); };
 
   // ---------- Canvas ----------
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
-  function fit() {
-    const dpr = Math.max(1, Math.min(3, window.devicePixelRatio||1));
+  function fitCanvas(){
+    const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
     const w = Math.floor(canvas.clientWidth * dpr);
     const h = Math.floor(canvas.clientHeight * dpr);
-    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; rebuildStars(); }
+    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; initStars(); }
   }
-  window.addEventListener('resize', fit, { passive:true }); fit();
-
-  // ---------- UI ----------
-  const elFPS = document.getElementById('fps');
-  const elShots = document.getElementById('shots');
-  const elTotal = document.getElementById('total');
-  const elOV = document.getElementById('ov');
-  const btnFire = document.getElementById('btnFire');
-  const btnShield = document.getElementById('btnShield');
-  const btnOver = document.getElementById('btnOver');
-  function updateHUD(){ elShots.textContent = state.shots; elTotal.textContent = save.totalShots; elOV.textContent = save.overdrive ? 'on' : 'off'; }
-  updateHUD();
+  window.addEventListener('resize', fitCanvas, { passive:true });
+  fitCanvas();
 
   // ---------- State ----------
   const state = {
-    time: 0, dt: 0, last: 0, fps: 0,
-    shots: 0,
+    time: 0, dt: 0, lastTs: 0, fps: 0,
+    scroll: { base: 1.1, overdriveBoost: 2.2 }, // px per frame (scaled below)
+    ship: { x: canvas.width*0.18, y: canvas.height*0.5, scale: 1.25, noseLen: 44 },
     input: { touching:false, tx:0, ty:0, firing:false },
-    scroll: 0, // vertical world scroll
-    baseScrollSpeed: 1.1, // px per frame unit (scaled below)
-    ship: { x: 0.25, y: 0.6, nose: 46, scale: 1.25 }, // relative positions (0..1) for init
     bullets: [],
-    shieldFx: [], // {t:0..1}
+    shots: 0,
+    lastShotAt: 0, shotIntervalMs: 120,
+    shieldFX: [], // {t:0, duration:ms, r: px}
   };
 
-  // place ship
-  function shipPx() { return { x: state.shipX, y: state.shipY }; }
-  function initShip() {
-    state.shipX = canvas.width * state.ship.x;
-    state.shipY = canvas.height * state.ship.y;
+  // ---------- HUD ----------
+  const elFPS = document.getElementById('fps');
+  const elShots = document.getElementById('shots');
+  const elTotal = document.getElementById('totalShots');
+  const elAuto = document.getElementById('autoStatus');
+  const elOD = document.getElementById('odStatus');
+  const elScroll = document.getElementById('scrollSpd');
+  function updateHUD(){
+    elShots.textContent = state.shots;
+    elTotal.textContent = save.totalShots;
+    elAuto.textContent = save.autofire ? 'on' : 'off';
+    elOD.textContent = save.overdrive ? 'on' : 'off';
+    const spd = Math.round(currentScrollSpeed()*10)/10;
+    elScroll.textContent = spd.toFixed(1);
   }
-  initShip();
 
   // ---------- Input ----------
-  function canvasCoords(e){
-    const rect = canvas.getBoundingClientRect();
-    return {
-      x: (e.clientX - rect.left) * (canvas.width/rect.width),
-      y: (e.clientY - rect.top ) * (canvas.height/rect.height),
-    };
+  function setTouch(x,y){ state.input.touching = true; state.input.tx=x; state.input.ty=y; }
+  function clearTouch(){ state.input.touching = false; }
+  canvas.addEventListener('pointerdown', e => {
+    const r = canvas.getBoundingClientRect();
+    setTouch((e.clientX-r.left)*(canvas.width/r.width), (e.clientY-r.top)*(canvas.height/r.height));
+  });
+  canvas.addEventListener('pointermove', e => {
+    if (!state.input.touching) return;
+    const r = canvas.getBoundingClientRect();
+    setTouch((e.clientX-r.left)*(canvas.width/r.width), (e.clientY-r.top)*(canvas.height/r.height));
+  });
+  window.addEventListener('pointerup', clearTouch);
+
+  const btnFire = document.getElementById('btnFire');
+  const btnAuto = document.getElementById('btnAuto');
+  const btnShield = document.getElementById('btnShield');
+  const btnOD = document.getElementById('btnOD');
+  const btnReset = document.getElementById('btnReset');
+
+  btnFire.addEventListener('pointerdown', ()=> state.input.firing = true);
+  btnFire.addEventListener('pointerup',   ()=> state.input.firing = false);
+  btnAuto.addEventListener('click', ()=> persist({autofire: !save.autofire}));
+  btnOD.addEventListener('click',   ()=> persist({overdrive: !save.overdrive}));
+  btnShield.addEventListener('click', ()=> triggerShield());
+  btnReset.addEventListener('click', ()=>{
+    save = {...defaultSave};
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(save));
+    state.shots = 0; updateHUD();
+  });
+
+  window.addEventListener('keydown', e=> { if (e.code==='Space') state.input.firing = true; if (e.key==='o') persist({overdrive: !save.overdrive}); if (e.key==='s') triggerShield(); });
+  window.addEventListener('keyup',   e=> { if (e.code==='Space') state.input.firing = false; });
+
+  // ---------- Stars (vertical parallax) ----------
+  let starsNear = [], starsMid = [], starsFar = [];
+  function makeStars(n){ return Array.from({length:n}, ()=>({ x:Math.random()*canvas.width, y:Math.random()*canvas.height, r: Math.random()*1.5+0.4 })); }
+  function initStars(){
+    const area = canvas.width*canvas.height;
+    const base = Math.max(60, Math.min(400, Math.floor(area/16000)));
+    starsFar = makeStars(base);
+    starsMid = makeStars(Math.floor(base*0.6));
+    starsNear= makeStars(Math.floor(base*0.35));
   }
-  canvas.addEventListener('pointerdown', e => { const p = canvasCoords(e); state.input.touching = true; state.input.tx=p.x; state.input.ty=p.y; });
-  canvas.addEventListener('pointermove', e => { if(!state.input.touching) return; const p = canvasCoords(e); state.input.tx=p.x; state.input.ty=p.y; });
-  window.addEventListener('pointerup', () => { state.input.touching=false; });
-
-  btnFire.addEventListener('pointerdown', () => state.input.firing = true);
-  btnFire.addEventListener('pointerup',   () => state.input.firing = false);
-  window.addEventListener('keydown', e => { if(e.code==='Space') state.input.firing=true; if(e.code==='KeyO') toggleOverdrive(); if(e.code==='KeyS') triggerShield(); });
-  window.addEventListener('keyup',   e => { if(e.code==='Space') state.input.firing=false; });
-
-  btnShield.addEventListener('click', () => triggerShield());
-  btnOver.addEventListener('click', () => toggleOverdrive());
-
-  function toggleOverdrive(){ persist({ overdrive: !save.overdrive }); }
-  function triggerShield(){ state.shieldFx.push({ t:0 }); }
-
-  // ---------- Starfield (vertical) ----------
-  let stars = [];
-  function rebuildStars(){
-    const count = Math.floor(Math.min(280, (canvas.width*canvas.height)/20000));
-    stars = Array.from({length: count}, () => ({
-      x: Math.random()*canvas.width,
-      y: Math.random()*canvas.height,
-      r: Math.random()*1.6 + 0.4,
-      s: Math.random()*0.8 + 0.3, // speed multiplier
-      tw: Math.random()*1.2 + 0.3, // twinkle
-    }));
+  function scrollStars(layer, speed, dt){
+    for (const s of layer){
+      s.y += speed * dt/16.6667;
+      if (s.y > canvas.height + 2){ s.y = -2; s.x = Math.random()*canvas.width; }
+    }
   }
-  rebuildStars();
+
+  function currentScrollSpeed(){
+    const base = state.scroll.base;
+    const boost = save.overdrive ? state.scroll.overdriveBoost : 0;
+    return base + boost;
+  }
 
   // ---------- Drawing helpers ----------
-  function withTX(x,y,rot=0,scale=1,draw){
-    ctx.save(); ctx.translate(x,y); if(rot) ctx.rotate(rot); if(scale!==1) ctx.scale(scale,scale); draw(); ctx.restore();
-  }
+  function withTransform(x,y,rot,scale,fn){ ctx.save(); ctx.translate(x,y); if(rot) ctx.rotate(rot); if(scale!==undefined) ctx.scale(scale,scale); fn(); ctx.restore(); }
+  function shipPointToWorld(px,py){ const sc = state.ship.scale; return { x: state.ship.x + px*sc, y: state.ship.y + py*sc }; }
 
-  // Ship drawing with wider wings and two wing cannons + nose cannon
-  function drawShip(t, overdrive=false){
-    const s = state.ship;
-    const scale = s.scale;
-    const bob = Math.sin(t*6.28)*0.6;
-
-    withTX(state.shipX, state.shipY, 0, scale, () => {
-      // body
-      ctx.lineJoin='round'; ctx.lineCap='round'; ctx.lineWidth=2.5;
-      ctx.fillStyle='#b7c4d6'; ctx.strokeStyle='#89a1b7';
+  // ---------- Starship (wider wings + wing cannons) ----------
+  function drawShip(s, t){
+    const sc = s.scale;
+    withTransform(s.x, s.y, 0, sc, ()=>{
+      // Body
+      ctx.lineJoin='round'; ctx.lineCap='round';
+      ctx.fillStyle='#b7c4d6'; ctx.strokeStyle='#89a1b7'; ctx.lineWidth=2.5;
       ctx.beginPath();
-      ctx.moveTo(-30, -12);
-      ctx.quadraticCurveTo(  8, -20, s.nose, 0);
-      ctx.quadraticCurveTo(  8,  20, -30, 12);
-      ctx.quadraticCurveTo( -38,  5, -40, 0);
-      ctx.quadraticCurveTo( -38, -5, -30, -12);
+      ctx.moveTo(-30, -11);
+      ctx.quadraticCurveTo(  8, -18,  s.noseLen, 0);
+      ctx.quadraticCurveTo(  8,  18, -30, 11);
+      ctx.quadraticCurveTo(-38,  5,  -38, 0);
+      ctx.quadraticCurveTo(-38, -5, -30,-11);
       ctx.closePath(); ctx.fill(); ctx.stroke();
 
       // WINGS (wider)
-      ctx.fillStyle = '#9fb3c9'; ctx.strokeStyle = '#7d93a8';
+      ctx.fillStyle='#9fb3c9'; ctx.strokeStyle='#7d93a8';
       // top wing
       ctx.beginPath();
-      ctx.moveTo(-10, -12);
-      ctx.lineTo(-40, -42);     // wider span
-      ctx.lineTo( 16, -18);
+      ctx.moveTo(-10,-11);
+      ctx.lineTo(-38,-34);   // wider span
+      ctx.lineTo( 14,-16);
       ctx.closePath(); ctx.fill(); ctx.stroke();
       // bottom wing
       ctx.beginPath();
-      ctx.moveTo(-10,  12);
-      ctx.lineTo(-40,  42);
-      ctx.lineTo( 16,  18);
+      ctx.moveTo(-10, 11);
+      ctx.lineTo(-38, 34);   // wider span
+      ctx.lineTo( 14, 16);
       ctx.closePath(); ctx.fill(); ctx.stroke();
 
       // Cockpit
-      const g = ctx.createLinearGradient(-2,-15, 12,8);
-      g.addColorStop(0,'#3bd1ff'); g.addColorStop(1,'#0b6a93');
-      ctx.fillStyle=g; ctx.strokeStyle='#89d6ff';
-      ctx.beginPath(); ctx.ellipse(2,-2, 13,11, 0, 0, Math.PI*2);
-      ctx.fill(); ctx.stroke();
+      const gGlass = ctx.createLinearGradient(-2,-14,12,6);
+      gGlass.addColorStop(0,'#3bc7ff'); gGlass.addColorStop(1,'#0b6a93');
+      ctx.fillStyle=gGlass; ctx.strokeStyle='#89d6ff';
+      ctx.beginPath(); ctx.ellipse(2,-2,12,10,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
 
-      // Cannons (nose + wing tips)
-      // nose barrel
+      // Front gun barrel
       ctx.strokeStyle='#49586a'; ctx.lineWidth=4;
-      ctx.beginPath(); ctx.moveTo(s.nose-8,0); ctx.lineTo(s.nose+12,0); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(s.noseLen-8,0); ctx.lineTo(s.noseLen+10,0); ctx.stroke();
 
-      // wing cannons (little barrels near wing tips)
-      ctx.lineWidth=3.5; ctx.strokeStyle='#4b5a6d';
-      // top wing cannon at approx (-28, -30) to (-18,-26)
-      ctx.beginPath(); ctx.moveTo(-28,-30); ctx.lineTo(-14,-24); ctx.stroke();
-      // bottom wing cannon
-      ctx.beginPath(); ctx.moveTo(-28, 30); ctx.lineTo(-14, 24); ctx.stroke();
+      // Wing cannons (visual barrels)
+      ctx.lineWidth=3;
+      // top wing barrel
+      ctx.beginPath(); ctx.moveTo(10,-16); ctx.lineTo(22,-16); ctx.stroke();
+      // bottom wing barrel
+      ctx.beginPath(); ctx.moveTo(10, 16); ctx.lineTo(22, 16); ctx.stroke();
 
       // Engine nozzle
       ctx.lineWidth=2; ctx.fillStyle='#8da0b5'; ctx.strokeStyle='#6a7c90';
-      ctx.beginPath(); ctx.moveTo(-40,-8); ctx.lineTo(-50,-6); ctx.lineTo(-50,6); ctx.lineTo(-40,8); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-38,-8); ctx.lineTo(-46,-6); ctx.lineTo(-46,6); ctx.lineTo(-38,8); ctx.closePath(); ctx.fill(); ctx.stroke();
 
-      // Engine flame (normal vs overdrive)
-      const baseLen = overdrive ? 38 : 20;
-      const pulse = overdrive ? 10 : 6;
-      const flameLen = baseLen + pulse * Math.sin(t*22 + bob);
-      const gradFlame = ctx.createLinearGradient(-50,0, -50 - flameLen, 0);
-      if (overdrive) {
-        gradFlame.addColorStop(0.00,'rgba(140,220,255,1)');
-        gradFlame.addColorStop(0.45,'rgba( 60,160,255,.85)');
-        gradFlame.addColorStop(1.00,'rgba( 30,100,255,0)');
+      // Engine flame (normal or overdrive)
+      const baseLen = save.overdrive ? 30 : 18;
+      const flick = (save.overdrive ? 8 : 6)*Math.sin(t*20);
+      const flameLen = baseLen + flick;
+      const gFlame = ctx.createLinearGradient(-46,0,-46-flameLen,0);
+      if (save.overdrive){
+        gFlame.addColorStop(0,'rgba(150,220,255,0.95)');
+        gFlame.addColorStop(0.6,'rgba(90,160,255,0.8)');
+        gFlame.addColorStop(1,'rgba(40,120,255,0)');
       } else {
-        gradFlame.addColorStop(0.00,'rgba(255,230,120,.95)');
-        gradFlame.addColorStop(0.60,'rgba(255,140, 40,.80)');
-        gradFlame.addColorStop(1.00,'rgba(255, 60, 20,0)');
+        gFlame.addColorStop(0,'rgba(255,230,120,0.95)');
+        gFlame.addColorStop(0.6,'rgba(255,140,40,0.8)');
+        gFlame.addColorStop(1,'rgba(255,60,20,0)');
       }
-      ctx.fillStyle=gradFlame;
-      ctx.beginPath();
-      ctx.moveTo(-50,-6);
-      ctx.lineTo(-50 - flameLen, -2);
-      ctx.lineTo(-50, 6);
-      ctx.closePath();
-      ctx.fill();
+      ctx.fillStyle = gFlame;
+      ctx.beginPath(); ctx.moveTo(-46,-6); ctx.lineTo(-46-flameLen,-2); ctx.lineTo(-46,6); ctx.closePath(); ctx.fill();
     });
   }
 
+  // Gun points in local ship coords
+  function getGunPointsLocal(){
+    const s = state.ship;
+    return [
+      {x: s.noseLen+10, y: 0},   // front gun
+      {x: 22, y: -16},           // top wing
+      {x: 22, y:  16}            // bottom wing
+    ];
+  }
+
   // ---------- Bullets ----------
-  const RATE_MS = 120; // 8.3/s
-  let lastShot = 0;
-  function fire(ts){
-    if (ts - lastShot < RATE_MS) return;
-    lastShot = ts;
-    const { x, y } = shipPx();
-    // positions matching drawn barrels (scaled)
-    const sc = state.ship.scale;
-    // nose
-    const noseX = x + (state.ship.nose + 12) * sc;
-    const noseY = y;
-    // wing cannons approx at (-14,-24) and (-14,24), shooting forward (to the right)
-    const wcx = x + (-14 + 5) * sc; // push slightly forward
-    const wcyTop = y + (-24) * sc;
-    const wcyBot = y + ( 24) * sc;
+  function fire(){
+    const now = performance.now();
+    if (now - state.lastShotAt < state.shotIntervalMs) return;
+    state.lastShotAt = now;
 
-    const speed = 13; // px per frame unit (scaled with dt below)
-    const life = 1600;
-
-    state.bullets.push({ x:noseX, y:noseY, vx:speed, vy:0, life });
-    state.bullets.push({ x:wcx,   y:wcyTop, vx:speed, vy:0, life });
-    state.bullets.push({ x:wcx,   y:wcyBot, vx:speed, vy:0, life });
-
-    state.shots++; persist({ totalShots: save.totalShots + 1 });
+    const pts = getGunPointsLocal().map(p => shipPointToWorld(p.x, p.y));
+    for (const p of pts){
+      state.bullets.push({ x:p.x, y:p.y, vx: 12, vy: 0, life: 1600 });
+      state.shots++; persist({ totalShots: save.totalShots + 1 });
+    }
   }
 
   // ---------- Shield FX ----------
+  function triggerShield(){
+    state.shieldFX.push({ t:0, duration: 650, r: 58 });
+  }
   function drawShieldFX(){
-    if (!state.shieldFx.length) return;
-    for (let i = state.shieldFx.length-1; i>=0; i--){
-      const fx = state.shieldFx[i];
-      fx.t += state.dt / 600; // total ~600ms
-      const t = Math.min(1, fx.t);
-      const ease = t<0.5 ? (2*t*t) : (1 - Math.pow(-2*t+2,2)/2); // ease in-out quad
-      const radius = 70 + 30*ease;
-      const alpha = 0.55 * (1 - ease);
+    for (let i=state.shieldFX.length-1; i>=0; i--){
+      const fx = state.shieldFX[i];
+      const k = Math.min(1, fx.t / fx.duration);
+      const alpha = (1-k) * 0.8;
+      const scale = 0.9 + 0.4*k;
+      const r = fx.r * state.ship.scale * scale;
 
-      const { x, y } = shipPx();
-      const rg = ctx.createRadialGradient(x,y, radius*0.2, x,y, radius);
-      rg.addColorStop(0, `rgba(120,200,255,${alpha})`);
-      rg.addColorStop(0.6, `rgba( 70,160,255,${alpha*0.6})`);
-      rg.addColorStop(1, `rgba( 40,120,255,0)`);
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      const grd = ctx.createRadialGradient(state.ship.x, state.ship.y, r*0.3, state.ship.x, state.ship.y, r);
+      grd.addColorStop(0, `rgba(120,180,255,${alpha})`);
+      grd.addColorStop(0.6, `rgba(80,150,255,${alpha*0.5})`);
+      grd.addColorStop(1, `rgba(30,100,255,0)`);
+      ctx.fillStyle = grd;
+      ctx.beginPath();
+      ctx.arc(state.ship.x, state.ship.y, r, 0, Math.PI*2);
+      ctx.fill();
 
-      ctx.fillStyle = rg;
-      ctx.beginPath(); ctx.arc(x,y,radius,0,Math.PI*2); ctx.fill();
-
-      // outline shimmer
-      ctx.strokeStyle = `rgba(140,220,255,${alpha*0.8})`;
+      // thin outline
       ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(x,y,radius,0,Math.PI*2); ctx.stroke();
+      ctx.strokeStyle = `rgba(150,200,255,${alpha*0.8})`;
+      ctx.beginPath(); ctx.arc(state.ship.x, state.ship.y, r*0.98, 0, Math.PI*2); ctx.stroke();
 
-      if (t >= 1) state.shieldFx.splice(i,1);
+      ctx.restore();
+
+      fx.t += state.dt;
+      if (fx.t >= fx.duration) state.shieldFX.splice(i,1);
+    }
+  }
+
+  // ---------- Render ----------
+  function drawStarfield(){
+    // background fill
+    ctx.fillStyle = '#060912';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    // Far, Mid, Near with different speeds
+    const spd = currentScrollSpeed();
+    scrollStars(starsFar,  0.6*spd, state.dt);
+    scrollStars(starsMid,  1.0*spd, state.dt);
+    scrollStars(starsNear, 1.6*spd, state.dt);
+
+    function drawLayer(layer, glow=false){
+      ctx.save();
+      if (glow) { ctx.globalAlpha = 0.9; }
+      for (const s of layer){
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+        ctx.fillStyle = '#9dcfff'; ctx.fill();
+      }
+      ctx.restore();
+    }
+    drawLayer(starsFar);
+    drawLayer(starsMid);
+    drawLayer(starsNear, true);
+  }
+
+  function drawBullets(){
+    ctx.lineCap='round';
+    for (const b of state.bullets){
+      const g = ctx.createLinearGradient(b.x-18, b.y, b.x+2, b.y);
+      g.addColorStop(0,'rgba(100,200,255,0)');
+      g.addColorStop(1,'#def8ff');
+      ctx.strokeStyle=g; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.moveTo(b.x-18,b.y); ctx.lineTo(b.x+2,b.y); ctx.stroke();
+      ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(b.x+2,b.y,2,0,Math.PI*2); ctx.fill();
     }
   }
 
   // ---------- Loop ----------
   function step(ts){
-    if (!state.last) state.last = ts;
-    state.dt = Math.min(40, ts - state.last);
-    state.last = ts;
+    if (!state.lastTs) state.lastTs = ts;
+    state.dt = Math.min(40, ts - state.lastTs);
+    state.lastTs = ts;
     state.time += state.dt/1000;
-    state.fps = state.fps*0.9 + (1000/state.dt)*0.1;
+    state.fps = (state.fps*0.9) + (1000/state.dt)*0.1;
 
-    // Input follow (drag)
+    // Move ship toward touch
     if (state.input.touching){
       const k = 0.18;
-      state.shipX += (state.input.tx - state.shipX) * k;
-      state.shipY += (state.input.ty - state.shipY) * k;
+      state.ship.x += (state.input.tx - state.ship.x) * k;
+      state.ship.y += (state.input.ty - state.ship.y) * k;
     }
 
-    // Vertical scroll speed (faster in overdrive)
-    const speed = (state.baseScrollSpeed * (save.overdrive ? 2.5 : 1.0)) * (state.dt/16.6667);
-    state.scroll += speed;
+    // Vertical scroll drift also nudges the ship slightly to sell motion
+    state.ship.y += currentScrollSpeed() * 0.15 * (state.dt/16.6667);
 
-    // Give ship a subtle vertical drift with the world scroll (moves “with” the scenery)
-    state.shipY -= speed * 0.35;
-
-    // Clamp ship on screen
-    state.shipX = Math.max(50, Math.min(canvas.width - 50, state.shipX));
-    state.shipY = Math.max(50, Math.min(canvas.height - 50, state.shipY));
+    // Clamp ship
+    const pad = 44*state.ship.scale;
+    state.ship.x = Math.max(pad, Math.min(canvas.width - pad, state.ship.x));
+    state.ship.y = Math.max(pad, Math.min(canvas.height - pad, state.ship.y));
 
     // Firing
-    if (state.input.firing) fire(ts);
+    if (save.autofire || state.input.firing) fire();
 
     // Bullets update
-    for (let i=state.bullets.length-1;i>=0;i--){
+    for (let i=state.bullets.length-1; i>=0; i--){
       const b = state.bullets[i];
       b.x += b.vx * (state.dt/16.6667);
       b.y += b.vy * (state.dt/16.6667);
       b.life -= state.dt;
-      if (b.x > canvas.width + 30 || b.y < -30 || b.y > canvas.height + 30 || b.life<=0) state.bullets.splice(i,1);
+      if (b.x > canvas.width + 24 || b.life<=0) state.bullets.splice(i,1);
     }
 
     // Render
-    render();
+    drawStarfield();
+    drawBullets();
+    drawShip(state.ship, state.time);
+    drawShieldFX();
 
-    // HUD (quarter second)
-    if ((Math.floor(ts/250)!==Math.floor((ts-state.dt)/250))) {
-      elFPS.textContent = Math.round(state.fps);
-      elShots.textContent = state.shots;
+    // HUD throttled
+    if ((Math.floor(ts/250) !== Math.floor((ts-state.dt)/250))){
+      document.getElementById('fps').textContent = Math.round(state.fps);
+      document.getElementById('shots').textContent = state.shots;
+      updateHUD();
     }
 
     requestAnimationFrame(step);
   }
 
-  function render(){
-    // background
-    drawStarfield();
-
-    // shield FX under bullets for nice layering glow
-    drawShieldFX();
-
-    // bullets
-    for (const b of state.bullets) {
-      const g = ctx.createLinearGradient(b.x-18, b.y, b.x+2, b.y);
-      g.addColorStop(0, 'rgba(100,200,255,0)');
-      g.addColorStop(1, '#def8ff');
-      ctx.strokeStyle = g; ctx.lineWidth = 3; ctx.lineCap='round';
-      ctx.beginPath(); ctx.moveTo(b.x-18, b.y); ctx.lineTo(b.x+2, b.y); ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(b.x+2, b.y, 2, 0, Math.PI*2); ctx.fill();
-    }
-
-    // ship (overdrive affects flame)
-    drawShip(state.time, save.overdrive);
-  }
-
-  function drawStarfield(){
-    // clear
-    ctx.fillStyle = '#070b12';
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-
-    // parallax layers via star speed
-    for (const st of stars){
-      st.y += st.s * (save.overdrive ? 2.5 : 1.0); // faster when overdrive
-      if (st.y > canvas.height + 2) { st.y = -2; st.x = Math.random()*canvas.width; }
-      const tw = 0.5 + 0.5*Math.sin((st.x + st.y + state.time*1000)*0.003*st.tw);
-      ctx.globalAlpha = tw * 0.9;
-      ctx.beginPath(); ctx.arc(st.x, st.y, st.r, 0, Math.PI*2);
-      ctx.fillStyle = '#9dcfff'; ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  // Kickoff
+  // Init & run
+  initStars();
+  updateHUD();
   requestAnimationFrame(step);
 })();
 </script>
