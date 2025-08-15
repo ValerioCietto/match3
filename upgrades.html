@@ -295,19 +295,6 @@
       grid.appendChild(card);
     }
 
-    // UNLOCK BOSS
-    {
-      const unlocked = !!save["boss unlocked"];
-      grid.appendChild(elCard({
-        name: 'Unlock Boss',
-        desc: 'Enable boss encounters (details later).',
-        stat: `Status: ${unlocked ? 'UNLOCKED' : 'LOCKED'}`,
-        price: unlocked ? 'Purchased' : fmtMoney(200),
-        canBuy: !unlocked && (save.money||0) >= 200,
-        onBuy: () => commit({ "boss unlocked": true, money: (save.money||0) - 200 })
-      }));
-    }
-
     // NEW GAME PLUS
     {
       grid.appendChild(elCard({
@@ -340,7 +327,7 @@
           localStorage.setItem(LS_KEY, JSON.stringify(fresh));
           save = fresh;
           refreshUI();
-          alert('New Game Plus activated! Upgrades reset, you received §10000.');
+          alert('New Game Plus activated! Upgrades reset, you received §1000000.');
         }
       }));
     }
