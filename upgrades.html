@@ -161,7 +161,7 @@
       const nextVal = fireRateValueFromLevel(lv+1);
       grid.appendChild(elCard({
         name: 'Fire Rate',
-        desc: 'Increase shots per second (+0.1 per level). Softer price curve.',
+        desc: 'Increase shots per second (+0.1 per level).',
         stat: `Current: ${save["bullet fire rate"].toFixed(2)} sps`,
         price: fmtMoney(price),
         canBuy: (save.money||0) >= price,
@@ -176,7 +176,7 @@
       const nextVal = bulletNumberValueFromLevel(lv+1);
       grid.appendChild(elCard({
         name: 'Bullet Number',
-        desc: 'Add +1 parallel bullet per shot (no max). Cheaper scaling.',
+        desc: 'Add +1 parallel bullet per shot (no max).',
         stat: `Current: ${save["bullet number"]}`,
         price: fmtMoney(price),
         canBuy: (save.money||0) >= price,
@@ -211,7 +211,7 @@
       const minReached = save["spawn every"] <= 0.1 + 1e-9;
       grid.appendChild(elCard({
         name: 'More Basic Enemies',
-        desc: 'Enemies spawn faster (spawnEvery -0.1s, min 0.1s). Expensive.',
+        desc: 'Enemies spawn faster (spawnEvery -0.1s, min 0.1s).',
         stat: `Current spawnEvery: ${save["spawn every"].toFixed(1)}s`,
         price: minReached ? 'MIN' : fmtMoney(price),
         canBuy: !minReached && (save.money||0) >= price,
