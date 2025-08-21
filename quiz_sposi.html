@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Quanto conosci gli sposi? — Quiz</title>
+<style>
+  :root{
+    --bg:#0f1220;
+    --card:#171a2b;
+    --acc:#6be3ff;
+    --txt:#e9eef5;
+    --muted:#9aa8bd;
+    --ok:#39d98a;
+    --warn:#ffcc00;
+    --bad:#ff6b6b;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Segoe UI, Noto Sans, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    color:var(--txt); background:linear-gradient(180deg,#0b0e1a,#0f1220 40%, #11142a);
+    display:flex; justify-content:center; min-height:100svh;
+  }
+  .wrap{
+    width:100%; max-width:760px; padding:16px; display:flex; flex-direction:column; gap:12px;
+  }
+  header{
+    display:flex; align-items:center; gap:12px; justify-content:space-between;
+  }
+  h1{font-size:1.25rem; margin:0}
+  .attempts{
+    font-size:.9rem; color:var(--muted)
+  }
+  .card{
+    background:var(--card); border:1px solid #23263a; border-radius:16px; padding:14px;
+    box-shadow:0 6px 20px rgba(0,0,0,.25);
+  }
+  .q{
+    display:grid; gap:10px;
+    background:#11152b; border-radius:12px; padding:12px; border:1px solid #1e2340;
+  }
+  .q h3{margin:0 0 4px; font-size:1.02rem}
+  .opts{display:grid; gap:8px}
+  .opt{
+    display:flex; align-items:center; gap:10px; padding:10px; border:1px solid #2a2f4d; border-radius:12px;
+    background:#0f1430;
+  }
+  .opt input{transform:scale(1.25)}
+  .muted{color:var(--muted); font-size:.95rem}
+  button{
+    appearance:none; border:none; border-radius:14px; padding:14px 16px; font-weight:700;
+    background:linear-gradient(180deg,#26b6ff,#1e9fe0); color:#06121a;
+    box-shadow:0 6px 20px rgba(38,182,255,.35);
+  }
+  button[disabled]{opacity:.5; filter:grayscale(0.2); box-shadow:none}
+  .row{display:flex; gap:10px; flex-wrap:wrap}
+  .row > * { flex:1 1 180px }
+  .result{
+    display:none; padding:14px; border-radius:14px; border:1px solid #2a2f4d; background:#0f1430; gap:6px;
+  }
+  .result.show{display:grid}
+  .badge{
+    font-weight:800; padding:6px 10px; border-radius:999px; display:inline-block; width:max-content;
+    background:#1b2540; border:1px solid #2a2f4d; color:var(--acc);
+  }
+  .scoreLine{font-size:1.1rem}
+  .danger{color:var(--bad)} .ok{color:var(--ok)} .warn{color:var(--warn)}
+  .footerNote{font-size:.85rem; color:var(--muted)}
+  /* Mobile first spacing */
+  .gridQ{display:grid; gap:12px}
+  /* Canvas container */
+  .fx{
+    position:sticky; top:8px; z-index:0; border-radius:16px; overflow:hidden; border:1px solid #23263a;
+    height:150px; background:radial-gradient(120px 80px at 20% 30%, #1a2045, transparent 70%),
+               radial-gradient(140px 80px at 80% 40%, #15204a, transparent 70%);
+  }
+  canvas{width:100%; height:100%}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Quanto conosci gli sposi? 💍</h1>
+      <div class="attempts" id="attemptsInfo">Tentativi rimasti: …</div>
+    </header>
+
+    <div class="fx card"><canvas id="fx" width="900" height="300" aria-hidden="true"></canvas></div>
+
+    <section class="card">
+      <p class="muted">Rispondi a tutte le 10 domande. Il pulsante <strong>“Verifica le risposte”</strong> si abilita quando hai selezionato tutte le opzioni. Hai a disposizione <strong>3 tentativi</strong> su questo dispositivo.</p>
+      <div id="quiz" class="gridQ"></div>
+      <div class="row" style="margin-top:10px">
+        <button id="checkBtn" disabled>Verifica le risposte</button>
+        <button id="resetBtn" style="background:#2a2f4d; color:#e9eef5">Cancella selezioni</button>
+      </div>
+      <p class="footerNote" id="lockMsg" style="display:none">
+        ⚠️ Hai esaurito i tentativi. Questo blocco è solo “gentle” e si basa sul tuo dispositivo.
+      </p>
+    </section>
+
+    <section class="card result" id="resultCard" aria-live="polite">
+      <span class="badge" id="badgeLabel">Risultato</span>
+      <div class="scoreLine" id="scoreText"></div>
+      <div class="muted" id="humorText"></div>
+      <div class="muted" id="attemptsHistory"></div>
+    </section>
+  </div>
+
+<script>
+/* =======================
+   DATI QUIZ (JSON)
+======================= */
+const QUIZ_DATA = [
+  {
+    q: "Dove si sono conosciuti gli sposi?",
+    options: [
+      { text: "Su Marte durante una missione segreta", value: -2 },
+      { text: "Al corso di cucina del venerdì sera", value: 2 },
+      { text: "Si sono conosciuti nel luogo in cui si sono conosciuti", value: 0 } // tautologia
+    ]
+  },
+  {
+    q: "Qual è il piatto preferito della coppia nelle serate pigre?",
+    options: [
+      { text: "Il cibo che preferiscono nelle serate pigre", value: 0 },
+      { text: "Pizza margherita extra basilico", value: 2 },
+      { text: "Un cucchiaio di farina cruda", value: -2 }
+    ]
+  },
+  {
+    q: "Chi impiega più tempo a prepararsi?",
+    options: [
+      { text: "Quello che impiega più tempo, ovviamente", value: 0 },
+      { text: "Lui", value: 2 }, // puoi personalizzare
+      { text: "Il gatto del vicino", value: -2 }
+    ]
+  },
+  {
+    q: "Qual è stata la prima vacanza insieme?",
+    options: [
+      { text: "Sulla Luna senza biglietto A/R", value: -2 },
+      { text: "In Puglia, on the road", value: 2 },
+      { text: "La prima vacanza è stata la prima vacanza", value: 0 }
+    ]
+  },
+  {
+    q: "Qual è la serie TV che hanno bingewatchato?",
+    options: [
+      { text: "La serie che hanno guardato tutta di fila", value: 0 },
+      { text: "Stranger Things", value: 2 },
+      { text: "Il Telegiornale del 1987 in replica", value: -2 }
+    ]
+  },
+  {
+    q: "Chi è il più puntuale agli appuntamenti?",
+    options: [
+      { text: "Chi arriva per primo", value: 0 },
+      { text: "Lei", value: 2 },
+      { text: "Il frigorifero smart", value: -2 }
+    ]
+  },
+  {
+    q: "La proposta è avvenuta…",
+    options: [
+      { text: "In gondola al tramonto", value: 2 },
+      { text: "Nel momento esatto in cui è avvenuta", value: 0 },
+      { text: "Durante un blackout su un sottomarino nucleare", value: -2 }
+    ]
+  },
+  {
+    q: "La canzone ‘loro’ è:",
+    options: [
+      { text: "Quella che è la loro canzone", value: 0 },
+      { text: "Perfect – Ed Sheeran", value: 2 },
+      { text: "Il rumore della stampante a aghi", value: -2 }
+    ]
+  },
+  {
+    q: "Chi cucina meglio i dolci?",
+    options: [
+      { text: "Chi cucina meglio i dolci", value: 0 },
+      { text: "Lei (regina dei tiramisù)", value: 2 },
+      { text: "Il microonde, da solo", value: -2 }
+    ]
+  },
+  {
+    q: "Il loro sogno nel cassetto è:",
+    options: [
+      { text: "Visitare il Giappone in primavera", value: 2 },
+      { text: "Avere un sogno nel cassetto", value: 0 },
+      { text: "Comprare un’isola di ghiaccio usa e getta", value: -2 }
+    ]
+  }
+];
+
+/* =======================
+   CONFIG & LOCALSTORAGE
+======================= */
+const LS_KEY_ATTEMPTS = "weddingQuizAttempts";
+const LS_KEY_HISTORY = "weddingQuizHistory";
+const MAX_ATTEMPTS = 3;
+
+function readAttempts(){ return parseInt(localStorage.getItem(LS_KEY_ATTEMPTS) || "0", 10); }
+function writeAttempts(n){ localStorage.setItem(LS_KEY_ATTEMPTS, String(n)); }
+function pushHistory(entry){
+  const arr = JSON.parse(localStorage.getItem(LS_KEY_HISTORY) || "[]");
+  arr.push(entry); localStorage.setItem(LS_KEY_HISTORY, JSON.stringify(arr));
+}
+function readHistory(){ return JSON.parse(localStorage.getItem(LS_KEY_HISTORY) || "[]"); }
+
+/* =======================
+   RENDER QUIZ
+======================= */
+const quizEl = document.getElementById('quiz');
+const checkBtn = document.getElementById('checkBtn');
+const resetBtn = document.getElementById('resetBtn');
+const attemptsInfo = document.getElementById('attemptsInfo');
+const lockMsg = document.getElementById('lockMsg');
+const resultCard = document.getElementById('resultCard');
+const badgeLabel = document.getElementById('badgeLabel');
+const scoreText = document.getElementById('scoreText');
+const humorText = document.getElementById('humorText');
+const attemptsHistory = document.getElementById('attemptsHistory');
+
+function renderQuiz(){
+  quizEl.innerHTML = "";
+  QUIZ_DATA.forEach((item, idx)=>{
+    const qDiv = document.createElement('div');
+    qDiv.className = 'q';
+    qDiv.innerHTML = `<h3>${idx+1}. ${item.q}</h3>`;
+    const opts = document.createElement('div'); opts.className = 'opts';
+    item.options.forEach((opt, jdx)=>{
+      const optId = `q${idx}_o${jdx}`;
+      const label = document.createElement('label');
+      label.className = 'opt';
+      label.innerHTML = `
+        <input type="radio" name="q${idx}" id="${optId}" data-score="${opt.value}">
+        <span>${opt.text}</span>
+      `;
+      opts.appendChild(label);
+    });
+    qDiv.appendChild(opts);
+    quizEl.appendChild(qDiv);
+  });
+}
+
+/* Enable check when all answered */
+function allAnswered(){
+  for (let i=0;i<QUIZ_DATA.length;i++){
+    if (!document.querySelector(`input[name="q${i}"]:checked`)) return false;
+  }
+  return true;
+}
+function updateCheckState(){
+  checkBtn.disabled = !allAnswered() || attemptsLeft()<=0;
+}
+
+function attemptsLeft(){ return Math.max(0, MAX_ATTEMPTS - readAttempts()); }
+
+function updateAttemptUI(){
+  const left = attemptsLeft();
+  attemptsInfo.textContent = `Tentativi rimasti: ${left}/${MAX_ATTEMPTS}`;
+  const locked = left<=0;
+  lockMsg.style.display = locked ? 'block' : 'none';
+  // disable inputs if locked
+  document.querySelectorAll('input[type="radio"]').forEach(r => r.disabled = locked);
+  checkBtn.disabled = locked || !allAnswered();
+}
+
+/* =======================
+   SCORING & MESSAGES
+======================= */
+function scoreToLabel(score){
+  // Range totale: -20 .. +20
+  if (score <= -10) return {label:"Totale Sconosciuto 😶‍🌫️", cls:"danger",
+    humor:"Hai portato il regalo giusto? Chiedi il nome degli sposi prima del lancio del bouquet…"};
+  if (score <= -1) return {label:"Parente alla lontana 🤔", cls:"warn",
+    humor:"Ti ricordi che c’è un matrimonio oggi… e forse è proprio questo!"};
+  if (score <= 6) return {label:"Conosci le basi 🙂", cls:"ok",
+    humor:"Buon inizio: sai distinguere gli sposi dal fotografo. Promossi a brindisi."};
+  if (score <= 14) return {label:"Amico/a di fiducia 💪", cls:"ok",
+    humor:"Ottimo! Potresti gestire il tavolo degli zii senza andare in crisi."};
+  return {label:"Sei uno dei testimoni? 🏆", cls:"ok",
+    humor:"Ma allora eri lì alla proposta! Punteggio da oro olimpico dell’amicizia."};
+}
+
+function computeScore(){
+  let total = 0;
+  for (let i=0;i<QUIZ_DATA.length;i++){
+    const sel = document.querySelector(`input[name="q${i}"]:checked`);
+    if (!sel) continue;
+    total += parseInt(sel.dataset.score, 10);
+  }
+  return total;
+}
+
+function showResult(score){
+  const meta = scoreToLabel(score);
+  badgeLabel.textContent = meta.label;
+  badgeLabel.style.color = meta.cls==="danger" ? "var(--bad)" : "var(--ok)";
+  scoreText.innerHTML = `Punteggio: <strong>${score}</strong> / 20`;
+  humorText.textContent = meta.humor;
+  // history
+  const hist = readHistory();
+  if (hist.length){
+    const lines = hist.map((h,i)=>`Tentativo ${i+1}: ${h.score} / 20`).join(" · ");
+    attemptsHistory.textContent = `Storico: ${lines}`;
+  }else{
+    attemptsHistory.textContent = "";
+  }
+  resultCard.classList.add('show');
+}
+
+/* =======================
+   CANVAS FX (cuori/confetti)
+======================= */
+const fxCanvas = document.getElementById('fx');
+const ctx = fxCanvas.getContext('2d');
+let particles = [];
+let running = false;
+
+function spawnParticles(mode="hearts"){
+  particles = [];
+  const N = 80;
+  for (let i=0;i<N;i++){
+    const angle = Math.random()*Math.PI*2;
+    const speed = mode==="hearts" ? (1.2+Math.random()*2.2) : (0.8+Math.random()*1.6);
+    particles.push({
+      x: fxCanvas.width/2 + (Math.random()*80-40),
+      y: fxCanvas.height/2 + (Math.random()*30-15),
+      vx: Math.cos(angle)*speed,
+      vy: Math.sin(angle)*speed - (mode==="hearts"? 1.2:0),
+      life: 80 + Math.random()*40,
+      mode
+    });
+  }
+}
+
+function drawHeart(x,y,s){
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.scale(s,s);
+  ctx.beginPath();
+  ctx.moveTo(0, -10);
+  ctx.bezierCurveTo(12, -22, 30, -4, 0, 18);
+  ctx.bezierCurveTo(-30, -4, -12, -22, 0, -10);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function tick(){
+  if (!running) return;
+  ctx.clearRect(0,0,fxCanvas.width, fxCanvas.height);
+  // background subtle stars
+  ctx.globalAlpha = .15;
+  for(let i=0;i<40;i++){
+    const x = (i*23)%fxCanvas.width;
+    const y = (i*97)%fxCanvas.height;
+    ctx.fillStyle = "#6be3ff";
+    ctx.fillRect(x,y,1,1);
+  }
+  ctx.globalAlpha = 1;
+
+  for (let p of particles){
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.025; // gravity
+    p.life--;
+
+    if (p.mode==="hearts"){
+      ctx.fillStyle = "#ff9bd3";
+      drawHeart(p.x, p.y, 0.3);
+    } else {
+      // confetti squares
+      ctx.fillStyle = ["#6be3ff","#ffdd57","#7dffb0","#ff8aa0"][Math.floor(Math.random()*4)];
+      ctx.fillRect(p.x, p.y, 4, 4);
+    }
+  }
+  particles = particles.filter(p=>p.life>0 && p.x>-20 && p.x<fxCanvas.width+20 && p.y<fxCanvas.height+40);
+  if (particles.length===0){ running=false; }
+  requestAnimationFrame(tick);
+}
+
+function playFX(score){
+  running = true;
+  if (score >= 16) spawnParticles("hearts");
+  else if (score >= 8) spawnParticles("confetti");
+  else spawnParticles("confetti"); // sempre qualcosa di carino
+  tick();
+}
+
+/* =======================
+   INIT & EVENTS
+======================= */
+renderQuiz();
+updateAttemptUI();
+
+/* Change handlers */
+quizEl.addEventListener('change', ()=>{
+  updateCheckState();
+});
+
+resetBtn.addEventListener('click', ()=>{
+  document.querySelectorAll('input[type="radio"]').forEach(r => r.checked=false);
+  resultCard.classList.remove('show');
+  updateCheckState();
+});
+
+checkBtn.addEventListener('click', ()=>{
+  if (attemptsLeft()<=0) return;
+
+  const score = computeScore();
+  // store attempt
+  const now = new Date();
+  pushHistory({ts: now.toISOString(), score});
+  writeAttempts(readAttempts()+1);
+
+  showResult(score);
+  playFX(score);
+
+  // update UI/lock if needed
+  updateAttemptUI();
+});
+
+/* Reflect attempts history on load if present */
+(function onLoad(){
+  const hist = readHistory();
+  if (hist.length){
+    resultCard.classList.add('show');
+    const last = hist[hist.length-1];
+    showResult(last.score);
+  }
+})();
+
+/* Resize canvas to device pixel ratio for crispness */
+function resizeCanvas(){
+  const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+  const rect = fxCanvas.getBoundingClientRect();
+  fxCanvas.width = Math.floor(rect.width * dpr);
+  fxCanvas.height = Math.floor(rect.height * dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0); // scale drawing
+}
+resizeCanvas();
+window.addEventListener('resize', ()=>{ resizeCanvas(); });
+
+</script>
+</body>
+</html>
