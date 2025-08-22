@@ -425,22 +425,62 @@
     }
 
     // collisions bullet-enemy
-    for (let i=state.enemies.length-1;i>=0;i--){
+    for (let i = state.enemies.length - 1; i >= 0; i--) {
       const e = state.enemies[i];
       let hitIndex = -1;
-      for (let j=state.bullets.length-1;j>=0;j--){
-        if (bulletHitsEnemy(state.bullets[j], e)) { hitIndex = j; break; }
+      for (let j = state.bullets.length - 1; j >= 0; j--) {
+        if (bulletHitsEnemy(state.bullets[j], e)) { 
+          hitIndex = j; 
+          break; 
+        }
       }
       if (hitIndex >= 0) {
-        state.bullets.splice(hitIndex,1);
+        state.bullets.splice(hitIndex, 1);
         e.hp -= 1;
+    
         if (e.hp <= 0) {
-          commitSave({ money: (state.save.money||0)+1,
-            "level data": { ...state.save["level data"], score: (state.save["level data"].score||0)+1 }
+          commitSave({
+            money: (state.save.money || 0) + (e.bounty || 1),
+            "level data": { 
+              ...state.save["level data"], 
+              score: (state.save["level data"].score || 0) + 1 
+            }
           });
-          state.enemies.splice(i,1);
+          state.enemies.splice(i, 1);
         } else {
-          e.color = '#5e0000';
+          // Make enemy "redder" progressively
+          if (!e.hitCount) e.hitCount = 0;
+          e.hitCount++;
+    
+          // Convert current color to hsl
+          let ctxTmp = document.createElement("canvas").getContext("2d");
+          ctxTmp.fillStyle = e.color;
+          const rgb = ctxTmp.fillStyle.match(/\d+/g).map(Number);
+          let [r,g,b] = rgb;
+          // Normalize to 0-1
+          r/=255; g/=255; b/=255;
+    
+          // rgb -> hsl
+          let max = Math.max(r,g,b), min = Math.min(r,g,b);
+          let h, s, l = (max+min)/2;
+          if (max === min) {
+            h = s = 0;
+          } else {
+            let d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            switch (max) {
+              case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+              case g: h = (b - r) / d + 2; break;
+              case b: h = (r - g) / d + 4; break;
+            }
+            h /= 6;
+          }
+          // shift hue towards red (0°) and boost saturation
+          h = h * 360;
+          h = h * 0.6; // move closer to red (reduce hue value)
+          s = Math.min(1, s + 0.2); // boost saturation
+          // back to css
+          e.color = `hsl(${h.toFixed(0)}, ${(s*100).toFixed(0)}%, ${(l*100).toFixed(0)}%)`;
         }
       }
     }
