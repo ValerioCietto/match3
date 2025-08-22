@@ -424,7 +424,20 @@
       if (e.y - e.size/2 > canvas.clientHeight + 40) state.enemies.splice(i,1);
     }
 
-    // collisions bullet-enemy
+    // --- helpers (safe color handling) ---
+    const __colorCtx = document.createElement('canvas').getContext('2d');
+    function colorToRGBArray(str) {
+      try {
+        __colorCtx.fillStyle = str;             // browser normalizes any CSS color
+        const s = __colorCtx.fillStyle;         // e.g. "rgb(128, 128, 128)" or "rgba(...)"
+        const m = s.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+        if (m) return [parseInt(m[1],10), parseInt(m[2],10), parseInt(m[3],10)];
+      } catch {}
+      return [128, 128, 128]; // safe fallback
+    }
+    const lerp = (a,b,t) => Math.round(a + (b - a) * t);
+    
+    // --- collisions bullet-enemy (safe version) ---
     for (let i = state.enemies.length - 1; i >= 0; i--) {
       const e = state.enemies[i];
       let hitIndex = -1;
@@ -440,7 +453,7 @@
     
         if (e.hp <= 0) {
           commitSave({
-            money: (state.save.money || 0) + (e.bounty || 1),
+            money: (state.save.money || 0) + (e.bounty || 1),  // ← use bounty
             "level data": { 
               ...state.save["level data"], 
               score: (state.save["level data"].score || 0) + 1 
@@ -448,39 +461,17 @@
           });
           state.enemies.splice(i, 1);
         } else {
-          // Make enemy "redder" progressively
+          // Progressively tint current color towards red, safely
           if (!e.hitCount) e.hitCount = 0;
           e.hitCount++;
     
-          // Convert current color to hsl
-          let ctxTmp = document.createElement("canvas").getContext("2d");
-          ctxTmp.fillStyle = e.color;
-          const rgb = ctxTmp.fillStyle.match(/\d+/g).map(Number);
-          let [r,g,b] = rgb;
-          // Normalize to 0-1
-          r/=255; g/=255; b/=255;
-    
-          // rgb -> hsl
-          let max = Math.max(r,g,b), min = Math.min(r,g,b);
-          let h, s, l = (max+min)/2;
-          if (max === min) {
-            h = s = 0;
-          } else {
-            let d = max - min;
-            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-            switch (max) {
-              case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-              case g: h = (b - r) / d + 2; break;
-              case b: h = (r - g) / d + 4; break;
-            }
-            h /= 6;
-          }
-          // shift hue towards red (0°) and boost saturation
-          h = h * 360;
-          h = h * 0.6; // move closer to red (reduce hue value)
-          s = Math.min(1, s + 0.2); // boost saturation
-          // back to css
-          e.color = `hsl(${h.toFixed(0)}, ${(s*100).toFixed(0)}%, ${(l*100).toFixed(0)}%)`;
+          const [r,g,b] = colorToRGBArray(e.color);
+          // Increase influence with each hit but cap it
+          const t = Math.min(0.85, 0.25 * e.hitCount); // 0 → none, up to 85% red
+          const nr = lerp(r, 255, t);
+          const ng = lerp(g, 0,   t);
+          const nb = lerp(b, 0,   t);
+          e.color = `rgb(${nr}, ${ng}, ${nb})`;
         }
       }
     }
