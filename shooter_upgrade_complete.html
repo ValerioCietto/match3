@@ -250,11 +250,8 @@
     } else {
       type = 'boss';
     }
-  
-    // Se boss estratto ma la bomba non è sbloccata, degrada a normal
-    if (type === 'boss' && !state.save["bomb unlocked"]) {
-      type = 'normal';
-    }
+
+    console.log('spawning roll:',roll, type);
   
     // Proprietà per ciascun tipo
     let size, hp, speed, color, bounty;
