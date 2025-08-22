@@ -229,13 +229,85 @@
 
   // ---------- Enemy spawn ----------
   function spawnEnemy() {
-    const size = 24;
-    const x = Math.random()*(canvas.clientWidth - size) + size/2;
+    // Lancio percentuale 0..100
+    let roll = Math.random() * 100;
+  
+    // Scelta tipo in base alle percentuali:
+    // 0–19.999: very_small (20%)
+    // 20–39.999: stealth (20%)
+    // 40–88.999: normal (49%)
+    // 89–98.999: special_ops (10%)
+    // 99–100: boss (1%)
+    let type = 'normal';
+    if (roll < 20) {
+      type = 'very_small';
+    } else if (roll < 40) {
+      type = 'stealth';
+    } else if (roll < 89) {
+      type = 'normal';
+    } else if (roll < 99) {
+      type = 'special_ops';
+    } else {
+      type = 'boss';
+    }
+  
+    // Se boss estratto ma la bomba non è sbloccata, degrada a normal
+    if (type === 'boss' && !state.save["bomb unlocked"]) {
+      type = 'normal';
+    }
+  
+    // Proprietà per ciascun tipo
+    let size, hp, speed, color, bounty;
+    switch (type) {
+      case 'very_small':
+        size = 10;   // px
+        hp = 1;
+        speed = 100;
+        color = '#5e0000'; // dark red
+        bounty = 1;  // $
+        break;
+      case 'stealth':
+        size = 24;
+        hp = 2;
+        speed = 70;
+        color = '#000000'; // black
+        bounty = 3;
+        break;
+      case 'normal':
+        size = 30;
+        hp = 3;
+        speed = 50;
+        color = 'grey';
+        bounty = 2;
+        break;
+      case 'special_ops':
+        size = 40;
+        hp = 5;
+        speed = 30;
+        color = 'darkblue';
+        bounty = 4;
+        break;
+      case 'boss':
+        size = 80;
+        hp = 20;
+        speed = 2;
+        color = '#000000'; // black
+        bounty = 20;
+        break;
+    }
+  
+    // Posizionamento X casuale con margini in base alla dimensione
+    const x = Math.random() * (canvas.clientWidth - size) + size / 2;
+  
     state.enemies.push({
-      x, y: -size, size,
-      speed: 70,
-      hp: 2,
-      color: '#000',
+      x,
+      y: -size,
+      size,
+      speed,
+      hp,
+      color,
+      name: type,   // <- tipo nemico
+      bounty        // <- denaro ottenuto all’uccisione
     });
   }
 
