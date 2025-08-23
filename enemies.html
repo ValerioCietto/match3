@@ -1,90 +1,83 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Alien Draw Demo — hitbox preservata</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>Alien Ships — hitbox preservata, orientamento top→bottom</title>
 <style>
   :root{
     --bg:#0b0e12;
     --fg:#e8f0ff;
-    --soft:#1a2230;
+    --panel:#0f141d;
+    --chip:#0f1724;
+    --chip-bd:#1f2a3a;
     --accent:#55c1ff;
   }
-  html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif}
-  .wrap{display:flex;flex-direction:column;min-height:100%}
-  header{padding:10px 14px;background:linear-gradient(180deg,#0f141d,#0b0e12);position:sticky;top:0;z-index:2}
-  header h1{font-size:16px;margin:0}
+  html,body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif}
+  header{position:sticky;top:0;z-index:2;padding:10px 14px;background:linear-gradient(180deg,var(--panel),#0b0e12)}
+  h1{margin:0;font-size:16px}
   #ui{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
-  label{font-size:13px;opacity:.85}
-  input[type=range]{width:150px}
   .chips{display:flex;gap:6px;overflow:auto;padding:4px 0}
-  .chip{padding:6px 10px;border-radius:999px;background:#0f1724;border:1px solid #1f2a3a;font-size:12px;white-space:nowrap}
+  .chip{padding:6px 10px;border-radius:999px;background:var(--chip);border:1px solid var(--chip-bd);font-size:12px;white-space:nowrap}
   .chip.active{outline:2px solid var(--accent)}
-  canvas{width:100vw;max-width:900px;aspect-ratio:16/9;background:radial-gradient(120% 80% at 50% 10%, #121824 0%, #0b0e12 60%);display:block;margin:0 auto;border-top:1px solid #111;border-bottom:1px solid #111;touch-action:manipulation}
-  .bar{padding:10px 14px;background:#0f141d;display:flex;justify-content:space-between;align-items:center;gap:8px}
-  .small{font-size:12px;opacity:.8}
-  .legend{display:flex;gap:12px;flex-wrap:wrap}
-  .kbd{font:11px/1.4 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;background:#0f1724;border:1px solid #1f2a3a;border-radius:6px;padding:4px 6px}
-  /* Mobile tweaks */
-  @media (max-width:480px){
-    #ui{gap:6px}
-    input[type=range]{width:120px}
-  }
+  label{font-size:13px;opacity:.9}
+  input[type=range]{width:140px}
+  canvas{width:100vw;max-width:900px;aspect-ratio:16/9;display:block;margin:0 auto;border-top:1px solid #111;border-bottom:1px solid #111;background:radial-gradient(120% 80% at 50% 10%, #121824 0%, #0b0e12 60%);touch-action:manipulation}
+  .bar{padding:10px 14px;background:var(--panel);display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .small{font-size:12px;opacity:.85}
+  .kbd{font:11px/1.4 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;background:var(--chip);border:1px solid var(--chip-bd);border-radius:6px;padding:3px 6px}
+  @media (max-width:480px){ input[type=range]{width:120px} }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <h1>Alieni stilizzati con hitbox quadrata preservata</h1>
-    <div id="ui">
-      <div class="chips" id="typeChips"></div>
-      <label>Raggio angoli: <input id="cornerRad" type="range" min="0" max="0.45" step="0.01"></label>
-      <label>Glow: <input id="glow" type="range" min="0" max="1" step="0.05"></label>
-      <button id="toggleBoxes" class="chip">Mostra/Nascondi hitbox</button>
-    </div>
-  </header>
-
-  <canvas id="c"></canvas>
-
-  <div class="bar">
-    <div class="small legend">
-      <span class="kbd">Tap/Click</span> cambia tipo •
-      <span class="kbd">Hitbox</span> tratteggio bianco •
-      Preferenze salvate in <span class="kbd">localStorage</span>
-    </div>
-    <div class="small" id="info"></div>
+<header>
+  <h1>Alieni stilizzati — hitbox quadrata, orientati verso il basso</h1>
+  <div id="ui">
+    <div class="chips" id="typeChips"></div>
+    <label>Angoli <input id="cornerRad" type="range" min="0" max="0.45" step="0.01"></label>
+    <label>Glow <input id="glow" type="range" min="0" max="1" step="0.05"></label>
+    <button id="toggleBoxes" class="chip">Hitbox ON/OFF</button>
   </div>
+</header>
+
+<canvas id="c"></canvas>
+
+<div class="bar">
+  <div class="small">
+    <span class="kbd">Tap/Click</span> cambia tipo •
+    <span class="kbd">Hitbox</span> tratteggio bianco •
+    Preferenze salvate in <span class="kbd">localStorage</span>
+  </div>
+  <div id="info" class="small"></div>
 </div>
 
 <script>
-/* ============== Persistenza preferenze (LocalStorage) ============== */
-const LS_KEY = 'alienStyle.v1';
+/* ================== LocalStorage ================== */
+const LS_KEY = 'alienStyle.v2';
 const defaults = { corner: 0.18, glow: 0.6, showBoxes: true, currentType: 'fast-small-red' };
 function loadPref(){
-  try{ return {...defaults, ...(JSON.parse(localStorage.getItem(LS_KEY)||'{}'))}; }
-  catch{ return {...defaults}; }
+  try { return { ...defaults, ...(JSON.parse(localStorage.getItem(LS_KEY)||'{}')) }; }
+  catch { return { ...defaults }; }
 }
-function savePref(next){ localStorage.setItem(LS_KEY, JSON.stringify(next)); }
+function savePref(p){ localStorage.setItem(LS_KEY, JSON.stringify(p)); }
 let pref = loadPref();
 
-/* ============== Canvas setup responsive ============== */
+/* ================== Canvas responsive ================== */
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 function resize(){
   const dpr = Math.max(1, Math.min(2, window.devicePixelRatio||1));
   const w = Math.min(window.innerWidth, 900);
-  const h = Math.round(w / (16/9));
-  canvas.width = Math.floor(w * dpr);
-  canvas.height = Math.floor(h * dpr);
+  const h = Math.round(w/(16/9));
+  canvas.width = Math.floor(w*dpr);
+  canvas.height = Math.floor(h*dpr);
   canvas.style.width = w+'px';
   canvas.style.height = h+'px';
   ctx.setTransform(dpr,0,0,dpr,0,0);
 }
-addEventListener('resize', resize, {passive:true});
-resize();
+addEventListener('resize', resize, {passive:true}); resize();
 
-/* ============== Specifiche per tipo: hitbox (lato) & colori ============== */
+/* ================== Tipi & dimensioni (lato hitbox) ================== */
 const TYPES = [
   'fast-small-red',
   'normal-grey',
@@ -92,6 +85,7 @@ const TYPES = [
   'elite-bigger-blue',
   'boss-huge-white',
 ];
+// NB: aggiorna i "size" se nel tuo engine hai lati specifici
 const SPEC = {
   'fast-small-red':     { size: 24, base:'#ff3757', accent:'#ff9ba8' },
   'normal-grey':        { size: 32, base:'#a7b0c0', accent:'#e6ebf5' },
@@ -100,15 +94,15 @@ const SPEC = {
   'boss-huge-white':    { size: 64, base:'#f2f7ff', accent:'#b8c7ff' },
 };
 
-/* ============== UI chip per selezione tipo ============== */
+/* ================== UI chips ================== */
 const chipWrap = document.getElementById('typeChips');
 function renderChips(){
-  chipWrap.innerHTML = '';
+  chipWrap.innerHTML='';
   TYPES.forEach(t=>{
-    const b = document.createElement('button');
-    b.className = 'chip' + (pref.currentType===t?' active':'');
-    b.textContent = t;
-    b.onclick = ()=>{ pref.currentType=t; savePref(pref); renderChips(); drawFrame(); };
+    const b=document.createElement('button');
+    b.className='chip'+(pref.currentType===t?' active':'');
+    b.textContent=t;
+    b.onclick=()=>{ pref.currentType=t; savePref(pref); renderChips(); drawFrame(); };
     chipWrap.appendChild(b);
   });
 }
@@ -116,24 +110,16 @@ renderChips();
 
 document.getElementById('cornerRad').value = pref.corner;
 document.getElementById('glow').value = pref.glow;
-document.getElementById('cornerRad').addEventListener('input', e=>{
-  pref.corner = parseFloat(e.target.value); savePref(pref); drawFrame();
-});
-document.getElementById('glow').addEventListener('input', e=>{
-  pref.glow = parseFloat(e.target.value); savePref(pref); drawFrame();
-});
-document.getElementById('toggleBoxes').onclick = ()=>{
-  pref.showBoxes = !pref.showBoxes; savePref(pref); drawFrame();
-};
-
-/* Tap/click per ciclare i tipi */
+document.getElementById('cornerRad').addEventListener('input', e=>{ pref.corner=parseFloat(e.target.value); savePref(pref); drawFrame(); });
+document.getElementById('glow').addEventListener('input', e=>{ pref.glow=parseFloat(e.target.value); savePref(pref); drawFrame(); });
+document.getElementById('toggleBoxes').onclick = ()=>{ pref.showBoxes=!pref.showBoxes; savePref(pref); drawFrame(); };
 canvas.addEventListener('click', ()=>{
-  const i = TYPES.indexOf(pref.currentType);
-  pref.currentType = TYPES[(i+1)%TYPES.length];
+  const i=TYPES.indexOf(pref.currentType);
+  pref.currentType=TYPES[(i+1)%TYPES.length];
   savePref(pref); renderChips(); drawFrame();
 });
 
-/* ============== Utility: rounded rect nel quadrato hitbox ============== */
+/* ================== Utility path ================== */
 function roundedRectPath(ctx, x, y, w, h, r){
   const rr = Math.max(0, Math.min(Math.min(w,h)/2, r));
   ctx.beginPath();
@@ -149,177 +135,150 @@ function roundedRectPath(ctx, x, y, w, h, r){
   ctx.closePath();
 }
 
-/* ============== Funzioni di dettaglio per ogni tipo ============== */
-/** Disegna dettagli “minacciosi” dentro il quadrato (x,y,side) */
+/* ================== Stili per tipo (orientati verso il basso) ==================
+   Convenzioni:
+   - lato/top/bottom riferiti all'hitbox; "punta" verso BASSO (y crescente).
+   - nessun disegno esce dal quadrato.
+*/
 function paintFast(ctx, x, y, side, base, accent){
-  const pad = side*0.08;
-  const r = side * pref.corner;
+  const r = side*pref.corner;
   // corpo
-  ctx.save();
   const g = ctx.createLinearGradient(x, y, x, y+side);
   g.addColorStop(0, base);
   g.addColorStop(1, accent);
   ctx.fillStyle = g;
-  roundedRectPath(ctx, x, y, side, side, r);
-  ctx.fill();
+  roundedRectPath(ctx, x, y, side, side, r); ctx.fill();
 
-  // pinne inclinate
-  ctx.strokeStyle = accent; ctx.lineWidth = Math.max(1, side*0.06);
+  // becco/vela puntato in giù (triangolo interno)
+  ctx.fillStyle = accent;
   ctx.beginPath();
-  ctx.moveTo(x+pad, y+side*0.25); ctx.lineTo(x+side*0.45, y+side*0.15);
-  ctx.moveTo(x+pad, y+side*0.75); ctx.lineTo(x+side*0.45, y+side*0.85);
+  ctx.moveTo(x+side*0.28, y+side*0.60);
+  ctx.lineTo(x+side*0.72, y+side*0.60);
+  ctx.lineTo(x+side*0.50, y+side*0.88);
+  ctx.closePath(); ctx.fill();
+
+  // prese superiori (propulsori rivolti verso l'alto)
+  ctx.strokeStyle = '#ffffffaa';
+  ctx.lineWidth = Math.max(1, side*0.05);
+  ctx.beginPath();
+  ctx.moveTo(x+side*0.30, y+side*0.18); ctx.lineTo(x+side*0.70, y+side*0.18);
   ctx.stroke();
 
-  // cockpit
+  // cockpit centrale
   ctx.fillStyle = 'rgba(255,255,255,.9)';
-  roundedRectPath(ctx, x+side*0.42, y+side*0.35, side*0.16, side*0.30, r*0.6);
-  ctx.fill();
+  roundedRectPath(ctx, x+side*0.40, y+side*0.34, side*0.20, side*0.22, r*0.6); ctx.fill();
 
-  // bagliore
-  if (pref.glow>0){
-    ctx.shadowColor = base; ctx.shadowBlur = side*0.8*pref.glow;
-    roundedRectPath(ctx, x, y, side, side, r);
-    ctx.strokeStyle = base+'80'; ctx.lineWidth=2; ctx.stroke();
-  }
-  ctx.restore();
+  // glow
+  if (pref.glow>0){ ctx.shadowColor=base; ctx.shadowBlur=side*0.8*pref.glow;
+    roundedRectPath(ctx,x,y,side,side,r); ctx.strokeStyle=base+'80'; ctx.lineWidth=2; ctx.stroke(); }
 }
 
 function paintNormal(ctx, x, y, side, base, accent){
-  const r = side * (pref.corner*0.9);
-  ctx.save();
-  ctx.fillStyle = base;
-  roundedRectPath(ctx, x, y, side, side, r); ctx.fill();
+  const r = side*(pref.corner*0.9);
+  ctx.fillStyle = base; roundedRectPath(ctx,x,y,side,side,r); ctx.fill();
 
-  // pannellature
-  ctx.strokeStyle = accent+'99'; ctx.lineWidth = Math.max(1, side*0.03);
-  ctx.setLineDash([Math.max(2, side*0.10), Math.max(2, side*0.06)]);
+  // pannelli diagonali che convergono verso il basso
+  ctx.strokeStyle = accent+'aa'; ctx.lineWidth = Math.max(1, side*0.03);
+  ctx.beginPath();
+  ctx.moveTo(x+side*0.20, y+side*0.30); ctx.lineTo(x+side*0.80, y+side*0.55);
+  ctx.moveTo(x+side*0.20, y+side*0.55); ctx.lineTo(x+side*0.80, y+side*0.80);
   ctx.stroke();
 
-  // oblò
-  ctx.setLineDash([]);
+  // “mandibole” inferiori dentro il bordo
   ctx.fillStyle = accent;
-  for(let i=0;i<3;i++){
-    const cx = x + side*0.25 + i*side*0.22;
-    const cy = y + side*0.55;
-    ctx.beginPath(); ctx.arc(cx,cy, side*0.05, 0, Math.PI*2); ctx.fill();
-  }
+  roundedRectPath(ctx, x+side*0.22, y+side*0.78, side*0.18, side*0.10, side*0.04); ctx.fill();
+  roundedRectPath(ctx, x+side*0.60, y+side*0.78, side*0.18, side*0.10, side*0.04); ctx.fill();
 
-  // glow leggero
-  if (pref.glow>0){
-    ctx.shadowColor = accent; ctx.shadowBlur = side*0.5*pref.glow;
-    roundedRectPath(ctx, x, y, side, side, r);
-    ctx.strokeStyle = accent+'44'; ctx.lineWidth=2; ctx.stroke();
-  }
-  ctx.restore();
+  if (pref.glow>0){ ctx.shadowColor=accent; ctx.shadowBlur=side*0.5*pref.glow;
+    roundedRectPath(ctx,x,y,side,side,r); ctx.strokeStyle=accent+'44'; ctx.lineWidth=2; ctx.stroke(); }
 }
 
 function paintStealth(ctx, x, y, side, base, accent){
-  const r = side * Math.max(0, pref.corner-0.05);
-  ctx.save();
-  ctx.fillStyle = base;
-  roundedRectPath(ctx, x, y, side, side, r); ctx.fill();
+  const r = side*Math.max(0, pref.corner-0.05);
+  ctx.fillStyle = base; roundedRectPath(ctx,x,y,side,side,r); ctx.fill();
 
-  // scanalature scure
-  ctx.strokeStyle = '#0b0e12';
-  ctx.lineWidth = Math.max(1, side*0.02);
+  // scanalature scure orizzontali parte alta (propulsori)
+  ctx.strokeStyle = '#0b0e12'; ctx.lineWidth = Math.max(1, side*0.02);
   ctx.beginPath();
-  ctx.moveTo(x+side*0.2, y+side*0.3); ctx.lineTo(x+side*0.8, y+side*0.3);
-  ctx.moveTo(x+side*0.2, y+side*0.7); ctx.lineTo(x+side*0.8, y+side*0.7);
+  ctx.moveTo(x+side*0.22, y+side*0.25); ctx.lineTo(x+side*0.78, y+side*0.25);
+  ctx.moveTo(x+side*0.22, y+side*0.35); ctx.lineTo(x+side*0.78, y+side*0.35);
   ctx.stroke();
 
-  // occhi/visore a V
+  // visore “a V” rivolto verso il basso
   ctx.strokeStyle = accent; ctx.lineWidth = Math.max(1, side*0.05);
   ctx.beginPath();
-  ctx.moveTo(x+side*0.25, y+side*0.45);
-  ctx.lineTo(x+side*0.5,  y+side*0.55);
-  ctx.lineTo(x+side*0.75, y+side*0.45);
+  ctx.moveTo(x+side*0.28, y+side*0.50);
+  ctx.lineTo(x+side*0.50, y+side*0.62);
+  ctx.lineTo(x+side*0.72, y+side*0.50);
   ctx.stroke();
 
-  // contorno quasi invisibile
-  if (pref.glow>0){
-    ctx.globalAlpha = 0.4;
-    roundedRectPath(ctx, x, y, side, side, r);
-    ctx.strokeStyle = accent+'33'; ctx.lineWidth = 1.5; ctx.stroke();
-  }
-  ctx.restore();
+  // bordo tenue
+  if (pref.glow>0){ ctx.globalAlpha=0.4;
+    roundedRectPath(ctx,x,y,side,side,r); ctx.strokeStyle=accent+'33'; ctx.lineWidth=1.5; ctx.stroke(); ctx.globalAlpha=1; }
 }
 
 function paintElite(ctx, x, y, side, base, accent){
-  const r = side * (pref.corner+0.05);
-  ctx.save();
-  // gradiente corpo
-  const g = ctx.createLinearGradient(x, y, x+side, y+side);
-  g.addColorStop(0, base);
-  g.addColorStop(1, accent);
-  ctx.fillStyle = g;
-  roundedRectPath(ctx, x, y, side, side, r); ctx.fill();
+  const r = side*(pref.corner+0.05);
+  const g = ctx.createLinearGradient(x,y,x+side,y+side);
+  g.addColorStop(0, base); g.addColorStop(1, accent);
+  ctx.fillStyle=g; roundedRectPath(ctx,x,y,side,side,r); ctx.fill();
 
-  // alette ornamentali
+  // alette alte (direzione verso basso)
   ctx.strokeStyle = accent; ctx.lineWidth = Math.max(1, side*0.04);
   ctx.beginPath();
-  ctx.moveTo(x+side*0.15, y+side*0.2); ctx.lineTo(x+side*0.85, y+side*0.3);
-  ctx.moveTo(x+side*0.15, y+side*0.8); ctx.lineTo(x+side*0.85, y+side*0.7);
+  ctx.moveTo(x+side*0.18, y+side*0.22); ctx.lineTo(x+side*0.82, y+side*0.32);
+  ctx.moveTo(x+side*0.18, y+side*0.35); ctx.lineTo(x+side*0.82, y+side*0.45);
   ctx.stroke();
 
-  // gemma centrale
+  // gemma/reattore in basso
   ctx.fillStyle = '#ffffff';
-  ctx.beginPath(); ctx.arc(x+side*0.5, y+side*0.5, side*0.10, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x+side*0.50, y+side*0.78, side*0.10, 0, Math.PI*2); ctx.fill();
 
-  if (pref.glow>0){
-    ctx.shadowColor = accent; ctx.shadowBlur = side*pref.glow;
-    roundedRectPath(ctx, x, y, side, side, r);
-    ctx.strokeStyle = accent; ctx.lineWidth=2; ctx.stroke();
-  }
-  ctx.restore();
+  if (pref.glow>0){ ctx.shadowColor=accent; ctx.shadowBlur=side*1.0*pref.glow;
+    roundedRectPath(ctx,x,y,side,side,r); ctx.strokeStyle=accent; ctx.lineWidth=2; ctx.stroke(); }
 }
 
 function paintBoss(ctx, x, y, side, base, accent){
-  const r = side * Math.min(0.28, pref.corner+0.02);
-  ctx.save();
-  ctx.fillStyle = base;
-  roundedRectPath(ctx, x, y, side, side, r); ctx.fill();
+  const r = side*Math.min(0.28, pref.corner+0.02);
+  ctx.fillStyle=base; roundedRectPath(ctx,x,y,side,side,r); ctx.fill();
 
-  // segmenti/pannelli
-  ctx.strokeStyle = accent; ctx.lineWidth = Math.max(2, side*0.04);
+  // colonne verticali strutturali
+  ctx.strokeStyle=accent; ctx.lineWidth=Math.max(2, side*0.04);
   ctx.beginPath();
-  ctx.moveTo(x+side*0.33, y+side*0.15); ctx.lineTo(x+side*0.33, y+side*0.85);
-  ctx.moveTo(x+side*0.66, y+side*0.15); ctx.lineTo(x+side*0.66, y+side*0.85);
+  ctx.moveTo(x+side*0.30, y+side*0.15); ctx.lineTo(x+side*0.30, y+side*0.85);
+  ctx.moveTo(x+side*0.70, y+side*0.15); ctx.lineTo(x+side*0.70, y+side*0.85);
   ctx.stroke();
 
-  // cannoni frontali
+  // “zanne” inferiori (minacciose) ma entro bordo
   ctx.fillStyle = accent;
-  roundedRectPath(ctx, x+side*0.08, y+side*0.25, side*0.10, side*0.15, side*0.04); ctx.fill();
-  roundedRectPath(ctx, x+side*0.08, y+side*0.60, side*0.10, side*0.15, side*0.04); ctx.fill();
+  roundedRectPath(ctx, x+side*0.18, y+side*0.78, side*0.20, side*0.12, side*0.05); ctx.fill();
+  roundedRectPath(ctx, x+side*0.62, y+side*0.78, side*0.20, side*0.12, side*0.05); ctx.fill();
 
-  // corona/glow potente
-  if (pref.glow>0){
-    ctx.shadowColor = accent;
-    ctx.shadowBlur = side*1.2*pref.glow;
-    roundedRectPath(ctx, x, y, side, side, r);
-    ctx.strokeStyle = accent; ctx.lineWidth=3; ctx.stroke();
-  }
-  ctx.restore();
+  // corona/glow forte
+  if (pref.glow>0){ ctx.shadowColor=accent; ctx.shadowBlur=side*1.2*pref.glow;
+    roundedRectPath(ctx,x,y,side,side,r); ctx.strokeStyle=accent; ctx.lineWidth=3; ctx.stroke(); }
 }
 
-/* ============== API principale: drawAlien(ctx, x, y, type) ============== */
-/** Disegna un alieno centrato in (x,y) dentro l’hitbox quadrata di lato fissato per tipo. */
+/* ================== API pubblica ================== */
+/** Disegna un alieno centrato in (x,y) dentro un quadrato (hitbox) di lato dipendente dal tipo.
+ *  Orientamento visivo: sempre "punta verso il basso".
+ */
 function drawAlien(ctx, x, y, type){
   const spec = SPEC[type] || SPEC['normal-grey'];
   const side = spec.size;
-  const half = side/2;
-  const left = x - half, top = y - half;
+  const left = x - side/2, top = y - side/2;
 
-  // opzionale: mostra l’hitbox (preservata)
+  // opzionale: mostra l’hitbox
   if (pref.showBoxes){
     ctx.save();
     ctx.setLineDash([4,4]);
-    ctx.strokeStyle = 'rgba(255,255,255,.6)';
+    ctx.strokeStyle='rgba(255,255,255,.65)';
     ctx.strokeRect(left, top, side, side);
     ctx.restore();
   }
 
-  // disegno interno (sempre confinato nel quadrato)
-  const {base, accent} = spec;
+  // dettaglio interno per tipo (tutto confinato nel quadrato)
+  const { base, accent } = spec;
   switch(type){
     case 'fast-small-red':     paintFast(ctx, left, top, side, base, accent); break;
     case 'normal-grey':        paintNormal(ctx, left, top, side, base, accent); break;
@@ -328,50 +287,50 @@ function drawAlien(ctx, x, y, type){
     case 'boss-huge-white':    paintBoss(ctx, left, top, side, base, accent); break;
     default:                   paintNormal(ctx, left, top, side, base, accent);
   }
+
+  // freccia sottile interna che indica la direzione (↓), utile in debug
+  // Commenta questo blocco se non la vuoi in produzione
+  ctx.save();
+  ctx.globalAlpha = 0.25;
+  ctx.fillStyle = '#ffffff';
+  const s = Math.max(6, side*0.12);
+  ctx.beginPath();
+  ctx.moveTo(x,         top+side*0.70);
+  ctx.lineTo(x-s*0.7,   top+side*0.58);
+  ctx.lineTo(x+s*0.7,   top+side*0.58);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
 }
 
-/* ============== Demo: disposizione e rendering ============== */
+/* ================== Demo: rendering ================== */
 const infoEl = document.getElementById('info');
 function drawFrame(){
-  // sfondo
   const w = canvas.clientWidth, h = canvas.clientHeight;
   ctx.clearRect(0,0,w,h);
-  // griglia di esempio
-  const cx = w*0.5, cy = h*0.55;
-  const gap = 72;
 
-  const order = [
-    'fast-small-red',
-    'normal-grey',
-    'stealth-black',
-    'elite-bigger-blue',
-    'boss-huge-white',
-  ];
-  // disegna la riga
+  // fila di 5 tipi
+  const cx = w*0.5, cy = h*0.55, gap = 72;
+  const order = TYPES;
   const startX = cx - gap*2, y = cy;
   for(let i=0;i<order.length;i++){
     drawAlien(ctx, startX + i*gap, y, order[i]);
   }
+  // tipo selezionato (grande)
+  drawAlien(ctx, w*0.5, h*0.26, pref.currentType);
 
-  // Mostra il tipo corrente in grande al centro
-  drawAlien(ctx, w*0.5, h*0.25, pref.currentType);
-
-  infoEl.textContent = `Tipo corrente: ${pref.currentType} • Hitbox lato (px): ${SPEC[pref.currentType].size} • Corner ratio: ${pref.corner.toFixed(2)} • Glow: ${pref.glow.toFixed(2)}`;
+  infoEl.textContent = `Tipo: ${pref.currentType} • Lato(px): ${SPEC[pref.currentType].size} • Corner: ${pref.corner.toFixed(2)} • Glow: ${pref.glow.toFixed(2)}`;
 }
 drawFrame();
 
-/* ============== Piccola animazione di respiro del glow ============== */
+/* lieve animazione del glow (breathing) — non altera l’hitbox */
 let t0 = performance.now();
 function loop(t){
-  const dt = (t - t0)/1000;
-  t0 = t;
-  // variazione lieve del glow (non tocca l’hitbox)
-  const g0 = pref.glow;
-  const wave = (Math.sin(performance.now()/1000)+1)/2; // 0..1
-  pref.glow = (JSON.parse(localStorage.getItem(LS_KEY)||'{}').glow ?? defaults.glow); // rispetta slider
-  pref.glow = pref.glow * (0.9 + 0.1*wave);
+  const gSaved = pref.glow;
+  const wave = (Math.sin(t/1000)+1)/2; // 0..1
+  const userGlow = (JSON.parse(localStorage.getItem(LS_KEY)||'{}').glow ?? defaults.glow);
+  pref.glow = userGlow * (0.9 + 0.1*wave);
   drawFrame();
-  pref.glow = g0; // ripristina valore logico allo slider
+  pref.glow = gSaved;
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
