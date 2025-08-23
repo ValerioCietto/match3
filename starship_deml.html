@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Triangle Starship (Canvas)</title>
+<style>
+  :root { --bg:#0b0f18; --fg:#e6eefc; --accent:#7cc7ff; }
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;}
+  body{
+    background:var(--bg);
+    color:var(--fg);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif;
+    display:flex; flex-direction:column;
+  }
+  header{
+    padding:10px 14px; display:flex; gap:10px; align-items:center; justify-content:space-between;
+  }
+  .row{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+  label{font-size:14px; opacity:.9}
+  input[type=color],button,select{
+    font:inherit; padding:8px 10px; border-radius:12px; border:1px solid #1e2636; background:#121a28; color:var(--fg);
+  }
+  button{touch-action:manipulation}
+  #c{width:100%; height:calc(100dvh - 90px); display:block; touch-action:none}
+  .controls{
+    position:fixed; inset:auto 0 10px 0; display:flex; justify-content:center; gap:16px; pointer-events:none;
+  }
+  .padBtn{
+    pointer-events:auto; width:min(28vw,160px); height:54px; border-radius:999px; border:1px solid #1f2a40;
+  }
+</style>
+</head>
+<body>
+  <header>
+    <div class="row">
+      <label>Hull</label>
+      <input id="hullColor" type="color" value="#6db3ff" />
+      <button id="reset">Reset</button>
+    </div>
+    <small>Drag or use ◀ ▶ — flame always on</small>
+  </header>
+  <canvas id="c"></canvas>
+
+  <!-- Optional mobile buttons -->
+  <div class="controls">
+    <button class="padBtn" id="leftBtn">◀</button>
+    <button class="padBtn" id="rightBtn">▶</button>
+  </div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+
+  // --------- DPR-safe resize ----------
+  function fitCanvas() {
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    const cssW = canvas.clientWidth;
+    const cssH = canvas.clientHeight;
+    canvas.width  = Math.round(cssW * dpr);
+    canvas.height = Math.round(cssH * dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0); // draw in CSS pixels
+  }
+  new ResizeObserver(fitCanvas).observe(canvas); fitCanvas();
+
+  // --------- Persisted state ----------
+  const saveKey = 'triShipDemo:v1';
+  function loadSave() {
+    try { return JSON.parse(localStorage.getItem(saveKey)) || {}; }
+    catch { return {}; }
+  }
+  function storeSave(patch) {
+    const cur = loadSave();
+    const next = {...cur, ...patch};
+    localStorage.setItem(saveKey, JSON.stringify(next));
+  }
+
+  const hullInput = document.getElementById('hullColor');
+  const leftBtn = document.getElementById('leftBtn');
+  const rightBtn = document.getElementById('rightBtn');
+  const resetBtn = document.getElementById('reset');
+
+  const state = {
+    x: 160, y: 140,
+    w: 120, h: 160,
+    vx: 0, // horizontal
+    movingLeft: false,
+    movingRight: false,
+    hull: hullInput.value
+  };
+
+  // Load persisted
+  {
+    const s = loadSave();
+    if (s.x!=null) state.x = s.x;
+    if (s.y!=null) state.y = s.y;
+    if (s.w!=null) state.w = s.w;
+    if (s.h!=null) state.h = s.h;
+    if (s.hull) { state.hull = s.hull; hullInput.value = s.hull; }
+  }
+
+  hullInput.addEventListener('input', () => {
+    state.hull = hullInput.value;
+    storeSave({ hull: state.hull });
+  });
+  resetBtn.addEventListener('click', () => {
+    Object.assign(state, { x: 160, y: 140, w: 120, h: 160, vx: 0 });
+    storeSave({ x: state.x, y: state.y, w: state.w, h: state.h });
+  });
+
+  // --------- Input (mouse/touch/keys/buttons) ----------
+  let dragging = false, dragOff = {x:0,y:0};
+
+  canvas.addEventListener('pointerdown', (e) => {
+    dragging = true;
+    const rect = canvas.getBoundingClientRect();
+    const px = e.clientX - rect.left;
+    const py = e.clientY - rect.top;
+    dragOff.x = px - state.x;
+    dragOff.y = py - state.y;
+    canvas.setPointerCapture(e.pointerId);
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const rect = canvas.getBoundingClientRect();
+    const px = e.clientX - rect.left;
+    const py = e.clientY - rect.top;
+    state.x = px - dragOff.x;
+    state.y = py - dragOff.y;
+  });
+  canvas.addEventListener('pointerup', (e) => {
+    dragging = false;
+    storeSave({ x: state.x, y: state.y });
+  });
+
+  // Buttons (mobile)
+  const press = (btn, prop) => {
+    btn.addEventListener('pointerdown', () => { state[prop] = true; });
+    btn.addEventListener('pointerup',   () => { state[prop] = false; });
+    btn.addEventListener('pointerleave',() => { state[prop] = false; });
+  };
+  press(leftBtn,'movingLeft'); press(rightBtn,'movingRight');
+
+  // Keyboard
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft') state.movingLeft = true;
+    if (e.key === 'ArrowRight') state.movingRight = true;
+  });
+  window.addEventListener('keyup', (e) => {
+    if (e.key === 'ArrowLeft') state.movingLeft = false;
+    if (e.key === 'ArrowRight') state.movingRight = false;
+  });
+
+  // ----------------------------------------------------
+  // REUSABLE DRAW FUNCTION (drop-in):
+  // drawStylizedTriangleShip(ctx, x, y, width, height, movingLeft, movingRight, hullColor?)
+  // ----------------------------------------------------
+  function drawStylizedTriangleShip(ctx, x, y, w, h, movingLeft, movingRight, hullColor = '#6db3ff') {
+    // Keep everything inside the upright triangle bounds
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Slight roll/lean based on movement
+    const tilt = (movingRight ? 1 : 0) - (movingLeft ? 1 : 0);
+    ctx.rotate(tilt * 0.06); // small tilt for feedback
+
+    // Triangle path (point up)
+    const halfW = w/2;
+    const triTop = -h/2, triBottom = h/2;
+    const tri = new Path2D();
+    tri.moveTo(0, triTop);     // tip
+    tri.lineTo(halfW, triBottom);
+    tri.lineTo(-halfW, triBottom);
+    tri.closePath();
+
+    // Clip to triangle so details never overflow
+    ctx.save();
+    ctx.clip(tri);
+
+    // Background fuselage gradient (subtle)
+    const g = ctx.createLinearGradient(0, triTop, 0, triBottom);
+    g.addColorStop(0, shade(hullColor,  20));
+    g.addColorStop(0.5, hullColor);
+    g.addColorStop(1, shade(hullColor, -25));
+    ctx.fillStyle = g;
+    ctx.fillRect(-halfW, triTop, w, h);
+
+    // Center spine
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.lineWidth = Math.max(1, w*0.01);
+    line(0, triTop, 0, triBottom);
+
+    // Cockpit (kept in center, ellipse)
+    const cockpitH = h * 0.18;
+    const cockpitW = w * 0.28;
+    ctx.fillStyle = 'rgba(140,200,255,0.85)';
+    ctx.beginPath();
+    ctx.ellipse(0, triTop + h*0.30, cockpitW/2, cockpitH/2, 0, 0, Math.PI*2);
+    ctx.fill();
+
+    // Wing panels as inset trapezoids (stay within triangle thanks to clipping)
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    const wingInset = w * 0.08;
+    const wingTopY = triTop + h*0.36;
+    const wingBottomY = triBottom - h*0.22;
+    drawWing(-1); drawWing(+1);
+    function drawWing(side){
+      ctx.beginPath();
+      const leftX  = side * (-halfW + wingInset);
+      const rightX = side * (-w*0.16);
+      ctx.moveTo(leftX,  wingTopY);
+      ctx.lineTo(rightX, wingTopY + h*0.08);
+      ctx.lineTo(rightX, wingBottomY);
+      ctx.lineTo(leftX,  wingBottomY - h*0.06);
+      ctx.closePath();
+      ctx.fill();
+      // cyber lines on wings
+      ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+      ctx.lineWidth = Math.max(1, w*0.005);
+      line(
+        (leftX+rightX)/2, wingTopY + h*0.03,
+        (leftX+rightX)/2, wingBottomY - h*0.03
+      );
+      line(leftX, (wingTopY+wingBottomY)/2, rightX, (wingTopY+wingBottomY)/2);
+    }
+
+    // Nose details (triangular plates)
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    drawPlate(0.0); drawPlate(0.08); drawPlate(0.16);
+    function drawPlate(offset){
+      const yy = triTop + h*(0.18 + offset);
+      const ww = w*(0.18 - offset*0.6);
+      ctx.beginPath();
+      ctx.moveTo(0, yy - h*0.04);
+      ctx.lineTo( ww/2, yy + h*0.04);
+      ctx.lineTo(-ww/2, yy + h*0.04);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Engine well (near base)
+    const baseY = triBottom - h*0.06;
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
+    roundedRect(-w*0.18, baseY - h*0.06, w*0.36, h*0.08, Math.min(8, w*0.06));
+
+    // Engine flame (always on, length modulated by motion)
+    ctx.globalCompositeOperation = 'lighter';
+    const flameLen = h * (0.22 + Math.abs(tilt)*0.05);
+    const flameWidth = w * 0.22;
+    ctx.fillStyle = 'rgba(255,200,60,0.9)';
+    ctx.beginPath();
+    ctx.moveTo(0, baseY);
+    ctx.lineTo( flameWidth/2, baseY + flameLen*0.45);
+    ctx.lineTo( 0,           baseY + flameLen);
+    ctx.lineTo(-flameWidth/2, baseY + flameLen*0.45);
+    ctx.closePath();
+    ctx.fill();
+    // inner core
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.beginPath();
+    ctx.moveTo(0, baseY + flameLen*0.12);
+    ctx.lineTo( flameWidth*0.26, baseY + flameLen*0.50);
+    ctx.lineTo( 0,               baseY + flameLen*0.86);
+    ctx.lineTo(-flameWidth*0.26, baseY + flameLen*0.50);
+    ctx.closePath();
+    ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+
+    // Hull outline (the triangle border)
+    ctx.restore(); // remove clip
+    ctx.strokeStyle = shade(hullColor, -35);
+    ctx.lineWidth = Math.max(1.5, w*0.02);
+    ctx.lineJoin = 'round';
+    ctx.stroke(tri);
+
+    ctx.restore();
+
+    // Helpers
+    function line(x1,y1,x2,y2){ ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); }
+    function roundedRect(x,y,w,h,r){
+      ctx.beginPath();
+      ctx.moveTo(x+r,y);
+      ctx.arcTo(x+w,y,x+w,y+h,r);
+      ctx.arcTo(x+w,y+h,x,y+h,r);
+      ctx.arcTo(x,y+h,x,y,r);
+      ctx.arcTo(x,y,x+w,y,r);
+      ctx.closePath(); ctx.fill();
+    }
+    function shade(hex, amt=0){
+      // tiny hex shade util: hex "#rrggbb"
+      const c = hex.replace('#','');
+      if (c.length!==6) return hex;
+      const n = (i)=>Math.min(255,Math.max(0,parseInt(c.slice(i,i+2),16)+amt));
+      return '#'+[0,2,4].map(i=>n(i).toString(16).padStart(2,'0')).join('');
+    }
+  }
+
+  // Expose globally so you can drop it into your existing code
+  window.drawStylizedTriangleShip = drawStylizedTriangleShip;
+
+  // ---------- Simple demo loop ----------
+  let lastT = 0;
+  function loop(t=0){
+    const dt = Math.min(32, t - lastT); lastT = t;
+
+    // Move horizontally with soft acceleration if keys/buttons pressed
+    const accel = 0.02, damp = 0.98, maxV = 0.6;
+    if (state.movingLeft)  state.vx -= accel*dt;
+    if (state.movingRight) state.vx += accel*dt;
+    state.vx *= damp;
+    state.vx = Math.max(-maxV, Math.min(maxV, state.vx));
+    state.x += state.vx * dt;
+
+    // Keep inside canvas view
+    const margin = 20;
+    const maxX = canvas.clientWidth - margin;
+    const minX = margin;
+    if (state.x < minX) { state.x = minX; state.vx = 0; }
+    if (state.x > maxX) { state.x = maxX; state.vx = 0; }
+
+    // Clear and draw
+    ctx.clearRect(0,0,canvas.clientWidth,canvas.clientHeight);
+    // Subtle grid for depth
+    ctx.globalAlpha = 0.12;
+    drawGrid(30);
+    ctx.globalAlpha = 1;
+
+    drawStylizedTriangleShip(
+      ctx,
+      state.x, state.y,
+      state.w, state.h,
+      state.movingLeft, state.movingRight,
+      state.hull
+    );
+
+    requestAnimationFrame(loop);
+  }
+  function drawGrid(step){
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    ctx.beginPath();
+    for (let x=0; x<=w; x+=step){ ctx.moveTo(x,0); ctx.lineTo(x,h); }
+    for (let y=0; y<=h; y+=step){ ctx.moveTo(0,y); ctx.lineTo(w,y); }
+    ctx.strokeStyle = '#1b2335'; ctx.lineWidth = 1; ctx.stroke();
+  }
+  requestAnimationFrame(loop);
+
+  // Persist size/pos occasionally
+  setInterval(() => storeSave({ x: state.x, y: state.y, w: state.w, h: state.h }), 1500);
+})();
+</script>
+</body>
+</html>
