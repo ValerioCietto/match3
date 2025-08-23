@@ -73,10 +73,18 @@
     "boost type": "none",
     "enemies unlocked": { basic: true, betterVisible: true },
     "level data": { level: 1, difficulty: 1, score: 0 },
-    "bullet type": "round",
+
+    // --- Proiettili ---
+    "bullet type": "round",                       // round | perforante | onda
+    "bullet types owned": { round:true, perforante:false, onda:false }, // NEW
+    "bullet damage bonus": 0,                     // derivata dal tipo
+    "bullet pierce": false,                       // trapassa nemici
+    "bullet speed mul": 1,                        // moltiplicatore velocità
+    "bullet pushback": false,                     // respinge i nemici
     "bullet number": 1,
     "bullet spread": 0,
     "bullet fire rate": 0.5,
+
     "spawn every": 1.2,
     "boss unlocked": false
   };
@@ -109,12 +117,39 @@
     refreshUI();
   }
 
+  // Applica le proprietà derivate del tipo proiettile scelto
+  function applyBulletType(type){
+    let derived = {};
+    if (type === 'perforante') {
+      derived = {
+        "bullet damage bonus": 2,
+        "bullet pierce": true,
+        "bullet speed mul": 1.3,
+        "bullet pushback": false
+      };
+    } else if (type === 'onda') {
+      derived = {
+        "bullet damage bonus": 1,
+        "bullet pierce": false,
+        "bullet speed mul": 0.8,
+        "bullet pushback": true
+      };
+    } else { // round (base)
+      derived = {
+        "bullet damage bonus": 0,
+        "bullet pierce": false,
+        "bullet speed mul": 1,
+        "bullet pushback": false
+      };
+    }
+    commit({ "bullet type": type, ...derived });
+  }
+
   let save = loadSave();
 
   const clamp = (n,min,max)=>Math.max(min,Math.min(max,n));
   const round = (n)=>Math.round(n);
 
-  // Calcolo costi
   function fireRateLevelFromValue(v){ return Math.max(0, Math.round((v - 0.5)/0.1)); }
   function fireRateValueFromLevel(lv){ return 0.5 + lv*0.1; }
   function fireRateCost(level){ return round(5 * Math.pow(1.15, level)); }
@@ -147,7 +182,7 @@
       const nextVal = fireRateValueFromLevel(lv+1);
       grid.appendChild(elCard({
         name: 'Frequenza di fuoco',
-        desc: 'Aumenta il numero di colpi sparati al secondo (+0.1 per livello).',
+        desc: 'Aumenta i colpi al secondo (+0.1 per livello).',
         stat: `Attuale: ${save["bullet fire rate"].toFixed(2)} colpi/s`,
         price: fmtMoney(price),
         canBuy: (save.money||0) >= price,
@@ -170,7 +205,7 @@
       }));
     }
 
-    // Apertura proiettili
+    // Apertura di tiro
     {
       const lv = spreadLevelFromValue(save["bullet spread"]);
       const capped = lv >= spreadMaxLv;
@@ -198,7 +233,7 @@
       grid.appendChild(elCard({
         name: 'Più nemici base',
         desc: 'I nemici compaiono più velocemente (spawnEvery -0.1s, minimo 0.1s).',
-        stat: `Attuale intervallo: ${save["spawn every"].toFixed(1)}s`,
+        stat: `Intervallo attuale: ${save["spawn every"].toFixed(1)}s`,
         price: minReached ? 'MIN' : fmtMoney(price),
         canBuy: !minReached && (save.money||0) >= price,
         onBuy: () => {
@@ -208,72 +243,75 @@
       }));
     }
 
-    // Bombe
+    // Tipo di proiettile — acquisto + selezione
     {
-      const owned = save["bomb types owned"] || { screen:false, smart:false };
-      const unlocked = !!save["bomb unlocked"];
-      const type = save["bomb type"] || 'none';
+      const owned = save["bullet types owned"] || { round:true, perforante:false, onda:false };
+      const curType = save["bullet type"] || 'round';
 
       const card = document.createElement('div');
       card.className = 'card';
       card.innerHTML = `
-        <div class="row"><div class="name">Bomba</div> <div class="price">${unlocked ? 'Sbloccata' : 'Bloccata'}</div></div>
-        <div class="desc">Compra tipi specifici di bomba. Una volta sbloccata almeno una, appare il selettore.</div>
-        <div class="row"><div class="stat">Possedute: screen=${owned.screen ? '✓' : '✕'}, smart=${owned.smart ? '✓' : '✕'}</div><div class="actions"></div></div>
-        <div class="row" id="bombChooserRow" style="display:none;">
+        <div class="row"><div class="name">Tipo di proiettile</div> <div class="price">Seleziona/Compra</div></div>
+        <div class="desc">Scegli il comportamento del proiettile. I tipi si sbloccano con l'acquisto.</div>
+        <div class="row"><div class="stat">Posseduti: round=${owned.round?'✓':'✕'}, perforante=${owned.perforante?'✓':'✕'}, onda=${owned.onda?'✓':'✕'}</div><div class="actions"></div></div>
+        <div class="row" id="bulletChooserRow">
           <div class="stat">Tipo attuale:</div>
           <div>
-            <select id="bombTypeSelect">
-              <option value="screen">Screen</option>
-              <option value="smart">Smart</option>
+            <select id="bulletTypeSelect">
+              <option value="round">Standard</option>
+              ${owned.perforante ? '<option value="perforante">Perforante (+2 danno, più veloce)</option>' : ''}
+              ${owned.onda ? '<option value="onda">Onda d’urto (+1 danno, spinta)</option>' : ''}
             </select>
           </div>
+        </div>
+        <div class="desc">
+          <strong>Perforante</strong>: +2 danno, trapassa i nemici, più veloce. <em>§200</em><br/>
+          <strong>Onda d’urto</strong>: +1 danno, più lenta ma più facile da colpire, spinge indietro i nemici. <em>§300</em>
         </div>
       `;
       const actions = card.querySelector('.actions');
 
-      const btnScreen = document.createElement('button');
-      btnScreen.className = 'btn small';
-      btnScreen.textContent = 'Compra Screen (§50)';
-      btnScreen.disabled = owned.screen || (save.money||0) < 50;
-      btnScreen.onclick = () => {
-        const nextOwned = { ...owned, screen: true };
+      // Compra Perforante (200)
+      const btnPerf = document.createElement('button');
+      btnPerf.className = 'btn small';
+      btnPerf.textContent = 'Compra Perforante (§200)';
+      btnPerf.disabled = owned.perforante || (save.money||0) < 200;
+      btnPerf.onclick = () => {
+        const nextOwned = { ...owned, perforante: true };
         commit({
-          "bomb types owned": nextOwned,
-          "bomb unlocked": true,
-          "bomb type": nextOwned.screen ? "screen" : (nextOwned.smart ? "smart" : "none"),
-          money: (save.money||0) - 50
+          "bullet types owned": nextOwned,
+          money: (save.money||0) - 200
         });
+        // Se l'utente non ha mai scelto altro, imposta e applica
+        if (save["bullet type"] === 'round') applyBulletType('perforante');
       };
-      actions.appendChild(btnScreen);
+      actions.appendChild(btnPerf);
 
-      const btnSmart = document.createElement('button');
-      btnSmart.className = 'btn small';
-      btnSmart.textContent = 'Compra Smart (§80)';
-      btnSmart.disabled = owned.smart || (save.money||0) < 80;
-      btnSmart.onclick = () => {
-        const nextOwned = { ...owned, smart: true };
+      // Compra Onda d'urto (300)
+      const btnOnda = document.createElement('button');
+      btnOnda.className = 'btn small';
+      btnOnda.textContent = "Compra Onda d’urto (§300)";
+      btnOnda.disabled = owned.onda || (save.money||0) < 300;
+      btnOnda.onclick = () => {
+        const nextOwned = { ...owned, onda: true };
         commit({
-          "bomb types owned": nextOwned,
-          "bomb unlocked": true,
-          "bomb type": nextOwned.smart ? "smart" : (nextOwned.screen ? "screen" : "none"),
-          money: (save.money||0) - 80
+          "bullet types owned": nextOwned,
+          money: (save.money||0) - 300
         });
+        if (save["bullet type"] === 'round') applyBulletType('onda');
       };
-      actions.appendChild(btnSmart);
+      actions.appendChild(btnOnda);
 
-      const chooserRow = card.querySelector('#bombChooserRow');
-      if (owned.screen || owned.smart) {
-        chooserRow.style.display = '';
-        const sel = card.querySelector('#bombTypeSelect');
-        sel.value = (type === 'smart' && owned.smart) ? 'smart' : 'screen';
-        sel.onchange = () => {
-          const val = sel.value;
-          if ((val === 'screen' && owned.screen) || (val === 'smart' && owned.smart)) {
-            commit({ "bomb type": val, "bomb unlocked": true });
-          }
-        };
-      }
+      // Selettore tipo
+      const sel = card.querySelector('#bulletTypeSelect');
+      sel.value = curType;
+      sel.onchange = () => {
+        const val = sel.value;
+        // consenti solo tipi posseduti
+        if (val === 'round' || (val === 'perforante' && owned.perforante) || (val === 'onda' && owned.onda)) {
+          applyBulletType(val);
+        }
+      };
 
       grid.appendChild(card);
     }
@@ -326,7 +364,15 @@
     return card;
   }
 
+  // Avvio UI
   refreshUI();
+
+  // Debug veloce in console
+  window.upg = {
+    addMoney(n=10){ commit({ money: (save.money||0)+n }); },
+    setMoney(n){ commit({ money: n }); },
+    applyBulletType, save: ()=>save
+  };
 })();
 </script>
 </body>
