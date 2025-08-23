@@ -80,7 +80,7 @@
 <body>
   <div class="topbar">
     <!-- Link alle upgrades -->
-    <a class="upgrades" href="/match3/upgrades.html">upgrades ↗</a>
+    <a class="upgrades" href="/match3/upgrades.html">Potenziamenti ↗</a>
   </div>
   <div class="hud" id="hud">§0 • 0:00</div>
   <div id="wrap">
@@ -93,7 +93,7 @@
     </div>
     <div class="col center">
       <div class="ghost-spot"></div>
-      <div class="btn hidden-btn" id="btnBomb">💣 BOMB</div>
+      <div class="btn hidden-btn" id="btnBomb">💣 BOMBA</div>
     </div>
     <div class="col right">
       <div class="btn" id="btnRight">⟶</div>
@@ -285,11 +285,11 @@
         bounty = 4;
         break;
       case 'boss':
-        size = 80;
-        hp = 50;
-        speed = 10;
+        size = 100;
+        hp = 80;
+        speed = 20;
         color = 'white'; // black
-        bounty = 20;
+        bounty = 50;
         break;
     }
   
@@ -362,11 +362,12 @@
     const py = state.player.y * canvas.clientHeight - state.player.size - 6;
 
     if (type === "screen") {
-      // 90 bullet, spread step 1°
+      // 90 bullet twice, spread step 1°
+      shootFan(px, py, 90, 1, 360);
       shootFan(px, py, 90, 1, 360);
     } else if (type === "smart") {
-      // spawn 50 enemies
-      for (let i=0;i<50;i++) spawnEnemy();
+      // spawn 100 enemies
+      for (let i=0;i<100;i++) spawnEnemy();
     }
     // set cooldown
     state.bombReadyAt = state.t + state.bombCooldownSec;
