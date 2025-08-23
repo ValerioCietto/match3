@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="it">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Shooter — Upgrades</title>
+<title>Shooter — Potenziamenti</title>
 <style>
   :root{
     --bg:#0b0e13; --ink:#e6e6e6; --muted:#9aa3ad; --card:#10151f; --line:#1e2633; --accent:#35c3ff;
@@ -44,42 +44,40 @@
 </head>
 <body>
   <header>
-    <div class="title">Upgrades</div>
-    <!-- Aggiornato: ritorno al gioco -->
-    <a class="btn" href="/match3/shooter_upgrade_complete.html">Return to Game ↩</a>
+    <div class="title">Potenziamenti</div>
+    <a class="btn" href="/match3/shooter_upgrade_complete.html">Ritorna al gioco ↩</a>
   </header>
 
   <main>
-    <div class="money" id="money">Money: §0</div>
+    <div class="money" id="money">Soldi: §0</div>
 
     <section class="grid" id="upgradesGrid">
-      <!-- Cards generate via JS -->
+      <!-- Le card sono generate via JS -->
     </section>
 
     <footer>
-      Changes are saved automatically in your browser (localStorage).
+      I potenziamenti acquistati sono salvati automaticamente nel tuo browser (localStorage).
     </footer>
   </main>
 
 <script>
 (() => {
-  // -------- Storage (coerente con il gioco) --------
   const LS_KEY = 'vscroll.shooter.v1';
   const defaults = {
     money: 0,
     timeSec: 0,
     "bomb unlocked": false,
     "bomb type": "none",
-    "bomb types owned": { screen: false, smart: false }, // NEW
+    "bomb types owned": { screen: false, smart: false },
     "boost unlocked": false,
     "boost type": "none",
     "enemies unlocked": { basic: true, betterVisible: true },
     "level data": { level: 1, difficulty: 1, score: 0 },
     "bullet type": "round",
     "bullet number": 1,
-    "bullet spread": 0,         // degrees (cap 45° in UI)
-    "bullet fire rate": 0.5,    // shots/sec
-    "spawn every": 1.2,         // seconds between spawns (let the game read this)
+    "bullet spread": 0,
+    "bullet fire rate": 0.5,
+    "spawn every": 1.2,
     "boss unlocked": false
   };
 
@@ -113,87 +111,75 @@
 
   let save = loadSave();
 
-  // -------- Pricing / progression (più dolci) --------
-  // Fire rate: base 5, x1.15 per livello, +0.1 sps
-  // Bullet number: base 10, x1.2 per livello, +1 bullet, NO max
-  // Spread: lasciamo come prima (cap 45°, 8 * 1.35^lv)
-  // More basic enemies (spawn every): base 40, x1.4 per livello, -0.1s (min 0.1s)
-
   const clamp = (n,min,max)=>Math.max(min,Math.min(max,n));
   const round = (n)=>Math.round(n);
 
-  // Fire rate
+  // Calcolo costi
   function fireRateLevelFromValue(v){ return Math.max(0, Math.round((v - 0.5)/0.1)); }
   function fireRateValueFromLevel(lv){ return 0.5 + lv*0.1; }
   function fireRateCost(level){ return round(5 * Math.pow(1.15, level)); }
 
-  // Bullet number (no max)
   function bulletNumberLevelFromValue(v){ return Math.max(0, Math.floor(v - 1)); }
   function bulletNumberValueFromLevel(lv){ return 1 + lv; }
   function bulletNumberCost(level){ return round(10 * Math.pow(1.2, level)); }
 
-  // Spread
   function spreadLevelFromValue(v){ return Math.max(0, Math.round(v / 5)); }
   function spreadValueFromLevel(lv){ return clamp(lv*5, 0, 45); }
   function spreadCost(level){ return round(8 * Math.pow(1.35, level)); }
-  const spreadMaxLv = 9; // 9*5=45°
+  const spreadMaxLv = 9;
 
-  // More basic enemies (spawn every)
-  function spawnEveryLevelFromValue(v){ // base 1.2, -0.1 per level
-    return Math.max(0, Math.round((1.2 - v) / 0.1));
-  }
+  function spawnEveryLevelFromValue(v){ return Math.max(0, Math.round((1.2 - v) / 0.1)); }
   function spawnEveryValueFromLevel(lv){ return clamp(1.2 - lv*0.1, 0.1, 99); }
   function spawnEveryCost(level){ return round(40 * Math.pow(1.4, level)); }
 
-  // -------- UI Builders --------
   const grid = document.getElementById('upgradesGrid');
   const moneyEl = document.getElementById('money');
   const fmtMoney = (n)=>`§${(n|0)}`;
 
   function refreshUI(){
-    moneyEl.textContent = `Money: ${fmtMoney(save.money||0)}`;
+    moneyEl.textContent = `Soldi: ${fmtMoney(save.money||0)}`;
     grid.innerHTML = '';
 
-    // FIRE RATE
+    // Frequenza di fuoco
     {
       const lv = fireRateLevelFromValue(save["bullet fire rate"]);
       const price = fireRateCost(lv);
       const nextVal = fireRateValueFromLevel(lv+1);
       grid.appendChild(elCard({
-        name: 'Fire Rate',
-        desc: 'Increase shots per second (+0.1 per level).',
-        stat: `Current: ${save["bullet fire rate"].toFixed(2)} sps`,
+        name: 'Frequenza di fuoco',
+        desc: 'Aumenta il numero di colpi sparati al secondo (+0.1 per livello).',
+        stat: `Attuale: ${save["bullet fire rate"].toFixed(2)} colpi/s`,
         price: fmtMoney(price),
         canBuy: (save.money||0) >= price,
         onBuy: () => commit({ "bullet fire rate": nextVal, money: (save.money||0) - price })
       }));
     }
 
-    // BULLET NUMBER (no max)
+    // Numero di proiettili
     {
       const lv = bulletNumberLevelFromValue(save["bullet number"]);
       const price = bulletNumberCost(lv);
       const nextVal = bulletNumberValueFromLevel(lv+1);
       grid.appendChild(elCard({
-        name: 'Bullet Number',
-        desc: 'Add +1 parallel bullet per shot (no max).',
-        stat: `Current: ${save["bullet number"]}`,
+        name: 'Numero di proiettili',
+        desc: 'Aggiunge +1 proiettile parallelo per colpo (senza limite).',
+        stat: `Attuale: ${save["bullet number"]}`,
         price: fmtMoney(price),
         canBuy: (save.money||0) >= price,
         onBuy: () => commit({ "bullet number": nextVal, money: (save.money||0) - price })
       }));
     }
 
-    // BULLET SPREAD
+    // Apertura proiettili
     {
       const lv = spreadLevelFromValue(save["bullet spread"]);
       const capped = lv >= spreadMaxLv;
       const price = spreadCost(lv);
       const nextVal = spreadValueFromLevel(lv+1);
       grid.appendChild(elCard({
-        name: 'Bullet Spread',
-        desc: 'Wider cone (+5° per level, up to 45°).',
-        stat: `Current: ${save["bullet spread"]}°`,
+        name: 'Apertura di tiro',
+        desc: 'Cono di fuoco più ampio (+5° per livello, fino a 45°).',
+        stat: `Attuale: ${save["bullet spread"]}°`,
         price: capped ? 'MAX' : fmtMoney(price),
         canBuy: !capped && (save.money||0) >= price,
         onBuy: () => {
@@ -203,16 +189,16 @@
       }));
     }
 
-    // MORE BASIC ENEMIES (spawnEvery -0.1s, min 0.1s)
+    // Più nemici base
     {
       const lv = spawnEveryLevelFromValue(save["spawn every"]);
       const nextVal = spawnEveryValueFromLevel(lv+1);
       const price = spawnEveryCost(lv);
       const minReached = save["spawn every"] <= 0.1 + 1e-9;
       grid.appendChild(elCard({
-        name: 'More Basic Enemies',
-        desc: 'Enemies spawn faster (spawnEvery -0.1s, min 0.1s).',
-        stat: `Current spawnEvery: ${save["spawn every"].toFixed(1)}s`,
+        name: 'Più nemici base',
+        desc: 'I nemici compaiono più velocemente (spawnEvery -0.1s, minimo 0.1s).',
+        stat: `Attuale intervallo: ${save["spawn every"].toFixed(1)}s`,
         price: minReached ? 'MIN' : fmtMoney(price),
         canBuy: !minReached && (save.money||0) >= price,
         onBuy: () => {
@@ -222,34 +208,33 @@
       }));
     }
 
-    // BOMB PURCHASES (separati) + TYPE CHOOSER
+    // Bombe
     {
       const owned = save["bomb types owned"] || { screen:false, smart:false };
-      const unlocked = !!save["bomb unlocked"]; // sarà true se compra almeno un tipo
+      const unlocked = !!save["bomb unlocked"];
       const type = save["bomb type"] || 'none';
 
       const card = document.createElement('div');
       card.className = 'card';
       card.innerHTML = `
-        <div class="row"><div class="name">Bomb</div> <div class="price">${unlocked ? 'Unlocked' : 'Locked'}</div></div>
-        <div class="desc">Buy specific bomb types. A chooser appears once at least one type is owned.</div>
-        <div class="row"><div class="stat">Owned: screen=${owned.screen ? '✓' : '✕'}, smart=${owned.smart ? '✓' : '✕'}</div><div class="actions"></div></div>
+        <div class="row"><div class="name">Bomba</div> <div class="price">${unlocked ? 'Sbloccata' : 'Bloccata'}</div></div>
+        <div class="desc">Compra tipi specifici di bomba. Una volta sbloccata almeno una, appare il selettore.</div>
+        <div class="row"><div class="stat">Possedute: screen=${owned.screen ? '✓' : '✕'}, smart=${owned.smart ? '✓' : '✕'}</div><div class="actions"></div></div>
         <div class="row" id="bombChooserRow" style="display:none;">
-          <div class="stat">Current type:</div>
+          <div class="stat">Tipo attuale:</div>
           <div>
             <select id="bombTypeSelect">
-              <option value="screen">screen</option>
-              <option value="smart">smart</option>
+              <option value="screen">Screen</option>
+              <option value="smart">Smart</option>
             </select>
           </div>
         </div>
       `;
       const actions = card.querySelector('.actions');
 
-      // Buy screen (50)
       const btnScreen = document.createElement('button');
       btnScreen.className = 'btn small';
-      btnScreen.textContent = 'Buy Screen (§50)';
+      btnScreen.textContent = 'Compra Screen (§50)';
       btnScreen.disabled = owned.screen || (save.money||0) < 50;
       btnScreen.onclick = () => {
         const nextOwned = { ...owned, screen: true };
@@ -262,10 +247,9 @@
       };
       actions.appendChild(btnScreen);
 
-      // Buy smart (80)
       const btnSmart = document.createElement('button');
       btnSmart.className = 'btn small';
-      btnSmart.textContent = 'Buy Smart (§80)';
+      btnSmart.textContent = 'Compra Smart (§80)';
       btnSmart.disabled = owned.smart || (save.money||0) < 80;
       btnSmart.onclick = () => {
         const nextOwned = { ...owned, smart: true };
@@ -278,7 +262,6 @@
       };
       actions.appendChild(btnSmart);
 
-      // Chooser visible only if any owned
       const chooserRow = card.querySelector('#bombChooserRow');
       if (owned.screen || owned.smart) {
         chooserRow.style.display = '';
@@ -295,39 +278,28 @@
       grid.appendChild(card);
     }
 
-    // NEW GAME PLUS
+    // New Game Plus
     {
       grid.appendChild(elCard({
-        name: 'New Game Plus',
-        desc: 'Restart without upgrades but begin with §1000000.',
-        stat: `This will reset bullets, spread, fire rate, bombs/boosts, enemy visibility, spawn rate, score and level.`,
+        name: 'Nuova Partita Plus',
+        desc: 'Ricomincia senza potenziamenti ma con §1000000 iniziali.',
+        stat: `Questo resetterà proiettili, apertura, frequenza, bombe/potenziamenti, visibilità nemici, spawn, punteggio e livello.`,
         price: fmtMoney(1000),
         canBuy: (save.money||0) >= 1000,
         onBuy: () => {
-          // Keep timeSec, reset upgrades/progress, set money 1000000
           const keepTime = save.timeSec || 0;
           const fresh = {
             ...defaults,
             timeSec: keepTime,
             money: 1000000,
             "level data": { level: 1, difficulty: 1, score: 0 },
-            "enemies unlocked": { basic: true, betterVisible: true },
-            "bomb unlocked": false,
-            "bomb type": "none",
-            "bomb types owned": { screen:false, smart:false },
-            "boost unlocked": false,
-            "boost type": "none",
-            "bullet number": 1,
-            "bullet spread": 0,
-            "bullet fire rate": 0.5,
-            "spawn every": 1.2,
-            "boss unlocked": false
+            "enemies unlocked": { basic: true, betterVisible: true }
           };
           mirrorAll(fresh);
           localStorage.setItem(LS_KEY, JSON.stringify(fresh));
           save = fresh;
           refreshUI();
-          alert('New Game Plus activated! Upgrades reset, you received §1000000.');
+          alert('Nuova Partita Plus attivata! Potenziamenti azzerati, hai ricevuto §1000000.');
         }
       }));
     }
@@ -347,22 +319,14 @@
     const actions = card.querySelector('.actions');
     const buy = document.createElement('button');
     buy.className = 'btn small';
-    buy.textContent = 'Buy';
+    buy.textContent = 'Compra';
     buy.disabled = !canBuy;
     buy.onclick = onBuy;
     actions.appendChild(buy);
     return card;
   }
 
-  // Initial UI
   refreshUI();
-
-  // Debug helpers
-  window.upg = {
-    addMoney(n=10){ commit({ money: (save.money||0)+n }); },
-    setMoney(n){ commit({ money: n }); },
-    save: ()=>save
-  };
 })();
 </script>
 </body>
