@@ -1,0 +1,160 @@
+{
+  "upgrades": [
+    {
+      "id": "fire_rate",
+      "name": "Frequenza di fuoco",
+      "description": "Aumenta i colpi al secondo (+0.1 per livello).",
+      "type": "linear",
+      "baseValue": 0.5,
+      "increment": 0.1,
+      "cost": { "base": 5, "growth": 1.15 },
+      "storage": { "value": "bullet fire rate" }
+    },
+    {
+      "id": "bullet_number",
+      "name": "Numero di proiettili",
+      "description": "Aggiunge +1 proiettile parallelo per colpo (senza limite).",
+      "type": "linear",
+      "baseValue": 1,
+      "increment": 1,
+      "cost": { "base": 10, "growth": 1.2 },
+      "storage": { "value": "bullet number" }
+    },
+    {
+      "id": "bullet_spread",
+      "name": "Apertura di tiro",
+      "description": "Cono di fuoco più ampio (+5° per livello, fino a 45°).",
+      "type": "linear",
+      "baseValue": 0,
+      "increment": 5,
+      "maxValue": 45,
+      "cost": { "base": 8, "growth": 1.35 },
+      "storage": { "value": "bullet spread" }
+    },
+    {
+      "id": "spawn_rate",
+      "name": "Più nemici base",
+      "description": "I nemici compaiono più velocemente (spawnEvery -0.1s, min 0.1s).",
+      "type": "linear",
+      "baseValue": 1.2,
+      "increment": -0.1,
+      "minValue": 0.1,
+      "cost": { "base": 40, "growth": 1.4 },
+      "storage": { "value": "spawn every" }
+    },
+    {
+      "id": "bullet_type",
+      "name": "Tipo di proiettile",
+      "description": "Scegli il comportamento del proiettile (standard, perforante, onda d’urto).",
+      "type": "multi",
+      "options": [
+        {
+          "id": "round",
+          "name": "Standard",
+          "description": "Colpo base senza effetti speciali.",
+          "cost": 0,
+          "effects": { "bullet damage bonus": 0, "bullet pierce": false, "bullet speed mul": 1, "bullet pushback": false }
+        },
+        {
+          "id": "perforante",
+          "name": "Perforante",
+          "description": "+2 danno, trapassa i nemici, più veloce.",
+          "cost": 200,
+          "effects": { "bullet damage bonus": 2, "bullet pierce": true, "bullet speed mul": 1.3, "bullet pushback": false }
+        },
+        {
+          "id": "onda",
+          "name": "Onda d’urto",
+          "description": "+1 danno, più lenta ma respinge i nemici.",
+          "cost": 300,
+          "effects": { "bullet damage bonus": 1, "bullet pierce": false, "bullet speed mul": 0.8, "bullet pushback": true }
+        }
+      ],
+      "storage": {
+        "value": "bullet type",
+        "owned": "bullet types owned"
+      }
+    },
+    {
+      "id": "bomb",
+      "name": "Bomba",
+      "description": "Compra tipi specifici di bomba e seleziona quale usare.",
+      "type": "multi",
+      "options": [
+        {
+          "id": "screen",
+          "name": "Screen",
+          "description": "Spara 90 proiettili in ventaglio.",
+          "cost": 50
+        },
+        {
+          "id": "smart",
+          "name": "Smart",
+          "description": "Fa spawnare 50 nemici subito.",
+          "cost": 80
+        }
+      ],
+      "storage": {
+        "unlocked": "bomb unlocked",
+        "type": "bomb type",
+        "owned": "bomb types owned"
+      }
+    },
+    {
+      "id": "better_enemies",
+      "name": "Nemici disegnati meglio",
+      "description": "Qualsiasi cosa è meglio di un quadrato.",
+      "type": "toggle",
+      "cost": 20,
+      "storage": { "flag": "better enemies" }
+    },
+    {
+      "id": "better_visible",
+      "name": "Nemici più visibili",
+      "description": "Con questo potenziamento vedrai meglio i nemici, anche quelli più nascosti.",
+      "type": "toggle",
+      "cost": 40,
+      "storage": { "flag": "better visible" }
+    },
+    {
+      "id": "fancy_ship",
+      "name": "Astronave più bella",
+      "description": "Ti stai affezionando al triangolo, sul serio.",
+      "type": "toggle",
+      "cost": 50,
+      "storage": { "flag": "ship fancy" }
+    },
+    {
+      "id": "sound_explosion",
+      "name": "Suoni di esplosioni",
+      "description": "In alternativa puoi fare boom con la bocca.",
+      "type": "toggle",
+      "cost": 10,
+      "storage": { "flag": "sound explosion" }
+    },
+    {
+      "id": "sound_shoot",
+      "name": "Suoni di sparo",
+      "description": "Oppure puoi fare pew pew.",
+      "type": "toggle",
+      "cost": 10,
+      "storage": { "flag": "sound shoot" }
+    },
+    {
+      "id": "music_battle",
+      "name": "Musica da battaglia",
+      "description": "Per distruggere come veri campioni.",
+      "type": "toggle",
+      "cost": 30,
+      "storage": { "flag": "music battle" }
+    },
+    {
+      "id": "new_game_plus",
+      "name": "Nuova Partita Plus",
+      "description": "Ricomincia senza potenziamenti ma con §1000000 iniziali.",
+      "type": "special",
+      "cost": 1000,
+      "storage": { "special": "reset_upgrades" }
+    }
+  ]
+}
