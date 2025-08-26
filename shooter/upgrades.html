@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Shooter — Potenziamenti (dinamici)</title>
+<style>
+  :root{
+    --bg:#0b0e13; --ink:#e6e6e6; --muted:#9aa3ad;
+    --card:#10151f; --line:#1e2633; --accent:#35c3ff;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:system-ui,Segoe UI,Roboto,Arial}
+  header{
+    position:sticky; top:0; z-index:5; background:#10151f;
+    border-bottom:1px solid var(--line); padding:12px max(12px, env(safe-area-inset-right)) 12px max(12px, env(safe-area-inset-left));
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .title{font-weight:700; letter-spacing:.3px}
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center;
+    min-height:44px; padding:10px 14px; border-radius:12px;
+    border:1px solid rgba(255,255,255,.15); background:rgba(255,255,255,.06);
+    color:var(--ink); font-weight:600; text-decoration:none; user-select:none; cursor:pointer;
+  }
+  .btn:disabled{opacity:.5; cursor:not-allowed}
+  main{max-width:900px; margin:0 auto; padding:16px 12px 32px}
+  .money{ margin:12px 0 8px; font-size:14px; color:var(--muted); }
+  .grid{ display:grid; gap:10px; grid-template-columns:1fr; }
+  @media (min-width:760px){ .grid{ grid-template-columns:1fr 1fr; } }
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px;
+    display:flex; flex-direction:column; gap:8px;
+  }
+  .row{display:flex; align-items:center; justify-content:space-between; gap:10px}
+  .name{font-weight:700}
+  .desc{font-size:13px; color:var(--muted)}
+  .stat{font-size:13px; color:#cfd6df}
+  .actions{display:flex; gap:8px; flex-wrap:wrap}
+  .price{font-size:12px; color:#c8f0ff; padding:2px 6px; border:1px solid rgba(53,195,255,.3); border-radius:999px; background:rgba(53,195,255,.08)}
+  .small{font-size:12px; padding:8px 10px; min-height:36px}
+  .note{font-size:12px; color:#9fb7c7}
+  .error{color:#ff8a8a; background:rgba(255,0,0,.08); border:1px solid rgba(255,0,0,.2); padding:10px; border-radius:10px}
+</style>
+</head>
+<body>
+  <header>
+    <div class="title">Potenziamenti</div>
+    <a class="btn" href="/match3/shooter/shooter_upgrade_complete.html">Ritorna al gioco ↩</a>
+  </header>
+
+  <main>
+    <div class="money" id="money">Soldi: §0</div>
+    <p class="note">Gli upgrade vengono caricati da <code>/match3/shooter/upgrades.json</code> e salvati in localStorage.</p>
+
+    <div id="loadStatus" class="note"></div>
+    <section class="grid" id="upgradesGrid"></section>
+
+    <footer class="note" style="margin-top:16px">
+      I potenziamenti acquistati sono salvati automaticamente nel tuo browser (localStorage).
+    </footer>
+  </main>
+
+<script>
+(() => {
+  // ====== STORAGE BASE ======
+  const LS_KEY = 'vscroll.shooter.v1';
+  function loadSave() {
+    try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; }
+    catch { return {}; }
+  }
+  function commitSave(partial) {
+    const merged = { ...save, ...partial };
+    save = merged;
+    localStorage.setItem(LS_KEY, JSON.stringify(merged));
+  }
+  let save = loadSave();
+
+  // Dot-path read/write helpers (supportano chiavi annidate es. "enemies unlocked.betterVisible")
+  function setKey(path, value) {
+    if (!path) return;
+    if (!path.includes('.')) { commitSave({ [path]: value }); return; }
+    const parts = path.split('.');
+    let obj = { ...save };
+    let cur = obj;
+    for (let i=0;i<parts.length-1;i++) {
+      if (typeof cur[parts[i]] !== 'object' || cur[parts[i]] === null) cur[parts[i]] = {};
+      cur = cur[parts[i]];
+    }
+    cur[parts[parts.length-1]] = value;
+    commitSave(obj);
+  }
+  function getKey(path, fallback) {
+    try {
+      if (!path) return fallback;
+      if (!path.includes('.')) return (save[path] ?? fallback);
+      const parts = path.split('.');
+      let cur = save;
+      for (const p of parts) {
+        if (cur == null) return fallback;
+        cur = cur[p];
+      }
+      return (cur === undefined ? fallback : cur);
+    } catch { return fallback; }
+  }
+
+  // ====== UI BASE ======
+  const grid = document.getElementById('upgradesGrid');
+  const moneyEl = document.getElementById('money');
+  const statusEl = document.getElementById('loadStatus');
+  const fmtMoney = (n)=>`§${(n|0)}`;
+  function refreshMoney(){ moneyEl.textContent = `Soldi: ${fmtMoney(save.money || 0)}`; }
+
+  function elCard({name, desc, stat, price, actions}) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="row"><div class="name">${name}</div><div class="price">${price}</div></div>
+      <div class="desc">${desc || ''}</div>
+      <div class="row">
+        <div class="stat">${stat || ''}</div>
+        <div class="actions"></div>
+      </div>
+    `;
+    const bar = card.querySelector('.actions');
+    for (const a of (actions||[])) bar.appendChild(a);
+    return card;
+  }
+  function btn(label, onClick, disabled=false) {
+    const b = document.createElement('button');
+    b.className = 'btn small';
+    b.textContent = label;
+    b.disabled = !!disabled;
+    b.onclick = onClick;
+    return b;
+  }
+
+  // ====== COSTI LINEAR ======
+  function linearLevelFromValue(base, inc, value) {
+    if (!isFinite(inc) || inc === 0) return 0;
+    const lvl = (value - base) / inc;
+    // livellamento robusto anche per incrementi negativi
+    return Math.max(0, Math.round(lvl));
+  }
+  function linearPrice(costBase, growth, level) {
+    const g = (growth == null ? 1 : growth);
+    return Math.round((costBase||0) * Math.pow(g, level));
+  }
+  function clamp(n, min, max) {
+    if (min!==undefined && n < min) n = min;
+    if (max!==undefined && n > max) n = max;
+    return n;
+  }
+
+  // ====== RENDER ======
+  let catalog = null;
+
+  async function loadCatalog() {
+    statusEl.textContent = 'Caricamento catalogo...';
+    try {
+      const res = await fetch('/match3/shooter/upgrades.json', { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      catalog = await res.json();
+      statusEl.textContent = '';
+    } catch (e) {
+      statusEl.innerHTML = `<div class="error">Errore nel caricamento di /match3/shooter/upgrades.json<br>${e.message}</div>`;
+      catalog = { upgrades: [] };
+    }
+  }
+
+  function renderAll() {
+    refreshMoney();
+    grid.innerHTML = '';
+    const list = catalog?.upgrades || [];
+
+    for (const u of list) {
+      if (u.type === 'linear') renderLinear(u);
+      else if (u.type === 'toggle') renderToggle(u);
+      else if (u.type === 'multi') renderMulti(u);
+      else if (u.type === 'special') renderSpecial(u);
+    }
+  }
+
+  // --- LINEAR ---
+  function renderLinear(u) {
+    const curVal = Number(getKey(u.storage?.value, u.baseValue));
+    const level = linearLevelFromValue(u.baseValue, u.increment, curVal);
+    const price = linearPrice(u.cost?.base || 0, u.cost?.growth || 1, level);
+
+    let nextVal = curVal + (u.increment || 0);
+    nextVal = clamp(nextVal, u.minValue, u.maxValue);
+
+    const canIncrease =
+      (u.maxValue === undefined || curVal < u.maxValue) &&
+      (u.minValue === undefined || curVal > u.minValue || (u.increment||0) > 0);
+
+    const buyDisabled = !(save.money >= price && canIncrease);
+
+    const buyBtn = btn('Compra', () => {
+      if (save.money < price || !canIncrease) return;
+      setKey(u.storage.value, nextVal);
+      commitSave({ money: (save.money||0) - price });
+      renderAll();
+    }, buyDisabled);
+
+    const priceLabel = canIncrease ? fmtMoney(price) : 'MAX';
+
+    const card = elCard({
+      name: u.name,
+      desc: u.description,
+      stat: formatStatValue(curVal, u),
+      price: priceLabel,
+      actions: [buyBtn]
+    });
+    grid.appendChild(card);
+  }
+
+  function formatStatValue(v, u) {
+    if (u.id === 'bullet_spread') return `Attuale: ${v}°`;
+    if (u.id === 'fire_rate') return `Attuale: ${Number(v).toFixed(2)} colpi/s`;
+    if (u.id === 'spawn_rate') return `Intervallo: ${Number(v).toFixed(1)}s`;
+    return `Attuale: ${v}`;
+  }
+
+  // --- TOGGLE ---
+  function renderToggle(u) {
+    const active = !!getKey(u.storage?.flag, false);
+    const price = u.cost || 0;
+
+    const buyBtn = btn('Compra', () => {
+      if (active) return;
+      if ((save.money||0) < price) return;
+      setKey(u.storage.flag, true);
+      commitSave({ money: (save.money||0) - price });
+      renderAll();
+    }, active || (save.money||0) < price);
+
+    const priceLabel = active ? 'ACQUISTATO' : fmtMoney(price);
+
+    const card = elCard({
+      name: u.name,
+      desc: u.description,
+      stat: `Stato: ${active ? 'ATTIVO' : 'NON ATTIVO'}`,
+      price: priceLabel,
+      actions: [buyBtn]
+    });
+    grid.appendChild(card);
+  }
+
+  // --- MULTI (es. Bomba, Tipo di proiettile) ---
+  function renderMulti(u) {
+    const actions = [];
+    const priceLabel = 'Seleziona/Compra';
+
+    // Owned map
+    const ownedKey = u.storage?.owned;
+    let owned = getKey(ownedKey, {});
+    if (typeof owned !== 'object' || owned === null) owned = {};
+
+    // Current selected (value or type)
+    const valueKey = u.storage?.value || u.storage?.type;
+    let current = valueKey ? getKey(valueKey, (u.options?.[0]?.id || '')) : '';
+
+    // Select visibile solo se c’è almeno un’opzione posseduta o a costo 0
+    const sel = document.createElement('select');
+    sel.className = 'btn small';
+    sel.style.minHeight = '36px';
+
+    const selectable = (u.options||[]).filter(opt => opt.cost === 0 || !!owned[opt.id]);
+    if (selectable.length > 0) {
+      for (const opt of selectable) {
+        const o = document.createElement('option');
+        o.value = opt.id;
+        o.textContent = opt.name;
+        sel.appendChild(o);
+      }
+      if (![...sel.options].some(o => o.value === current)) current = sel.options[0].value;
+      sel.value = current;
+      sel.onchange = () => {
+        const chosen = sel.value;
+        if (valueKey) setKey(valueKey, chosen);
+        applyEffectsIfAny(u, chosen);
+        renderAll();
+      };
+      actions.push(sel);
+    }
+
+    // Bottoni acquisto per le opzioni non possedute (costo > 0)
+    for (const opt of (u.options||[])) {
+      if ((opt.cost||0) > 0 && !owned[opt.id]) {
+        const canBuy = (save.money||0) >= opt.cost;
+        const b = btn(`Compra ${opt.name} (${fmtMoney(opt.cost)})`, () => {
+          if ((save.money||0) < opt.cost) return;
+          const nextOwned = { ...owned, [opt.id]: true };
+          if (ownedKey) setKey(ownedKey, nextOwned);
+          // se nessuna selezione ancora, imposta quella appena acquistata
+          if (valueKey && !getKey(valueKey, '')) setKey(valueKey, opt.id);
+          // applica effetti SE l’opzione acquistata è anche quella selezionata
+          const chosen = valueKey ? getKey(valueKey, opt.id) : opt.id;
+          if (chosen === opt.id) applyEffectsIfAny(u, chosen);
+          // soldi
+          commitSave({ money: (save.money||0) - opt.cost });
+          // opzionale: flag unlocked
+          if (u.storage?.unlocked) setKey(u.storage.unlocked, true);
+          renderAll();
+        }, !canBuy);
+        actions.push(b);
+      }
+    }
+
+    const card = elCard({
+      name: u.name,
+      desc: u.description,
+      stat: multiStat(u, owned, current),
+      price: priceLabel,
+      actions
+    });
+    grid.appendChild(card);
+  }
+
+  function multiStat(u, owned, current) {
+    const ownedList = (u.options||[]).map(o => `${o.id}=${owned[o.id] ? '✓' : '✕'}`).join(', ');
+    const curText = current ? current : '—';
+    return `Posseduti: ${ownedList} • Attuale: ${curText}`;
+  }
+
+  function applyEffectsIfAny(u, chosenId) {
+    // Esempio: bullet_type con "effects" nel JSON
+    if (u.id === 'bullet_type') {
+      const opt = (u.options||[]).find(o => o.id === chosenId);
+      if (opt?.effects) {
+        const patch = {};
+        for (const [k,v] of Object.entries(opt.effects)) patch[k] = v;
+        commitSave(patch);
+      }
+    }
+  }
+
+  // --- SPECIAL (es. New Game Plus) ---
+  function renderSpecial(u) {
+    const price = u.cost || 0;
+    const action = u.storage?.special || '';
+
+    const buyBtn = btn('Compra', () => {
+      if ((save.money||0) < price) return;
+      if (action === 'reset_upgrades') {
+        // Importo base: se il JSON definisce un campo "startMoney" nell'oggetto, usalo; altrimenti default 1,000,000
+        doNewGamePlus(u.startMoney ?? 1000000);
+      }
+    }, (save.money||0) < price);
+
+    const card = elCard({
+      name: u.name,
+      desc: u.description,
+      stat: `Azione: ${action || '—'}`,
+      price: fmtMoney(price),
+      actions: [buyBtn]
+    });
+    grid.appendChild(card);
+  }
+
+  function doNewGamePlus(startMoney) {
+    const keepTime = save.timeSec || 0;
+    const fresh = { timeSec: keepTime, money: startMoney };
+
+    // reset coerente con il catalogo
+    for (const u of (catalog?.upgrades||[])) {
+      if (u.type === 'linear') {
+        setNested(fresh, u.storage?.value, u.baseValue);
+      } else if (u.type === 'toggle') {
+        setNested(fresh, u.storage?.flag, false);
+      } else if (u.type === 'multi') {
+        if (u.storage?.owned) setNested(fresh, u.storage.owned, {});
+        if (u.storage?.value) setNested(fresh, u.storage.value, (u.options?.[0]?.id || ''));
+        if (u.storage?.type)  setNested(fresh, u.storage.type,  (u.options?.[0]?.id || ''));
+        if (u.storage?.unlocked) setNested(fresh, u.storage.unlocked, false);
+        // cleanup effetti noti (es. bullet_type)
+        if (u.id === 'bullet_type') {
+          fresh["bullet damage bonus"] = 0;
+          fresh["bullet pierce"] = false;
+          fresh["bullet speed mul"] = 1;
+          fresh["bullet pushback"] = false;
+        }
+      }
+    }
+    commitSave(fresh);
+    alert(`Nuova Partita Plus attivata! Potenziamenti azzerati, hai ricevuto ${fmtMoney(startMoney)}.`);
+    renderAll();
+  }
+
+  function setNested(obj, path, value) {
+    if (!path) return;
+    if (!path.includes('.')) { obj[path] = value; return; }
+    const parts = path.split('.');
+    let cur = obj;
+    for (let i=0;i<parts.length-1;i++) {
+      if (typeof cur[parts[i]] !== 'object' || cur[parts[i]] === null) cur[parts[i]] = {};
+      cur = cur[parts[i]];
+    }
+    cur[parts[parts.length-1]] = value;
+  }
+
+  // ====== AVVIO ======
+  (async function init(){
+    await loadCatalog();
+    renderAll();
+  })();
+
+  // Debug veloce
+  window.upg = {
+    addMoney(n=10){ commitSave({ money: (save.money||0)+n }); renderAll(); },
+    setMoney(n){ commitSave({ money: n }); renderAll(); },
+    save: ()=>save,
+    reload: async ()=>{ await loadCatalog(); renderAll(); }
+  };
+})();
+</script>
+</body>
+</html>
