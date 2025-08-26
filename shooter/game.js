@@ -1,1 +1,502 @@
-// to complete
+(() => {
+  'use strict';
+
+  // ---------- Persistent Storage ----------
+  const LS_KEY = 'vscroll.shooter.v1';
+  const defaultSave = {
+    money: 0,
+    timeSec: 0,
+    "bomb unlocked": false,
+    "bomb type": "none",   // "screen" | "smart"
+    "boost unlocked": false,
+    "boost type": "none",
+    "enemies unlocked": { basic: true, betterVisible: false },
+    "level data": { level: 1, difficulty: 1, score: 0 },
+    "bullet type": "round",
+    "bullet number": 1,
+    "bullet spread": 0,    // degrees
+    "bullet fire rate": 0.5, // shots/sec
+  };
+
+  function loadSave() {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      let save = raw ? JSON.parse(raw) : {};
+      save = { ...defaultSave, ...save };
+      // mirror requested simple keys
+      for (const k of Object.keys(save)) {
+        const v = save[k];
+        localStorage.setItem(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
+      }
+      localStorage.setItem(LS_KEY, JSON.stringify(save));
+      return save;
+    } catch(e) {
+      localStorage.setItem(LS_KEY, JSON.stringify(defaultSave));
+      for (const k of Object.keys(defaultSave)) {
+        const v = defaultSave[k];
+        localStorage.setItem(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
+      }
+      return structuredClone(defaultSave);
+    }
+  }
+
+  function commitSave(partial) {
+    const save = { ...state.save, ...partial };
+    state.save = save;
+    for (const [k, v] of Object.entries(partial)) {
+      localStorage.setItem(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
+    }
+    localStorage.setItem(LS_KEY, JSON.stringify(save));
+  }
+
+  // ---------- Canvas ----------
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+
+  function resizeCanvas() {
+    const cssW = canvas.clientWidth;
+    const cssH = canvas.clientHeight;
+    const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+    canvas.width = Math.floor(cssW * dpr);
+    canvas.height = Math.floor(cssH * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  window.addEventListener('resize', resizeCanvas, { passive: true });
+  resizeCanvas();
+
+  // ---------- State ----------
+  const hudEl = document.getElementById('hud');
+  const state = {
+    save: loadSave(),
+    player: {
+      x: 0.5, y: 0.85,
+      speed: 0.5, // screen widths per second
+      size: 20,
+      moveLeft: false, moveRight: false,
+    },
+    bullets: [],
+    enemies: [],
+    stars: [],
+    lastShotAt: 0,
+    spawnTimer: 0,
+    spawnEvery: 1.2,
+    t: 0,
+    lastFrame: performance.now(),
+    playtimeAccumulator: 0,
+
+    // Bomb
+    bombCooldownSec: 60,
+    bombReadyAt: 0, // timestamp (seconds)
+  };
+
+  if (!state.bombReadyAt) state.bombReadyAt = 0;
+
+  // ---------- Input ----------
+  const btnLeft = document.getElementById('btnLeft');
+  const btnRight = document.getElementById('btnRight');
+  const btnBomb  = document.getElementById('btnBomb');
+
+  const press = (setter, val) => (e)=>{ e.preventDefault(); setter(val); };
+
+  btnLeft.addEventListener('touchstart', press(v=>state.player.moveLeft=v,true), { passive:false });
+  btnLeft.addEventListener('touchend',   press(v=>state.player.moveLeft=v,false), { passive:false });
+  btnLeft.addEventListener('mousedown',  press(v=>state.player.moveLeft=v,true));
+  btnLeft.addEventListener('mouseup',    press(v=>state.player.moveLeft=v,false));
+  btnLeft.addEventListener('mouseleave', press(v=>state.player.moveLeft=v,false));
+
+  btnRight.addEventListener('touchstart', press(v=>state.player.moveRight=v,true), { passive:false });
+  btnRight.addEventListener('touchend',   press(v=>state.player.moveRight=v,false), { passive:false });
+  btnRight.addEventListener('mousedown',  press(v=>state.player.moveRight=v,true));
+  btnRight.addEventListener('mouseup',    press(v=>state.player.moveRight=v,false));
+  btnRight.addEventListener('mouseleave', press(v=>state.player.moveRight=v,false));
+
+  // ---------- Stars ----------
+  function initStars() {
+    state.stars = [];
+    const count = Math.floor((canvas.clientWidth * canvas.clientHeight) / 8000);
+    for (let i=0;i<count;i++){
+      state.stars.push({
+        x: Math.random()*canvas.clientWidth,
+        y: Math.random()*canvas.clientHeight,
+        s: Math.random()*1.5 + 0.5,
+        v: Math.random()*40 + 20, // px/s
+      });
+    }
+  }
+  initStars();
+
+  // ---------- Enemy spawn ----------
+  function spawnEnemy() {
+    // Lancio percentuale 0..100
+    let roll = Math.random() * 100;
+
+    // Scelta tipo in base alle percentuali:
+    // 0–19.999: very_small (20%)
+    // 20–39.999: stealth (20%)
+    // 40–88.999: normal (49%)
+    // 89–98.999: special_ops (10%)
+    // 99–100: boss (1%)
+    let type = 'normal';
+    if (roll < 20) {
+      type = 'very_small';
+    } else if (roll < 40) {
+      type = 'stealth';
+    } else if (roll < 89) {
+      type = 'normal';
+    } else if (roll < 99) {
+      type = 'special_ops';
+    } else {
+      type = 'boss';
+    }
+
+    console.log('spawning roll:',roll, type);
+
+    // Proprietà per ciascun tipo
+    let size, hp, speed, color, bounty;
+    switch (type) {
+      case 'very_small':
+        size = 10;   // px
+        hp = 1;
+        speed = 100;
+        color = '#5e0000'; // dark red
+        bounty = 1;  // $
+        break;
+      case 'stealth':
+        size = 24;
+        hp = 2;
+        speed = 70;
+        color = '#000000'; // black
+        bounty = 3;
+        break;
+      case 'normal':
+        size = 30;
+        hp = 3;
+        speed = 50;
+        color = 'grey';
+        bounty = 2;
+        break;
+      case 'special_ops':
+        size = 40;
+        hp = 5;
+        speed = 30;
+        color = 'darkblue';
+        bounty = 4;
+        break;
+      case 'boss':
+        size = 100;
+        hp = 80;
+        speed = 20;
+        color = 'white'; // black
+        bounty = 50;
+        break;
+    }
+
+    // Posizionamento X casuale con margini in base alla dimensione
+    const x = Math.random() * (canvas.clientWidth - size) + size / 2;
+
+    state.enemies.push({
+      x,
+      y: -size,
+      size,
+      speed,
+      hp,
+      color,
+      name: type,   // tipo nemico
+      bounty        // denaro ottenuto all’uccisione
+    });
+  }
+
+  // ---------- Shooting ----------
+  function shootFan(centerX, centerY, count, stepDeg, speed=320) {
+    const center = -Math.PI/2; // -90°
+    const total = (count-1) * (stepDeg * Math.PI/180);
+    const start = center - total/2;
+    for (let i=0;i<count;i++){
+      const angle = start + i*(stepDeg * Math.PI/180);
+      state.bullets.push({
+        x: centerX,
+        y: centerY,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        r: 4,
+      });
+    }
+  }
+
+  function maybeShoot() {
+    const rate = state.save["bullet fire rate"]; // shots/sec
+    const interval = 1 / Math.max(0.05, rate);
+    if (state.t - state.lastShotAt >= interval) {
+      state.lastShotAt = state.t;
+      const num = Math.max(1, Math.floor(state.save["bullet number"]));
+      const spreadDeg = state.save["bullet spread"];
+      const spreadRad = spreadDeg * Math.PI / 180;
+      const startAngle = -Math.PI/2 - spreadRad/2;
+      const step = (num === 1) ? 0 : spreadRad / (num-1);
+      for (let i=0;i<num;i++){
+        const angle = startAngle + i*step;
+        state.bullets.push({
+          x: state.player.x * canvas.clientWidth,
+          y: state.player.y * canvas.clientHeight - state.player.size - 4,
+          vx: Math.cos(angle) * 200, // orizzontale
+          vy: Math.sin(angle) * 300, // verticale
+          r: 4,
+        });
+      }
+    }
+  }
+
+  // ---------- Bomb logic ----------
+  function bombReady() {
+    return state.t >= state.bombReadyAt;
+  }
+
+  function triggerBomb() {
+    if (!bombReady()) return;
+
+    const type = state.save["bomb type"] || "screen";
+    const px = state.player.x * canvas.clientWidth;
+    const py = state.player.y * canvas.clientHeight - state.player.size - 6;
+
+    if (type === "screen") {
+      // 90 bullet twice, spread step 1°
+      shootFan(px, py, 90, 1, 360);
+      shootFan(px, py, 90, 1, 360);
+    } else if (type === "smart") {
+      // spawn 100 enemies
+      for (let i=0;i<100;i++) spawnEnemy();
+    }
+    // set cooldown
+    state.bombReadyAt = state.t + state.bombCooldownSec;
+  }
+
+  document.getElementById('btnBomb')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (!bombReady()) return;
+    triggerBomb();
+  });
+
+  // ---------- Collisions ----------
+  function bulletHitsEnemy(b, e) {
+    const rx = e.x - e.size/2, ry = e.y - e.size/2, rw = e.size, rh = e.size;
+    const cx = Math.max(rx, Math.min(b.x, rx+rw));
+    const cy = Math.max(ry, Math.min(b.y, ry+rh));
+    const dx = b.x - cx, dy = b.y - cy;
+    return (dx*dx + dy*dy) <= (b.r*b.r);
+  }
+
+  function update() {
+    const now = performance.now();
+    const dt = Math.min(0.033, (now - state.lastFrame)/1000);
+    state.lastFrame = now;
+    state.t += dt;
+    state.playtimeAccumulator += dt;
+
+    // player move
+    const move = (state.player.moveRight ? 1 : 0) - (state.player.moveLeft ? 1 : 0);
+    if (move) {
+      state.player.x += move * state.player.speed * dt;
+      state.player.x = Math.max(0.05, Math.min(0.95, state.player.x));
+    }
+
+    // spawn enemies
+    state.spawnTimer += dt;
+    if (state.spawnTimer >= state.spawnEvery) {
+      state.spawnTimer = 0;
+      spawnEnemy();
+    }
+
+    // bullets
+    for (let i=state.bullets.length-1;i>=0;i--){
+      const b = state.bullets[i];
+      b.x += b.vx * dt;
+      b.y += b.vy * dt;
+      if (b.y < -10 || b.x < -10 || b.x > canvas.clientWidth+10) state.bullets.splice(i,1);
+    }
+
+    // enemies
+    for (let i=state.enemies.length-1;i>=0;i--){
+      const e = state.enemies[i];
+      e.y += e.speed * dt;
+      if (e.y - e.size/2 > canvas.clientHeight + 40) state.enemies.splice(i,1);
+    }
+
+    // --- helpers (safe color handling) ---
+    const __colorCtx = document.createElement('canvas').getContext('2d');
+    function colorToRGBArray(str) {
+      try {
+        __colorCtx.fillStyle = str;
+        const s = __colorCtx.fillStyle;
+        const m = s.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+        if (m) return [parseInt(m[1],10), parseInt(m[2],10), parseInt(m[3],10)];
+      } catch {}
+      return [128, 128, 128];
+    }
+    const lerp = (a,b,t) => Math.round(a + (b - a) * t);
+
+    // --- collisions bullet-enemy (safe version) ---
+    for (let i = state.enemies.length - 1; i >= 0; i--) {
+      const e = state.enemies[i];
+      let hitIndex = -1;
+      for (let j = state.bullets.length - 1; j >= 0; j--) {
+        if (bulletHitsEnemy(state.bullets[j], e)) { 
+          hitIndex = j; 
+          break; 
+        }
+      }
+      if (hitIndex >= 0) {
+        state.bullets.splice(hitIndex, 1);
+        e.hp -= 1;
+
+        if (e.hp <= 0) {
+          commitSave({
+            money: (state.save.money || 0) + (e.bounty || 1),
+            "level data": { 
+              ...state.save["level data"], 
+              score: (state.save["level data"].score || 0) + 1 
+            }
+          });
+          state.enemies.splice(i, 1);
+        } else {
+          // Progressively tint current color towards red, safely
+          if (!e.hitCount) e.hitCount = 0;
+          e.hitCount++;
+
+          const [r,g,b] = colorToRGBArray(e.color);
+          const t = Math.min(0.85, 0.25 * e.hitCount);
+          const nr = lerp(r, 255, t);
+          const ng = lerp(g, 0,   t);
+          const nb = lerp(b, 0,   t);
+          e.color = `rgb(${nr}, ${ng}, ${nb})`;
+        }
+      }
+    }
+
+    // stars
+    for (const s of state.stars) {
+      s.y += s.v * dt;
+      if (s.y > canvas.clientHeight) { s.y = -2; s.x = Math.random()*canvas.clientWidth; }
+    }
+
+    // shooting
+    maybeShoot();
+
+    // time persistence
+    if (state.playtimeAccumulator >= 1) {
+      state.playtimeAccumulator -= 1;
+      commitSave({ timeSec: (state.save.timeSec||0) + 1 });
+    }
+  }
+
+  function draw() {
+    ctx.clearRect(0,0,canvas.clientWidth, canvas.clientHeight);
+
+    // bg + stars
+    ctx.fillStyle = '#0b0e13';
+    ctx.fillRect(0,0,canvas.clientWidth, canvas.clientHeight);
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    for (const s of state.stars) ctx.fillRect(s.x, s.y, s.s, s.s);
+
+    // player
+    const px = state.player.x * canvas.clientWidth;
+    const py = state.player.y * canvas.clientHeight;
+    const a = state.player.size;
+    ctx.fillStyle = '#35c3ff';
+    ctx.beginPath();
+    ctx.moveTo(px, py - a);
+    ctx.lineTo(px - a, py + a);
+    ctx.lineTo(px + a, py + a);
+    ctx.closePath();
+    ctx.fill();
+
+    // bullets
+    ctx.fillStyle = '#f5f7ff';
+    for (const b of state.bullets) {
+      ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill();
+    }
+
+    // enemies (better visible)
+    const enemiesCfg = (()=>{try{return JSON.parse(localStorage.getItem("enemies unlocked")||'{}');}catch{return {};}})();
+    const betterVisible = !!enemiesCfg.betterVisible;
+
+    for (const e of state.enemies) {
+      if (betterVisible) {
+        ctx.save();
+        ctx.shadowColor = 'rgba(255,255,255,0.6)';
+        ctx.shadowBlur = 8;
+        ctx.fillStyle = e.color;
+        ctx.fillRect(e.x - e.size/2, e.y - e.size/2, e.size, e.size);
+        ctx.restore();
+        ctx.save();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+        ctx.strokeRect(e.x - e.size/2, e.y - e.size/2, e.size, e.size);
+        ctx.restore();
+      } else {
+        ctx.fillStyle = e.color;
+        ctx.fillRect(e.x - e.size/2, e.y - e.size/2, e.size, e.size);
+      }
+      // HP pips
+      ctx.fillStyle = 'rgba(255,255,255,0.25)';
+      for (let i=0;i<e.hp;i++){
+        ctx.fillRect(e.x - 6 + i*6 - 3, e.y - e.size/2 - 6, 4, 4);
+      }
+    }
+
+    // HUD
+    const m = state.save.money || 0;
+    theTime(state.save.timeSec || 0);
+    const ts = state.save.timeSec || 0;
+    const mm = Math.floor(ts/60), ss = ts % 60;
+    document.getElementById('hud').textContent = `§${m} • ${mm}:${String(ss).padStart(2,'0')}`;
+
+    // Bomb button UI (cooldown)
+    const btnBomb = document.getElementById('btnBomb');
+    if (btnBomb) {
+      const unlocked = !!state.save["bomb unlocked"];
+      const type = state.save["bomb type"] || "screen";
+      const cd = Math.ceil(Math.max(0, state.bombReadyAt - state.t));
+      if (unlocked) {
+        btnBomb.style.display = 'flex';
+        btnBomb.textContent = bombReady() ? `💣 BOMB (${type})` : `💣 ${type} (${cd}s)`;
+        btnBomb.style.opacity = bombReady() ? '1' : '0.6';
+      } else {
+        btnBomb.style.display = 'none';
+      }
+    }
+  }
+
+  function theTime(){} // placeholder simple
+
+  function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  // Hidden central buttons visibility (in caso di sblocco futuro)
+  function checkUnlocksAndToggleButtons() {
+    const bombUnlocked = !!state.save["bomb unlocked"];
+    const bombBtn = document.getElementById('btnBomb');
+    if (bombBtn) bombBtn.style.display = bombUnlocked ? 'flex' : 'none';
+  }
+
+  checkUnlocksAndToggleButtons();
+  loop();
+
+  // reset frame timer after tab switch
+  document.addEventListener('visibilitychange', () => {
+    state.lastFrame = performance.now();
+  });
+
+  // Debug helpers
+  window.vscroll = {
+    addMoney(n=1){ commitSave({ money: (state.save.money||0)+n }); },
+    setFireRate(r){ commitSave({ "bullet fire rate": r }); },
+    setBullets(n, spread=0){ commitSave({ "bullet number": n, "bullet spread": spread }); },
+    unlockBomb(type="screen"){ commitSave({ "bomb unlocked": true, "bomb type": type }); checkUnlocksAndToggleButtons(); },
+    unlockBoost(type="speed"){ commitSave({ "boost unlocked": true, "boost type": type }); checkUnlocksAndToggleButtons(); },
+    setBombType(t="screen"){ commitSave({ "bomb type": t }); },
+    save: ()=>state.save
+  };
+})();
