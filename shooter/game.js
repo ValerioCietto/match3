@@ -388,7 +388,7 @@
     }
   }
 
-  function drawPlayer(ctx, px, py, a){
+  function drawPlayerFancy(ctx, px, py, a){
     ctx.save();
   
     // --- Hull (triangle) ---
@@ -470,6 +470,31 @@
     ctx.restore();
   }
 
+  function drawPlayerBasic(ctx, px, py, a){
+    ctx.fillStyle = '#35c3ff';
+    ctx.beginPath();
+    ctx.moveTo(px, py - a);
+    ctx.lineTo(px - a, py + a);
+    ctx.lineTo(px + a, py + a);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function isFancyShipEnabled(){
+    // priorità allo state.save, fallback al localStorage diretto
+    if (state?.save && typeof state.save["ship fancy"] !== 'undefined') {
+      return !!state.save["ship fancy"];
+    }
+    try {
+      const v = localStorage.getItem("ship fancy");
+      if (v === null) return false;
+      // supporta 'true'/'false' stringa o JSON boolean
+      if (v === 'true') return true;
+      if (v === 'false') return false;
+      return !!JSON.parse(v);
+    } catch { return false; }
+  }
+
   function draw() {
     ctx.clearRect(0,0,canvas.clientWidth, canvas.clientHeight);
 
@@ -483,14 +508,11 @@
     const px = state.player.x * canvas.clientWidth;
     const py = state.player.y * canvas.clientHeight;
     const a = state.player.size;
-    drawPlayer(ctx, px, py, a);
-    // ctx.fillStyle = '#35c3ff';
-    // ctx.beginPath();
-    // ctx.moveTo(px, py - a);
-    // ctx.lineTo(px - a, py + a);
-    // ctx.lineTo(px + a, py + a);
-    // ctx.closePath();
-    // ctx.fill();
+    if (isFancyShipEnabled()) {
+      drawPlayerFancy(ctx, px, py, a);
+    } else {
+      drawPlayerBasic(ctx, px, py, a);
+    }
 
     // bullets
     ctx.fillStyle = '#f5f7ff';
