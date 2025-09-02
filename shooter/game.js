@@ -388,6 +388,88 @@
     }
   }
 
+  function drawPlayer(ctx, px, py, a){
+    ctx.save();
+  
+    // --- Hull (triangle) ---
+    const g = ctx.createLinearGradient(px, py - a, px, py + a);
+    g.addColorStop(0.00, '#8adfff');
+    g.addColorStop(0.55, '#35c3ff');
+    g.addColorStop(1.00, '#1e5f79');
+  
+    ctx.beginPath();
+    ctx.moveTo(px, py - a);
+    ctx.lineTo(px - a, py + a);
+    ctx.lineTo(px + a, py + a);
+    ctx.closePath();
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.stroke();
+  
+    // --- Small wings (trapezoids), slightly above mid body ---
+    const wingH = a * 0.45;
+    const wingY = py + a * 0.1;
+  
+    // left wing
+    ctx.beginPath();
+    ctx.moveTo(px - a * 0.38, wingY - wingH * 0.7);
+    ctx.lineTo(px - a - a * 0.15, wingY);
+    ctx.lineTo(px - a * 0.28, wingY + wingH * 0.4);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.stroke();
+  
+    // right wing (mirror)
+    ctx.beginPath();
+    ctx.moveTo(px + a * 0.38, wingY - wingH * 0.7);
+    ctx.lineTo(px + a + a * 0.15, wingY);
+    ctx.lineTo(px + a * 0.28, wingY + wingH * 0.4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  
+    // --- Cockpit (elliptical canopy) near the tip ---
+    const cY = py - a * 0.45;
+    const cRx = Math.max(6, a * 0.55 * 0.6);
+    const cRy = Math.max(4, a * 0.40 * 0.6);
+    const cg = ctx.createRadialGradient(px, cY - 2, 1, px, cY, Math.max(cRx, cRy) * 1.2);
+    cg.addColorStop(0.00, 'rgba(255,255,255,0.95)');
+    cg.addColorStop(0.18, 'rgba(210,240,255,0.85)');
+    cg.addColorStop(1.00, 'rgba(70,130,170,0.65)');
+  
+    ctx.beginPath();
+    ctx.ellipse(px, cY, cRx, cRy, 0, 0, Math.PI * 2);
+    ctx.fillStyle = cg;
+    ctx.fill();
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.stroke();
+  
+    // --- Subtle center ridge ---
+    ctx.beginPath();
+    ctx.moveTo(px, py - a);
+    ctx.lineTo(px, py + a * 0.92);
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.stroke();
+  
+    // --- Engine glow at tail ---
+    const egY = py + a + 2;
+    const eg = ctx.createRadialGradient(px, egY, 0, px, egY, a * 0.9);
+    eg.addColorStop(0, 'rgba(255,200,90,0.9)');
+    eg.addColorStop(1, 'rgba(255,120,0,0)');
+    ctx.fillStyle = eg;
+    ctx.beginPath();
+    ctx.ellipse(px, egY, a * 0.35, a * 0.6, 0, 0, Math.PI * 2);
+    ctx.fill();
+  
+    ctx.restore();
+  }
+
   function draw() {
     ctx.clearRect(0,0,canvas.clientWidth, canvas.clientHeight);
 
@@ -401,13 +483,14 @@
     const px = state.player.x * canvas.clientWidth;
     const py = state.player.y * canvas.clientHeight;
     const a = state.player.size;
-    ctx.fillStyle = '#35c3ff';
-    ctx.beginPath();
-    ctx.moveTo(px, py - a);
-    ctx.lineTo(px - a, py + a);
-    ctx.lineTo(px + a, py + a);
-    ctx.closePath();
-    ctx.fill();
+    drawPlayer(ctx, px, py, a);
+    // ctx.fillStyle = '#35c3ff';
+    // ctx.beginPath();
+    // ctx.moveTo(px, py - a);
+    // ctx.lineTo(px - a, py + a);
+    // ctx.lineTo(px + a, py + a);
+    // ctx.closePath();
+    // ctx.fill();
 
     // bullets
     ctx.fillStyle = '#f5f7ff';
