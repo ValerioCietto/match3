@@ -521,8 +521,17 @@
     }
 
     // enemies (better visible)
-    const enemiesCfg = (()=>{try{return JSON.parse(localStorage.getItem("enemies unlocked")||'{}');}catch{return {};}})();
-    const betterVisible = !!enemiesCfg.betterVisible;
+    const betterVisible = (() => {
+      try {
+        const v = localStorage.getItem("better visible");
+        if (v === null) return false;
+        if (v === "true") return true;
+        if (v === "false") return false;
+        return !!JSON.parse(v);
+      } catch {
+        return false;
+      }
+    })();
 
     for (const e of state.enemies) {
       if (betterVisible) {
