@@ -29,10 +29,6 @@
     .wrap{max-width: 900px; margin: 0 auto; padding: 16px;}
     h1{font-size: clamp(1.25rem, 2.5vw, 1.8rem); margin: 0 0 8px}
     .subtitle{color: var(--muted); font-size: .95rem; margin: 2px 0 10px}
-    #fxCanvas{
-      width:100%; height:120px; display:block; border-radius: 12px; background: conic-gradient(from 180deg at 50% 120%, #eef2ff, #f8fafc);
-      box-shadow: var(--shadow);
-    }
 
     main{padding: 20px 16px 40px;}
     .card{
@@ -215,7 +211,6 @@
     <div class="wrap">
       <h1>Quiz — Fondamenti del Pensiero Critico</h1>
       <div class="subtitle">Domande a scelta multipla (4 opzioni) • 10 domande • Salva punteggio su dispositivo</div>
-      <canvas id="fxCanvas" aria-hidden="true"></canvas>
     </div>
   </header>
 
@@ -242,65 +237,6 @@
       LAST_AT: "ctQuiz:lastAt"
     };
 
-    // ---------- Canvas FX (mini-confetti) ----------
-    const fx = (() => {
-      const canvas = document.getElementById('fxCanvas');
-      const ctx = canvas.getContext('2d');
-      let W=0,H=0, particles=[], running=false, startT=0, duration=1600;
-
-      function resize(){
-        const dpr = Math.max(1, window.devicePixelRatio || 1);
-        W = canvas.clientWidth; H = canvas.clientHeight;
-        canvas.width = W * dpr; canvas.height = H * dpr;
-        ctx.setTransform(dpr,0,0,dpr,0,0);
-      }
-      window.addEventListener('resize', resize); resize();
-
-      function burst(type="ok"){ // type: "ok" | "meh"
-        particles.length = 0;
-        const n = 80;
-        for(let i=0;i<n;i++){
-          particles.push({
-            x: W/2, y: H-10,
-            vx: (Math.random()*2-1)* (type==="ok"? 3:2),
-            vy: - (Math.random()*3 + (type==="ok"? 4:2)),
-            r: Math.random()*3+2,
-            a: 1
-          });
-        }
-        startT = performance.now(); running=true; loop(type);
-      }
-
-      function loop(type){
-        if(!running) return;
-        const now = performance.now();
-        const t = (now - startT) / duration;
-        if(t>=1){ running=false; clear(); return; }
-
-        // background subtle gradient
-        ctx.clearRect(0,0,W,H);
-        const grad = ctx.createLinearGradient(0,0,W,0);
-        grad.addColorStop(0, type==="ok" ? "#eefaf3" : "#fff7ed");
-        grad.addColorStop(1, "#ffffff");
-        ctx.fillStyle = grad;
-        ctx.fillRect(0,0,W,H);
-
-        // particles
-        for(const p of particles){
-          p.x += p.vx; p.y += p.vy; p.vy += 0.06; p.a *= 0.985;
-          ctx.globalAlpha = Math.max(0, p.a);
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
-          ctx.fillStyle = type==="ok" ? "#16a34a" : "#f59e0b";
-          ctx.fill();
-          ctx.globalAlpha = 1;
-        }
-        requestAnimationFrame(()=>loop(type));
-      }
-      function clear(){ ctx.clearRect(0,0,W,H); }
-
-      return { burst };
-    })();
 
     // ---------- Load JSON ----------
     const raw = document.getElementById('quiz-data').textContent.trim();
