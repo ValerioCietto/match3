@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Quiz — Fondamenti del Pensiero Critico</title>
+  <style>
+    :root{
+      --bg:#ffffff;
+      --fg:#111;
+      --muted:#666;
+      --accent:#2563eb;
+      --ok:#16a34a;
+      --warn:#f59e0b;
+      --card:#f7f7f8;
+      --border:#e6e6e6;
+      --shadow: 0 6px 20px rgba(0,0,0,.08);
+      --radius:16px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji";
+      background: var(--bg); color: var(--fg);
+    }
+    header{
+      position: sticky; top:0; z-index: 10; background: var(--bg);
+      border-bottom: 1px solid var(--border);
+    }
+    .wrap{max-width: 900px; margin: 0 auto; padding: 16px;}
+    h1{font-size: clamp(1.25rem, 2.5vw, 1.8rem); margin: 0 0 8px}
+    .subtitle{color: var(--muted); font-size: .95rem; margin: 2px 0 10px}
+    #fxCanvas{
+      width:100%; height:120px; display:block; border-radius: 12px; background: conic-gradient(from 180deg at 50% 120%, #eef2ff, #f8fafc);
+      box-shadow: var(--shadow);
+    }
+
+    main{padding: 20px 16px 40px;}
+    .card{
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
+    }
+    .q{
+      margin-bottom: 18px;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+    }
+    .q h3{
+      margin:0 0 10px; font-size: 1rem; line-height: 1.3;
+    }
+    .opts{display:grid; gap:10px}
+    .opt{
+      display:flex; align-items:center; gap:10px;
+      padding: 10px 12px; border: 1px solid var(--border); background:#fafafa; border-radius: 10px;
+      transition: border-color .2s, transform .02s;
+    }
+    .opt:active{ transform: scale(.995); }
+    .opt input{ width: 20px; height: 20px; accent-color: var(--accent) }
+    .opt label{ flex:1; cursor:pointer }
+    .correct{ border-color: #86efac !important; background: #ecfdf5 !important; }
+    .wrong-selected{ border-color: #fde68a !important; background: #fffbeb !important; }
+
+    .footer-actions{
+      display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:space-between; margin-top: 16px;
+    }
+    button{
+      appearance:none; border: 1px solid var(--accent); color: #fff; background: var(--accent);
+      padding: 12px 16px; border-radius: 12px; font-weight: 600; cursor:pointer;
+      box-shadow: 0 4px 14px rgba(37,99,235,.2);
+      min-width: 180px;
+    }
+    button:disabled{ opacity: .5; cursor: not-allowed; }
+    .ghost{
+      background: transparent; color: var(--accent); border-color: var(--accent);
+      box-shadow: none;
+    }
+    .score{
+      margin-top: 8px; font-size: 1.05rem;
+    }
+    .badge{
+      display:inline-block; padding:6px 10px; border-radius: 999px; font-weight:700; border:1px solid var(--border); background:#fff; color: var(--muted);
+    }
+    .result{
+      margin-top: 10px; padding: 12px; border-radius: 12px; border:1px solid var(--border); background:#fff;
+    }
+    .result strong{ display:block; font-size: 1.05rem; margin-bottom: 6px }
+    .last{
+      font-size: .9rem; color: var(--muted);
+    }
+
+    /* Mobile spacing */
+    @media (max-width: 640px){
+      .q{ padding:12px }
+      .opt{ padding:10px }
+      button{ width:100% }
+      .footer-actions{ flex-direction:column; align-items:stretch }
+    }
+  </style>
+
+  <!-- JSON Inline: 10 domande, 4 opzioni, indice corretto -->
+  <script type="application/json" id="quiz-data">
+  {
+    "title": "Fondamenti del Pensiero Critico — Quiz",
+    "questions": [
+      {
+        "q": "Cos'è, in sintesi, il pensiero critico?",
+        "options": [
+          "Un insieme di tecniche per convincere gli altri",
+          "La capacità di analizzare informazioni e argomentazioni in modo rigoroso e basato su evidenze",
+          "Il rifiuto sistematico delle opinioni altrui",
+          "Un’intuizione naturale che non richiede metodo"
+        ],
+        "correctIndex": 1
+      },
+      {
+        "q": "Quale frase rappresenta un fatto (non opinione né ipotesi)?",
+        "options": [
+          "I prodotti biologici sono migliori di quelli convenzionali",
+          "Secondo l’ISTAT, la popolazione italiana al 1° gennaio 2024 è circa 58,9 milioni",
+          "Se investo in formazione, probabilmente aumenterà lo stipendio",
+          "Questo film è noioso"
+        ],
+        "correctIndex": 1
+      },
+      {
+        "q": "Quale è una fallacia 'ad hominem'?",
+        "options": [
+          "Rifiuto un argomento perché chi lo esprime ha un interesse personale",
+          "Concludo che, poiché due eventi sono correlati, uno causa l'altro",
+          "Propongo una falsa alternativa tra due sole opzioni",
+          "Sostengo che è vero perché 'tutti lo dicono'"
+        ],
+        "correctIndex": 0
+      },
+      {
+        "q": "Quale pratica aiuta a valutare la credibilità di una fonte?",
+        "options": [
+          "Contare il numero di follower della fonte",
+          "Verificare competenza, trasparenza, metodo e tracce di verificabilità",
+          "Preferire sempre fonti che confermano la nostra idea",
+          "Basarsi sulle recensioni a 5 stelle"
+        ],
+        "correctIndex": 1
+      },
+      {
+        "q": "Qual è la differenza chiave tra deduzione e induzione?",
+        "options": [
+          "La deduzione parte da casi particolari e arriva a leggi generali",
+          "L’induzione garantisce conclusioni certe",
+          "La deduzione trae conclusioni necessarie da premesse; l’induzione generalizza da osservazioni",
+          "Non c'è alcuna differenza"
+        ],
+        "correctIndex": 2
+      },
+      {
+        "q": "Quale esempio mostra 'bias di conferma'?",
+        "options": [
+          "Cerco attivamente prove che contraddicono la mia ipotesi",
+          "Ignoro studi contrari e salvo solo quelli che supportano la mia tesi",
+          "Rivaluto la mia ipotesi dopo nuovi dati",
+          "Confronto pro e contro in modo simmetrico"
+        ],
+        "correctIndex": 1
+      },
+      {
+        "q": "In azienda, come applicare il ragionamento basato su evidenze?",
+        "options": [
+          "Decidere in base all’anzianità di chi propone",
+          "Usare aneddoti del passato della squadra",
+          "Definire metriche, raccogliere dati e valutare alternative con criteri trasparenti",
+          "Seguire l’idea più popolare"
+        ],
+        "correctIndex": 2
+      },
+      {
+        "q": "Come gestire incertezza e ambiguità nei processi decisionali?",
+        "options": [
+          "Rimandare sempre la decisione finché non c’è certezza totale",
+          "Usare scenari, limiti di confidenza e decisioni reversibili quando possibile",
+          "Scegliere a caso per evitare bias",
+          "Ignorare i margini d’errore"
+        ],
+        "correctIndex": 1
+      },
+      {
+        "q": "Quale esempio riflette un bias sistemico nei gruppi?",
+        "options": [
+          "Un team che privilegia idee del leader senza valutarle criticamente (groupthink)",
+          "Valutare candidati con rubriche standardizzate",
+          "Raccogliere feedback anonimi a fine sprint",
+          "Rotazione dei ruoli per mitigare gerarchie informali"
+        ],
+        "correctIndex": 0
+      },
+      {
+        "q": "Quale strategia allena la consapevolezza dei bias personali?",
+        "options": [
+          "Tenere un diario dei bias con casi reali e contromisure",
+          "Evitare feedback per non farsi influenzare",
+          "Prendere decisioni solo in solitaria",
+          "Ignorare i risultati per non scoraggiarsi"
+        ],
+        "correctIndex": 0
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <h1>Quiz — Fondamenti del Pensiero Critico</h1>
+      <div class="subtitle">Domande a scelta multipla (4 opzioni) • 10 domande • Salva punteggio su dispositivo</div>
+      <canvas id="fxCanvas" aria-hidden="true"></canvas>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="card">
+      <div class="last" id="lastScoreLine" hidden></div>
+      <form id="quizForm" novalidate></form>
+
+      <div class="footer-actions">
+        <button id="checkBtn" disabled>Verifica risposte</button>
+        <button id="resetBtn" class="ghost" type="button">Ripeti il quiz</button>
+        <span id="answeredBadge" class="badge" aria-live="polite">0/10 risposte</span>
+      </div>
+
+      <div class="score" id="scoreBox" hidden></div>
+      <div class="result" id="resultBox" hidden></div>
+    </div>
+  </main>
+
+  <script>
+    // ---------- Config LocalStorage ----------
+    const LS_KEYS = {
+      LAST_SCORE: "ctQuiz:lastScore",
+      LAST_AT: "ctQuiz:lastAt"
+    };
+
+    // ---------- Canvas FX (mini-confetti) ----------
+    const fx = (() => {
+      const canvas = document.getElementById('fxCanvas');
+      const ctx = canvas.getContext('2d');
+      let W=0,H=0, particles=[], running=false, startT=0, duration=1600;
+
+      function resize(){
+        const dpr = Math.max(1, window.devicePixelRatio || 1);
+        W = canvas.clientWidth; H = canvas.clientHeight;
+        canvas.width = W * dpr; canvas.height = H * dpr;
+        ctx.setTransform(dpr,0,0,dpr,0,0);
+      }
+      window.addEventListener('resize', resize); resize();
+
+      function burst(type="ok"){ // type: "ok" | "meh"
+        particles.length = 0;
+        const n = 80;
+        for(let i=0;i<n;i++){
+          particles.push({
+            x: W/2, y: H-10,
+            vx: (Math.random()*2-1)* (type==="ok"? 3:2),
+            vy: - (Math.random()*3 + (type==="ok"? 4:2)),
+            r: Math.random()*3+2,
+            a: 1
+          });
+        }
+        startT = performance.now(); running=true; loop(type);
+      }
+
+      function loop(type){
+        if(!running) return;
+        const now = performance.now();
+        const t = (now - startT) / duration;
+        if(t>=1){ running=false; clear(); return; }
+
+        // background subtle gradient
+        ctx.clearRect(0,0,W,H);
+        const grad = ctx.createLinearGradient(0,0,W,0);
+        grad.addColorStop(0, type==="ok" ? "#eefaf3" : "#fff7ed");
+        grad.addColorStop(1, "#ffffff");
+        ctx.fillStyle = grad;
+        ctx.fillRect(0,0,W,H);
+
+        // particles
+        for(const p of particles){
+          p.x += p.vx; p.y += p.vy; p.vy += 0.06; p.a *= 0.985;
+          ctx.globalAlpha = Math.max(0, p.a);
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+          ctx.fillStyle = type==="ok" ? "#16a34a" : "#f59e0b";
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+        requestAnimationFrame(()=>loop(type));
+      }
+      function clear(){ ctx.clearRect(0,0,W,H); }
+
+      return { burst };
+    })();
+
+    // ---------- Load JSON ----------
+    const raw = document.getElementById('quiz-data').textContent.trim();
+    /** @type {{title:string, questions:{q:string, options:string[], correctIndex:number}[]}} */
+    const QUIZ = JSON.parse(raw);
+
+    // ---------- Render ----------
+    const form = document.getElementById('quizForm');
+    const checkBtn = document.getElementById('checkBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const answeredBadge = document.getElementById('answeredBadge');
+    const scoreBox = document.getElementById('scoreBox');
+    const resultBox = document.getElementById('resultBox');
+    const lastScoreLine = document.getElementById('lastScoreLine');
+
+    // Show last score if present
+    (function showLast(){
+      const s = localStorage.getItem(LS_KEYS.LAST_SCORE);
+      const at = localStorage.getItem(LS_KEYS.LAST_AT);
+      if(s && at){
+        const when = new Date(parseInt(at,10));
+        lastScoreLine.hidden = false;
+        lastScoreLine.textContent = `Ultimo punteggio salvato: ${s}/10 — ${when.toLocaleString()}`;
+      }
+    })();
+
+    function renderQuiz(){
+      form.innerHTML = "";
+      scoreBox.hidden = true; resultBox.hidden = true;
+
+      QUIZ.questions.forEach((item, qi) => {
+        const qEl = document.createElement('section');
+        qEl.className = 'q';
+        qEl.dataset.qindex = qi;
+
+        const h = document.createElement('h3');
+        h.textContent = `${qi+1}. ${item.q}`;
+        qEl.appendChild(h);
+
+        const opts = document.createElement('div');
+        opts.className = 'opts';
+
+        item.options.forEach((text, oi) => {
+          const id = `q${qi}_o${oi}`;
+          const wrap = document.createElement('div');
+          wrap.className = 'opt';
+
+          const input = document.createElement('input');
+          input.type = 'radio';
+          input.name = `q${qi}`;
+          input.id = id;
+          input.value = String(oi);
+          input.addEventListener('change', onChange);
+
+          const label = document.createElement('label');
+          label.setAttribute('for', id);
+          label.textContent = text;
+
+          wrap.appendChild(input);
+          wrap.appendChild(label);
+          opts.appendChild(wrap);
+        });
+
+        qEl.appendChild(opts);
+        form.appendChild(qEl);
+      });
+
+      updateAnsweredBadge();
+      checkBtn.disabled = true;
+    }
+
+    function onChange(){
+      updateAnsweredBadge();
+      checkBtn.disabled = !allAnswered();
+    }
+
+    function allAnswered(){
+      return QUIZ.questions.every((_, qi) => {
+        return !!form.querySelector(`input[name="q${qi}"]:checked`);
+      });
+    }
+
+    function updateAnsweredBadge(){
+      const answered = QUIZ.questions.reduce((acc, _, qi) => {
+        return acc + (form.querySelector(`input[name="q${qi}"]:checked`) ? 1 : 0);
+      }, 0);
+      answeredBadge.textContent = `${answered}/${QUIZ.questions.length} risposte`;
+    }
+
+    // ---------- Grading ----------
+    function grade(){
+      let score = 0;
+
+      QUIZ.questions.forEach((item, qi) => {
+        const chosen = form.querySelector(`input[name="q${qi}"]:checked`);
+        const optWraps = form.querySelectorAll(`section[data-qindex="${qi}"] .opt`);
+
+        optWraps.forEach((wrap, oi) => {
+          wrap.classList.remove('correct','wrong-selected');
+          const isCorrect = oi === item.correctIndex;
+          const isChosen = chosen && Number(chosen.value) === oi;
+
+          if(isCorrect){
+            wrap.classList.add('correct'); // sempre verde per mostrare la corretta
+          }
+          if(isChosen && !isCorrect){
+            wrap.classList.add('wrong-selected'); // giallo solo per la selezionata errata
+          }
+        });
+
+        if(chosen && Number(chosen.value) === item.correctIndex) score++;
+      });
+
+      // Output
+      scoreBox.hidden = false;
+      scoreBox.textContent = `Punteggio: ${score}/${QUIZ.questions.length}`;
+
+      const msg = resultMessage(score);
+      resultBox.hidden = false;
+      resultBox.innerHTML = `<strong>${msg.title}</strong>${msg.text}`;
+
+      // Persist
+      localStorage.setItem(LS_KEYS.LAST_SCORE, String(score));
+      localStorage.setItem(LS_KEYS.LAST_AT, String(Date.now()));
+
+      // FX
+      fx.burst(score >= 6 ? "ok" : "meh");
+
+      // Lock inputs after grading
+      form.querySelectorAll('input[type="radio"]').forEach(i => i.disabled = true);
+      checkBtn.disabled = true;
+    }
+
+    function resultMessage(score){
+      if(score === 10){
+        return {
+          title: "10/10 — Sherlock Holmes",
+          text: "Non ti sfugge nulla e se l’impossibile è l’unica cosa possibile, non la scarti come possibilità."
+        };
+      }
+      if(score >= 6){
+        return {
+          title: "6–9/10 — Pensatore analitico",
+          text: "Hai le basi del pensiero analitico e lo sai usare con profitto, continua così e sarai imbattibile!"
+        };
+      }
+      return {
+        title: "0–6/10 — Va dove ti porta il cuore",
+        text: "Le sensazioni di pancia guidano ancora le tue decisioni. Se devi decidere dove mangiare fuori va bene, ma se devi essere il capitano di una squadra, …"
+      };
+    }
+
+    // ---------- Reset ----------
+    function resetQuiz(){
+      renderQuiz();
+      // Scroll all’inizio per mobile
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // ---------- Events ----------
+    checkBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if(!allAnswered()) return;
+      grade();
+    });
+    resetBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      resetQuiz();
+    });
+
+    // ---------- Init ----------
+    renderQuiz();
+  </script>
+</body>
+</html>
