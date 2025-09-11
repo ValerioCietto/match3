@@ -185,8 +185,6 @@
       type = 'boss';
     }
 
-    console.log('spawning roll:',roll, type);
-
     // Proprietà per ciascun tipo
     let size, hp, speed, color, bounty;
     switch (type) {
