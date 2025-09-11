@@ -110,6 +110,27 @@
   btnRight.addEventListener('mouseup',    press(v=>state.player.moveRight=v,false));
   btnRight.addEventListener('mouseleave', press(v=>state.player.moveRight=v,false));
 
+  // ---------- Keyboard controls ----------
+  document.addEventListener('keydown', (e) => {
+    if (e.code === 'ArrowLeft') {
+      state.player.moveLeft = true;
+      e.preventDefault();
+    } else if (e.code === 'ArrowRight') {
+      state.player.moveRight = true;
+      e.preventDefault();
+    }
+  });
+  
+  document.addEventListener('keyup', (e) => {
+    if (e.code === 'ArrowLeft') {
+      state.player.moveLeft = false;
+      e.preventDefault();
+    } else if (e.code === 'ArrowRight') {
+      state.player.moveRight = false;
+      e.preventDefault();
+    }
+  });
+
   // ---------- Stars ----------
   function initStars() {
     state.stars = [];
