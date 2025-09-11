@@ -16,6 +16,7 @@
     "bullet number": 1,
     "bullet spread": 0,    // degrees
     "bullet fire rate": 0.5, // shots/sec
+    "spawn quantity": 1, // how many enemies to spawn
   };
 
   function loadSave() {
