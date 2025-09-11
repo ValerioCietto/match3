@@ -356,7 +356,7 @@
       state.spawnTimer = 0;
       if(state.spawnQuantity && state.spawnQuantity > 1){
         const quantity = state.spawnQuantity 
-        for (let i=quantity; i>=0; i--;) {
+        for (let i=quantity; i>=0; i--) {
           spawnEnemy();
         }
       }
