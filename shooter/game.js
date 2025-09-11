@@ -353,7 +353,16 @@
     state.spawnTimer += dt;
     if (state.spawnTimer >= state.spawnEvery) {
       state.spawnTimer = 0;
-      spawnEnemy();
+      if(state.spawnQuantity && state.spawnQuantity > 1){
+        const quantity = state.spawnQuantity 
+        for (let i=quantity; i>=0; i--;) {
+          spawnEnemy();
+        }
+      }
+      else{
+        spawnEnemy();
+      }
+
     }
 
     // bullets
