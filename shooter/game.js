@@ -146,6 +146,22 @@
   
   let audioSettings = loadAudioSettings();
 
+  function updateMusicPlayback() {
+    const musicBattle = localStorage.getItem("music battle") === "true";
+    const mute = localStorage.getItem("music mute") === "true";
+  
+    if (musicBattle && !mute) {
+      if (music.paused) {
+        music.play().catch(e => {
+          console.warn("Music play failed (user interaction may be required):", e);
+        });
+      }
+    } else {
+      if (!music.paused) music.pause();
+    }
+  }
+
+
   // ---------- Stars ----------
   function initStars() {
     state.stars = [];
@@ -619,6 +635,7 @@
   function loop() {
     update();
     draw();
+    updateMusicPlayback();
     requestAnimationFrame(loop);
   }
 
