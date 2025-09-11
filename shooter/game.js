@@ -131,6 +131,21 @@
     }
   });
 
+  // ---------- Audio ----------
+  const music = new Audio('/match3/shooter/battle_music.mp3');
+  music.loop = true;
+  
+  // Setup iniziale volumi / mute da localStorage
+  function loadAudioSettings() {
+    const vol = parseFloat(localStorage.getItem("music volume")) || 1.0;
+    const mute = localStorage.getItem("music mute") === "true";
+    music.volume = vol;
+    if (mute) music.pause();
+    return { volume: vol, mute };
+  }
+  
+  let audioSettings = loadAudioSettings();
+
   // ---------- Stars ----------
   function initStars() {
     state.stars = [];
