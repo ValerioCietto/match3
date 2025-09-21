@@ -1,0 +1,47 @@
+/* Basic styling - can be customized */
+body {
+  font-family: sans-serif;
+  background-color: #f0f0f0;
+}
+
+#game-container {
+  position: relative; /* Important for positioning the canvas */
+  width: 600px;
+  height: 400px;
+}
+
+.game-window {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background-color: #333;
+  border: 1px solid black;
+  padding: 20px;
+  z-index: 10; /* Ensure it's above other elements */
+}
+
+canvas {
+  width: 600px;
+  height: 400px;
+  background-color: #eee; /* Light background for visibility */
+}
+
+button {
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+
+.score {
+  margin-top: 10px;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.score-text {
+  font-size: 14px;
+  font-weight: bold;
+}
