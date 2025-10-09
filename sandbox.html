@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Sand Falling Sandbox (480x800, 1px)</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0b0b0b;
+    --fg: #eaeaea;
+    --accent: #ffd34d;
+    --btn: #1c1c1c;
+    --btn-hover: #2a2a2a;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Noto Sans", "Helvetica Neue", Arial, "Apple Color Emoji","Segoe UI Emoji";
+    height: 100%;
+    overscroll-behavior: none;
+  }
+  .wrap {
+    min-height: 100%;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: 8px;
+    padding: env(safe-area-inset-top) 12px env(safe-area-inset-bottom);
+  }
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-top: 8px;
+  }
+  h1 {
+    font-size: 1rem;
+    margin: 0;
+    font-weight: 600;
+    letter-spacing: .2px;
+    color: #f3f3f3;
+  }
+  .controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  button {
+    -webkit-tap-highlight-color: transparent;
+    appearance: none;
+    border: 1px solid #333;
+    background: var(--btn);
+    color: var(--fg);
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform .06s ease, background .15s ease;
+    user-select: none;
+  }
+  button:active { transform: translateY(1px) scale(0.99); }
+  button:hover { background: var(--btn-hover); }
+  .canvas-shell {
+    display: grid;
+    place-items: center;
+    overflow: auto;
+  }
+  canvas {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    width: 100%;
+    max-width: 480px; /* keep aspect on mobile */
+    height: auto;
+    border-radius: 10px;
+    box-shadow: 0 0 0 1px #222, 0 10px 30px rgba(0,0,0,.35);
+    background: #151515;
+    touch-action: none; /* allow precise touch without scrolling */
+  }
+  footer {
+    font-size: 0.8rem;
+    opacity: 0.8;
+    text-align: center;
+    padding: 8px 0 0;
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Sand Falling Sandbox · 480×800 · 60&nbsp;Hz</h1>
+      <div class="controls">
+        <button id="pauseBtn" aria-pressed="false" title="Pause/Resume simulation">⏯️ Pause</button>
+      </div>
+    </header>
+
+    <div class="canvas-shell">
+      <canvas id="sand" width="480" height="800" aria-label="sand simulation canvas"></canvas>
+    </div>
+
+    <footer>
+      Hold click/touch to drop 1 grain every 200ms. Data autosaves to localStorage.
+    </footer>
+  </div>
+
+<script>
+(() => {
+  'use strict';
+
+  /*** Config ***/
+  const W = 480, H = 800;
+  const DROP_INTERVAL_MS = 200;
+  const FRAME_TARGET_HZ = 60;
+  const SAVE_INTERVAL_MS = 5000;
+  // Sand color base (yellow-ish). We'll vary only the red channel by ±10.
+  const BASE_R = 245, R_JITTER = 10;
+  const G = 220, B = 40, A = 255;
+
+  /*** State arrays ***/
+  // Occ grid: 0 = empty, 1 = sand
+  let occ = new Uint8Array(W * H);
+  // Red channel per grain (0 if empty). Persist for visual consistency.
+  let red = new Uint8Array(W * H);
+
+  // Double buffer for updates
+  let nextOcc = new Uint8Array(W * H);
+  let nextRed = new Uint8Array(W * H);
+
+  // Canvas & drawing
+  const canvas = document.getElementById('sand');
+  const ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: false });
+  const imageData = ctx.createImageData(W, H);
+  const pixels = imageData.data; // RGBA
+
+  // UI
+  const pauseBtn = document.getElementById('pauseBtn');
+  let paused = false;
+
+  /*** LocalStorage helpers ***/
+  const LS_KEY = 'sandfalling_v1';
+  function saveToLocalStorage() {
+    try {
+      // We save occ and red, concatenated.
+      const buf = new Uint8Array(occ.length + red.length);
+      buf.set(occ, 0);
+      buf.set(red, occ.length);
+      // base64 encode
+      let binary = '';
+      const chunk = 0x8000;
+      for (let i = 0; i < buf.length; i += chunk) {
+        binary += String.fromCharCode.apply(null, buf.subarray(i, i + chunk));
+      }
+      const b64 = btoa(binary);
+      localStorage.setItem(LS_KEY, b64);
+    } catch (e) {
+      console.warn('Save failed', e);
+    }
+  }
+  function loadFromLocalStorage() {
+    try {
+      const b64 = localStorage.getItem(LS_KEY);
+      if (!b64) return;
+      const binary = atob(b64);
+      const len = binary.length;
+      if (len !== occ.length + red.length) {
+        // size mismatch (e.g., version change)
+        return;
+      }
+      const buf = new Uint8Array(len);
+      for (let i = 0; i < len; i++) buf[i] = binary.charCodeAt(i);
+      occ.set(buf.subarray(0, occ.length));
+      red.set(buf.subarray(occ.length));
+    } catch (e) {
+      console.warn('Load failed', e);
+    }
+  }
+
+  loadFromLocalStorage();
+
+  /*** Simulation rules ***/
+  // Helpers
+  const idx = (x, y) => y * W + x;
+
+  // Update step: bottom -> top, left -> right
+  function step() {
+    // clear next
+    nextOcc.fill(0);
+    nextRed.fill(0);
+
+    // Iterate bottom-up
+    for (let y = H - 1; y >= 0; y--) {
+      const yW = y * W;
+      for (let x = 0; x < W; x++) {
+        const i = yW + x;
+        if (occ[i] === 0) {
+          // Empty stays empty in nextOcc unless something falls into it.
+          continue;
+        }
+
+        // Occupied (sand)
+        const rVal = red[i];
+
+        // Border: bottom -> immobile (cannot move below)
+        if (y === H - 1) {
+          nextOcc[i] = 1;
+          nextRed[i] = rVal;
+          continue;
+        }
+
+        const below = i + W; // (x, y+1)
+        const belowOcc = occ[below];
+
+        if (belowOcc === 0) {
+          // Falls down by 1
+          nextOcc[below] = 1;
+          nextRed[below] = rVal;
+          continue;
+        }
+
+        // Below is occupied
+        // Border side immobility: if at left/right border and bottom is occupied, it stays.
+        if ((x === 0 || x === W - 1)) {
+          nextOcc[i] = 1;
+          nextRed[i] = rVal;
+          continue;
+        }
+
+        // Check "sopra occupato" (above must be occupied to attempt lateral move)
+        const above = i - W; // (x, y-1)
+        const aboveOcc = (y > 0) ? occ[above] : 0;
+
+        if (aboveOcc) {
+          // Try left first
+          const left = i - 1;
+          if (occ[left] === 0 && nextOcc[left] === 0) {
+            nextOcc[left] = 1;
+            nextRed[left] = rVal;
+            continue;
+          }
+          // Else try right
+          const right = i + 1;
+          if (occ[right] === 0 && nextOcc[right] === 0) {
+            nextOcc[right] = 1;
+            nextRed[right] = rVal;
+            continue;
+          }
+        }
+
+        // Otherwise stays
+        nextOcc[i] = 1;
+        nextRed[i] = rVal;
+      }
+    }
+
+    // Swap buffers
+    [occ, nextOcc] = [nextOcc, occ];
+    [red, nextRed] = [nextRed, red];
+  }
+
+  /*** Rendering ***/
+  function draw() {
+    // Fill pixels from occ/red
+    // Premultiply constant G,B,A; variable R per cell.
+    let p = 0;
+    for (let y = 0; y < H; y++) {
+      const yW = y * W;
+      for (let x = 0; x < W; x++) {
+        const o = occ[yW + x];
+        if (o) {
+          pixels[p    ] = red[yW + x] || BASE_R; // R
+          pixels[p + 1] = G;                     // G
+          pixels[p + 2] = B;                     // B
+          pixels[p + 3] = A;                     // A
+        } else {
+          // background (dark)
+          pixels[p    ] = 16;
+          pixels[p + 1] = 16;
+          pixels[p + 2] = 16;
+          pixels[p + 3] = 255;
+        }
+        p += 4;
+      }
+    }
+    ctx.putImageData(imageData, 0, 0);
+  }
+
+  /*** Input (mouse + touch) ***/
+  let isPointerDown = false;
+  let lastDropTime = 0;
+
+  function canvasToCoord(clientX, clientY) {
+    // Map client coords to canvas pixel coordinates (since CSS scales)
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width  / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const x = Math.floor((clientX - rect.left) * scaleX);
+    const y = Math.floor((clientY - rect.top)  * scaleY);
+    return { x: Math.min(Math.max(x, 0), W - 1), y: Math.min(Math.max(y, 0), H - 1) };
+    }
+
+  function dropGrainAt(x, y) {
+    const i = idx(x, y);
+    if (occ[i] === 0) {
+      occ[i] = 1;
+      // Assign persistent red with ±10 jitter (clamped)
+      let r = BASE_R + Math.floor((Math.random() * (2 * R_JITTER + 1)) - R_JITTER);
+      if (r < 0) r = 0; if (r > 255) r = 255;
+      red[i] = r;
+    }
+  }
+
+  function maybeDrop(e) {
+    const now = performance.now();
+    if (now - lastDropTime >= DROP_INTERVAL_MS) {
+      lastDropTime = now;
+      let point;
+      if (e.touches && e.touches.length > 0) {
+        point = canvasToCoord(e.touches[0].clientX, e.touches[0].clientY);
+      } else {
+        point = canvasToCoord(e.clientX, e.clientY);
+      }
+      dropGrainAt(point.x, point.y);
+    }
+  }
+
+  canvas.addEventListener('mousedown', (e) => { isPointerDown = true; maybeDrop(e); });
+  window.addEventListener('mouseup',   ()  => { isPointerDown = false; });
+  canvas.addEventListener('mousemove', (e) => { if (isPointerDown) maybeDrop(e); });
+
+  canvas.addEventListener('touchstart', (e) => { isPointerDown = true; maybeDrop(e); e.preventDefault(); }, { passive: false });
+  canvas.addEventListener('touchend',   (e) => { isPointerDown = false; e.preventDefault(); }, { passive: false });
+  canvas.addEventListener('touchmove',  (e) => { if (isPointerDown) maybeDrop(e); e.preventDefault(); }, { passive: false });
+
+  /*** Pause/Resume ***/
+  function setPaused(v) {
+    paused = v;
+    pauseBtn.textContent = paused ? '▶️ Resume' : '⏯️ Pause';
+    pauseBtn.setAttribute('aria-pressed', String(paused));
+    if (paused) saveToLocalStorage();
+  }
+  pauseBtn.addEventListener('click', () => setPaused(!paused));
+
+  /*** Main loop ***/
+  let lastFrameTime = 0;
+  const frameInterval = 1000 / FRAME_TARGET_HZ;
+
+  function loop(ts) {
+    requestAnimationFrame(loop);
+    if (paused) return;
+
+    if (ts - lastFrameTime >= frameInterval) {
+      lastFrameTime = ts;
+      step();
+      draw();
+    }
+  }
+  requestAnimationFrame(loop);
+
+  /*** Autosave ***/
+  let lastSave = performance.now();
+  function saveTicker() {
+    const now = performance.now();
+    if (now - lastSave >= SAVE_INTERVAL_MS) {
+      lastSave = now;
+      saveToLocalStorage();
+    }
+    setTimeout(saveTicker, 500);
+  }
+  saveTicker();
+
+  window.addEventListener('beforeunload', saveToLocalStorage);
+})();
+</script>
+</body>
+</html>
