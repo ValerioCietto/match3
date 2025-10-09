@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Sand / Water / Rock / Water Source — 480×800 @60Hz</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0b0b0b;
+    --fg: #eaeaea;
+    --btn: #1c1c1c;
+    --btn-hover: #2a2a2a;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Noto Sans", "Helvetica Neue", Arial;
+    overscroll-behavior: none;
+  }
+  .wrap {
+    min-height: 100%;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 8px;
+    padding: env(safe-area-inset-top) 12px env(safe-area-inset-bottom);
+  }
+  header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 16px;
+    padding-top: 8px;
+  }
+  h1 {
+    font-size: 1rem;
+    margin: 0;
+    font-weight: 600;
+    letter-spacing: .2px;
+  }
+  .controls {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  fieldset {
+    border: 1px solid #2a2a2a;
+    border-radius: 10px;
+    padding: 6px 10px 10px;
+    min-width: 280px;
+  }
+  legend { font-size: .9rem; opacity: .9; padding: 0 6px; }
+  label {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-right: 10px; margin-top: 6px;
+    cursor: pointer;
+  }
+  input[type="radio"] { accent-color: #ffd34d; }
+  .dot {
+    display:inline-block; width:10px; height:10px; border-radius:50%; margin-left:4px;
+    vertical-align: middle; outline:1px solid #333;
+  }
+  button {
+    -webkit-tap-highlight-color: transparent;
+    appearance: none;
+    border: 1px solid #333;
+    background: var(--btn);
+    color: var(--fg);
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform .06s ease, background .15s ease;
+    user-select: none;
+  }
+  button:hover { background: var(--btn-hover); }
+  button:active { transform: translateY(1px) scale(0.99); }
+  .canvas-shell {
+    display: grid; place-items: center; overflow: auto;
+  }
+  canvas {
+    width: 100%; max-width: 480px; height: auto;
+    image-rendering: pixelated; image-rendering: crisp-edges;
+    background: #151515; border-radius: 0; /* bordi quadrati */
+    box-shadow: 0 0 0 1px #222, 0 10px 30px rgba(0,0,0,.35);
+    touch-action: none;
+  }
+  footer { font-size: 0.82rem; opacity: 0.8; text-align: center; padding: 6px 0 10px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Sandbox 480×800 · 60Hz</h1>
+      <div class="controls">
+        <fieldset>
+          <legend>Materiale</legend>
+          <label><input type="radio" name="mat" value="sand" checked /> Sabbia <span class="dot" style="background:#e5dc28"></span></label>
+          <label><input type="radio" name="mat" value="water" /> Acqua <span class="dot" style="background:#2d6df2"></span></label>
+          <label><input type="radio" name="mat" value="rock" /> Roccia <span class="dot" style="background:#5a5a5a"></span></label>
+          <label><input type="radio" name="mat" value="wsrc" /> Water&nbsp;Source <span class="dot" style="background:#50aadc"></span></label>
+        </fieldset>
+        <button id="pauseBtn" aria-pressed="false" title="Pause/Resume simulation">⏯️ Pause</button>
+      </div>
+    </header>
+
+    <div class="canvas-shell">
+      <canvas id="canvas" width="480" height="800" aria-label="sand/water/rock/water source simulation"></canvas>
+    </div>
+
+    <footer>
+      Sabbia/Acqua/Roccia: tieni premuto → 1 pixel ogni 100 ms. | Water Source: piazza la sorgente (3×2) al click. Stato autosalvato.
+    </footer>
+  </div>
+
+<script>
+(() => {
+  'use strict';
+
+  /*** Config ***/
+  const W = 480, H = 800;
+  const DROP_INTERVAL_MS = 100;
+  const FRAME_HZ = 60;
+  const SAVE_INTERVAL_MS = 5000;
+  const WSRC_EMIT_MS = 10; // ogni 10 ms per sorgente
+
+  // Material codes
+  const EMPTY=0, SAND=1, ROCK=2, WATER=3, SRCWALL=4;
+
+  // Colors
+  const BASE_R = 245, R_JITTER = 10;
+  const SAND_G = 220, SAND_B = 40, A = 255;
+  const ROCK_R = 90, ROCK_G = 90, ROCK_B = 90;
+  const WATER_R = 45, WATER_G = 110, WATER_B = 242;
+  const SRCWALL_R = 80, SRCWALL_G = 170, SRCWALL_B = 220;
+
+  /*** State ***/
+  let mat = new Uint8Array(W*H);       // materiale per cella
+  let sandR = new Uint8Array(W*H);     // R per sabbia (persistente)
+  let rockHits = new Uint8Array(W*H);  // contatore impatti acqua dall’alto per roccia (0..10)
+
+  // Water sources: lista di indici "foro" (la cella generatrice)
+  let waterSources = [];               // array di number (index)
+
+  // next buffers
+  let nextMat = new Uint8Array(W*H);
+  let nextSandR = new Uint8Array(W*H);
+  let nextRockHits = new Uint8Array(W*H);
+
+  // Canvas
+  const cvs = document.getElementById('canvas');
+  const ctx = cvs.getContext('2d', { alpha:false });
+  const img = ctx.createImageData(W,H);
+  const px = img.data;
+
+  // UI
+  const pauseBtn = document.getElementById('pauseBtn');
+  let paused = false;
+  let currentMaterial = SAND;
+
+  // Radio selector
+  document.querySelectorAll('input[name="mat"]').forEach(r => {
+    r.addEventListener('change', () => {
+      const v = r.value;
+      currentMaterial = (v === 'sand') ? SAND : (v === 'water' ? WATER : (v === 'rock' ? ROCK : SRCWALL));
+    });
+  });
+
+  /*** LocalStorage ***/
+  const LS_GRID = 'sandbox_v3_grid';
+  const LS_WSRC = 'sandbox_v3_wsrc';
+
+  function saveGrid() {
+    try {
+      const total = mat.length + sandR.length + rockHits.length;
+      const buf = new Uint8Array(total);
+      let off = 0;
+      buf.set(mat, off); off += mat.length;
+      buf.set(sandR, off); off += sandR.length;
+      buf.set(rockHits, off);
+      // base64
+      let binary = '';
+      const chunk = 0x8000;
+      for (let i=0;i<buf.length;i+=chunk) {
+        binary += String.fromCharCode.apply(null, buf.subarray(i, i+chunk));
+      }
+      localStorage.setItem(LS_GRID, btoa(binary));
+    } catch(e) { console.warn('Save grid failed', e); }
+  }
+  function loadGrid() {
+    try {
+      const b64 = localStorage.getItem(LS_GRID);
+      if (!b64) return;
+      const bin = atob(b64);
+      if (bin.length !== (mat.length + sandR.length + rockHits.length)) return;
+      const buf = new Uint8Array(bin.length);
+      for (let i=0;i<bin.length;i++) buf[i] = bin.charCodeAt(i);
+      let off = 0;
+      mat.set(buf.subarray(off, off+mat.length)); off += mat.length;
+      sandR.set(buf.subarray(off, off+sandR.length)); off += sandR.length;
+      rockHits.set(buf.subarray(off, off+rockHits.length));
+    } catch(e) { console.warn('Load grid failed', e); }
+  }
+  function saveWSources() {
+    try {
+      localStorage.setItem(LS_WSRC, JSON.stringify(waterSources));
+    } catch(e) { console.warn('Save sources failed', e); }
+  }
+  function loadWSources() {
+    try {
+      const raw = localStorage.getItem(LS_WSRC);
+      if (!raw) return;
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) {
+        waterSources = arr.filter(n => Number.isInteger(n) && n>=0 && n < W*H);
+      }
+    } catch(e) { console.warn('Load sources failed', e); }
+  }
+
+  loadGrid();
+  loadWSources();
+
+  /*** Helpers ***/
+  const idx = (x,y) => y*W + x;
+  function clamp(v,min,max){ return v<min?min:(v>max?max:v); }
+  function jitterSandR() {
+    let r = BASE_R + Math.floor(Math.random()*(2*R_JITTER+1) - R_JITTER);
+    if (r<0) r=0; if (r>255) r=255;
+    return r;
+  }
+  function inBounds(x,y){ return x>=0 && x<W && y>=0 && y<H; }
+
+  /*** Simulation step (bottom -> top) ***/
+  function step() {
+    nextMat.fill(0);
+    nextSandR.fill(0);
+    nextRockHits.fill(0);
+
+    for (let y=H-1; y>=0; y--) {
+      for (let x=0; x<W; x++) {
+        const i = idx(x,y);
+        const m = mat[i];
+        if (m === EMPTY) continue;
+
+        if (m === SAND) {
+          if (y === H-1) { nextMat[i]=SAND; nextSandR[i]=sandR[i]||BASE_R; continue; }
+          const below = i + W;
+          if (mat[below] === EMPTY) { nextMat[below]=SAND; nextSandR[below]=sandR[i]||BASE_R; continue; }
+
+          if (x===0 || x===W-1) { nextMat[i]=SAND; nextSandR[i]=sandR[i]||BASE_R; continue; }
+
+          const aboveOcc = (y>0) ? (mat[i-W] !== EMPTY) : false;
+          if (aboveOcc) {
+            const left=i-1, right=i+1;
+            if (mat[left]===EMPTY && nextMat[left]===EMPTY) { nextMat[left]=SAND; nextSandR[left]=sandR[i]||BASE_R; continue; }
+            if (mat[right]===EMPTY && nextMat[right]===EMPTY){ nextMat[right]=SAND; nextSandR[right]=sandR[i]||BASE_R; continue; }
+          }
+          nextMat[i]=SAND; nextSandR[i]=sandR[i]||BASE_R;
+
+        } else if (m === ROCK) {
+          let hits = rockHits[i]||0;
+          if (y>0 && mat[i-W]===WATER) hits = Math.min(255, hits+1);
+          if (hits>=10) {
+            nextMat[i]=SAND; nextSandR[i]=jitterSandR();
+          } else {
+            nextMat[i]=ROCK; nextRockHits[i]=hits;
+          }
+
+        } else if (m === WATER) {
+          if (y < H-1) {
+            const below = i + W;
+            if (mat[below] === EMPTY && nextMat[below] === EMPTY) { nextMat[below]=WATER; continue; }
+          }
+          if (x > 0) {
+            const left = i - 1;
+            if (mat[left] === EMPTY && nextMat[left] === EMPTY) { nextMat[left]=WATER; continue; }
+          }
+          if (x < W-1) {
+            const right = i + 1;
+            if (mat[right] === EMPTY && nextMat[right] === EMPTY) { nextMat[right]=WATER; continue; }
+          }
+          nextMat[i]=WATER;
+
+        } else if (m === SRCWALL) {
+          // Sorgente: blocco immobile
+          nextMat[i]=SRCWALL;
+        }
+      }
+    }
+
+    [mat, nextMat] = [nextMat, mat];
+    [sandR, nextSandR] = [nextSandR, sandR];
+    [rockHits, nextRockHits] = [nextRockHits, rockHits];
+  }
+
+  /*** Draw ***/
+  function draw() {
+    let p=0;
+    for (let y=0;y<H;y++) {
+      const yW=y*W;
+      for (let x=0;x<W;x++) {
+        const i=yW+x, m=mat[i];
+        if (m===EMPTY){ px[p]=16; px[p+1]=16; px[p+2]=16; px[p+3]=255; }
+        else if (m===SAND){ px[p]=sandR[i]||BASE_R; px[p+1]=SAND_G; px[p+2]=SAND_B; px[p+3]=A; }
+        else if (m===ROCK){ px[p]=ROCK_R; px[p+1]=ROCK_G; px[p+2]=ROCK_B; px[p+3]=A; }
+        else if (m===WATER){ px[p]=WATER_R; px[p+1]=WATER_G; px[p+2]=WATER_B; px[p+3]=A; }
+        else /*SRCWALL*/ { px[p]=SRCWALL_R; px[p+1]=SRCWALL_G; px[p+2]=SRCWALL_B; px[p+3]=A; }
+        p+=4;
+      }
+    }
+    ctx.putImageData(img,0,0);
+  }
+
+  /*** Water Source placement ***/
+  // Forma 3x2 (LxH), ancorata al foro in (x,y):
+  // Row -1: (-1,-1),(0,-1),(+1,-1) = pareti
+  // Row  0: (-1, 0),(+1, 0)        = pareti
+  const SRC_OFFSETS = [ [-1,-1],[0,-1],[1,-1], [-1,0],[1,0] ];
+  function canPlaceWaterSourceAt(x,y) {
+    // Il foro (x,y) deve essere dentro canvas; tutte le pareti dentro canvas e libere
+    for (const [dx,dy] of SRC_OFFSETS) {
+      const xx=x+dx, yy=y+dy;
+      if (!inBounds(xx,yy)) return false;
+      if (mat[idx(xx,yy)] !== EMPTY) return false;
+    }
+    // Il foro può essere qualunque stato? Richiediamo vuoto per iniziare pulito
+    if (mat[idx(x,y)] !== EMPTY) return false;
+    return true;
+  }
+  function placeWaterSourceAt(x,y) {
+    if (!canPlaceWaterSourceAt(x,y)) return false;
+    for (const [dx,dy] of SRC_OFFSETS) {
+      const i = idx(x+dx, y+dy);
+      mat[i] = SRCWALL;
+    }
+    // Il foro resta vuoto: genererà acqua
+    const holeIdx = idx(x,y);
+    // Evita doppioni
+    if (!waterSources.includes(holeIdx)) {
+      waterSources.push(holeIdx);
+    }
+    saveWSources(); // subito
+    return true;
+  }
+
+  /*** Input ***/
+  let isDown = false;
+  let lastDrop = 0;
+
+  function clientToCanvas(clientX, clientY) {
+    const r = cvs.getBoundingClientRect();
+    const sx = cvs.width / r.width;
+    const sy = cvs.height / r.height;
+    let x = Math.floor((clientX - r.left) * sx);
+    let y = Math.floor((clientY - r.top) * sy);
+    return { x: clamp(x,0,W-1), y: clamp(y,0,H-1) };
+  }
+
+  function placePixelAt(x,y) {
+    const i = idx(x,y);
+    if (mat[i] !== EMPTY) return;
+    if (currentMaterial === SAND) {
+      mat[i] = SAND; sandR[i] = jitterSandR();
+    } else if (currentMaterial === WATER) {
+      mat[i] = WATER;
+    } else if (currentMaterial === ROCK) {
+      mat[i] = ROCK; rockHits[i]=0;
+    }
+  }
+
+  function maybeDrop(e) {
+    const now = performance.now();
+    if (currentMaterial === SRCWALL) return; // le sorgenti non auto-ripetono
+    if (now - lastDrop >= DROP_INTERVAL_MS) {
+      lastDrop = now;
+      const pt = ('touches' in e && e.touches.length)
+        ? clientToCanvas(e.touches[0].clientX, e.touches[0].clientY)
+        : clientToCanvas(e.clientX, e.clientY);
+      placePixelAt(pt.x, pt.y);
+    }
+  }
+
+  // Mouse
+  cvs.addEventListener('mousedown', e => {
+    const pt = clientToCanvas(e.clientX, e.clientY);
+    if (currentMaterial === SRCWALL) {
+      // Ancoraggio sul foro = punto cliccato
+      placeWaterSourceAt(pt.x, pt.y);
+      // non attiviamo drag-repeat
+      return;
+    }
+    isDown = true; maybeDrop(e);
+  });
+  window.addEventListener('mouseup', () => { isDown = false; });
+  cvs.addEventListener('mousemove', e => { if (isDown) maybeDrop(e); });
+
+  // Touch
+  cvs.addEventListener('touchstart', e => {
+    const pt = clientToCanvas(e.touches[0].clientX, e.touches[0].clientY);
+    if (currentMaterial === SRCWALL) {
+      placeWaterSourceAt(pt.x, pt.y);
+      e.preventDefault(); return;
+    }
+    isDown = true; maybeDrop(e); e.preventDefault();
+  }, {passive:false});
+  cvs.addEventListener('touchend', e => { isDown = false; e.preventDefault(); }, {passive:false});
+  cvs.addEventListener('touchmove', e => { if (isDown) maybeDrop(e); e.preventDefault(); }, {passive:false});
+
+  /*** Water source generator (ogni 10 ms) ***/
+  let wsrcTimer = setInterval(() => {
+    if (paused || waterSources.length === 0) return;
+    for (let k=0; k<waterSources.length; k++) {
+      const i = waterSources[k];
+      if (i<0 || i>=W*H) continue;
+      if (mat[i] === EMPTY) {
+        mat[i] = WATER; // genera acqua nel foro se libero
+      }
+    }
+  }, WSRC_EMIT_MS);
+
+  /*** Pause ***/
+  function setPaused(v) {
+    paused = v;
+    pauseBtn.textContent = paused ? '▶️ Resume' : '⏯️ Pause';
+    pauseBtn.setAttribute('aria-pressed', String(paused));
+    if (paused) { saveGrid(); }
+  }
+  pauseBtn.addEventListener('click', () => setPaused(!paused));
+
+  /*** Loop ***/
+  let lastFrame = 0;
+  const frameMs = 1000/FRAME_HZ;
+  function loop(ts) {
+    requestAnimationFrame(loop);
+    if (paused) return;
+    if (ts - lastFrame >= frameMs) {
+      lastFrame = ts;
+      step();
+      draw();
+    }
+  }
+  requestAnimationFrame(loop);
+
+  /*** Autosave ***/
+  let lastSave = performance.now();
+  function saveTicker() {
+    const now = performance.now();
+    if (now - lastSave >= SAVE_INTERVAL_MS) {
+      lastSave = now;
+      saveGrid(); saveWSources();
+    }
+    setTimeout(saveTicker, 500);
+  }
+  saveTicker();
+  window.addEventListener('beforeunload', () => { saveGrid(); saveWSources(); });
+})();
+</script>
+</body>
+</html>
