@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Arena a Turni – Ruoli & Abilità</title>
+<style>
+  :root{
+    --bg:#0f1117; --panel:#151925; --accent:#5eead4; --muted:#93a4b6; --win:#86efac; --lose:#fca5a5; --warn:#fde047;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Ubuntu,Arial,sans-serif;
+    background:linear-gradient(180deg,#0b0e14,#0f1117);
+    color:#e6edf3; line-height:1.45;
+  }
+  header{
+    padding:12px 16px; display:flex; gap:12px; align-items:center; justify-content:space-between;
+    position:sticky; top:0; background:rgba(15,17,23,.8); backdrop-filter: blur(8px); z-index:5; border-bottom:1px solid #1f2533;
+    flex-wrap:wrap;
+  }
+  h1{font-size:18px; margin:0; font-weight:700; letter-spacing:.2px}
+  .controls{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+  button{
+    appearance:none; border:0; padding:12px 16px; border-radius:14px; font-weight:700; cursor:pointer;
+    background:var(--accent); color:#081016; box-shadow:0 6px 20px rgba(94,234,212,.2);
+    transition:transform .08s ease, filter .15s ease, opacity .2s ease;
+  }
+  button:active{ transform: translateY(1px) scale(.99); }
+  .ghost{ background:#263041; color:#d6e2f0; box-shadow:none; }
+  .field{
+    display:grid; grid-template-columns:1fr; gap:10px; padding:10px; max-width:1200px; margin:0 auto;
+  }
+  .card{ background:var(--panel); border:1px solid #1f2533; border-radius:18px; overflow:hidden; }
+  .section-title{ padding:10px 12px; font-size:12px; color:var(--muted); letter-spacing:.3px; text-transform:uppercase; border-bottom:1px solid #1f2533; }
+  .pad{ padding:12px; }
+  .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  canvas{ width:100%; height:52vh; display:block; background:#0b0e14; }
+  @media (min-width:1000px){
+    .field{ grid-template-columns: 1.35fr .65fr; }
+    canvas{ height:62vh; }
+  }
+  .log{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-size:13px; white-space:pre-wrap; max-height:42vh; overflow:auto; padding:12px;
+  }
+  .meta{ color:var(--muted); font-size:12px; }
+  .inline{ display:inline-flex; align-items:center; gap:6px; }
+  input[type="number"], input[type="text"], select{
+    background:#0f1522; border:1px solid #263041; color:#e6edf3; padding:10px 12px; border-radius:12px; min-width:76px; font-weight:600;
+  }
+  input[type="text"]{ min-width:110px;}
+  .badge{ padding:2px 8px; border-radius:999px; font-size:12px; border:1px solid #263041; background:#0e1522; }
+  .summary { display:flex; gap:8px; flex-wrap:wrap; }
+  .hpbar{ height:6px; background:#1f2636; border-radius:6px; overflow:hidden; margin-top:6px; }
+  .hpbar > i{ display:block; height:100%; background:linear-gradient(90deg,#34d399,#22c55e); width:100%; }
+  .tabs{ display:flex; }
+  .tab-btn{
+    flex:1; text-align:center; padding:10px; cursor:pointer; border-bottom:2px solid transparent; font-weight:700;
+  }
+  .tab-btn.active{ border-bottom-color:var(--accent); background:#101626; }
+  .hidden{ display:none; }
+  .table-like{ width:100%; border-collapse:separate; border-spacing:0 8px; }
+  .table-like th{ text-align:left; font-size:12px; color:var(--muted); font-weight:700; padding:0 6px; }
+  .row-card{
+    display:grid; grid-template-columns: 1fr .7fr .7fr .8fr .8fr .9fr; gap:8px; background:#101626; padding:8px; border:1px solid #1f2533; border-radius:12px;
+  }
+  @media (max-width:980px){
+    .row-card{ grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <h1>🏟️ Arena a Turni – Simulazione</h1>
+    <div class="controls">
+      <button id="startBtn">Start Battle</button>
+      <button id="fastBtn" class="ghost" title="Velocizza animazioni">Velocità ×1</button>
+      <div class="inline">
+        <label for="enemyCount" class="meta">Droni:</label>
+        <input id="enemyCount" type="number" min="1" max="300" step="1" value="30">
+      </div>
+      <button id="clearLog" class="ghost">Svuota Log</button>
+    </div>
+  </header>
+
+  <main class="field">
+    <!-- LEFT: Arena -->
+    <section class="card">
+      <div class="section-title">Arena</div>
+      <canvas id="arena" width="1200" height="700"></canvas>
+      <div class="pad">
+        <div class="summary" id="liveSummary"></div>
+      </div>
+    </section>
+
+    <!-- RIGHT: Config + Log -->
+    <section class="card">
+      <div class="tabs">
+        <div id="tabConfigBtn" class="tab-btn active">Config</div>
+        <div id="tabLogBtn" class="tab-btn">Log</div>
+      </div>
+
+      <!-- CONFIG -->
+      <div id="tabConfig" class="pad">
+        <div class="section-title">Eroi (editor)</div>
+        <div class="pad">
+          <div id="heroesForm"></div>
+          <div class="meta" style="margin-top:6px;">Valori e ruoli salvati automaticamente in <b>localStorage</b>.</div>
+        </div>
+
+        <div class="section-title">Nemici – Template</div>
+        <div class="pad">
+          <div class="row" id="enemyTemplateForm">
+            <label class="inline">HP <input type="number" id="et_hp" min="1" max="9999" step="1"></label>
+            <label class="inline">ATK <input type="number" id="et_atk" min="1" max="9999" step="1"></label>
+            <label class="inline">Priority
+              <select id="et_priority">
+                <option value="random">random</option>
+                <option value="weakest">weakest</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <div class="section-title">Impostazioni</div>
+        <div class="pad row">
+          <span class="badge">Droni iniziali: <span id="dronePreview">30</span></span>
+          <span id="lastResultMeta" class="meta">Nessun risultato precedente.</span>
+        </div>
+      </div>
+
+      <!-- LOG -->
+      <div id="tabLog" class="hidden">
+        <div class="section-title">Log</div>
+        <div class="log" id="logBox" aria-live="polite"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    Salva automatico su <b>localStorage</b>. Canvas ottimizzato per mobile. Tocca “Start Battle” per simulare.
+  </footer>
+
+<script>
+(() => {
+  // ====== Keys ======
+  const LS_KEY_SETTINGS = "arena.settings.v3";
+  const LS_KEY_LAST = "arena.lastResult.v1";
+  const LS_KEY_HEROES = "arena.heroes.v3";
+  const LS_KEY_ENEMY_TEMPLATE = "arena.enemyTemplate.v2";
+
+  // ====== Defaults ======
+  const DEFAULT_HEROES = [
+    { id:"Eroe1", name:"Eroe1", role:"tank",   maxHp:50, atk:10, def:0.10, attacksPerTurn:2 },
+    { id:"Eroe2", name:"Eroe2", role:"dps",    maxHp:50, atk:10, def:0.10, attacksPerTurn:2 },
+    { id:"Eroe3", name:"Eroe3", role:"dps",    maxHp:50, atk:10, def:0.10, attacksPerTurn:2 },
+    { id:"Eroe4", name:"Eroe4", role:"healer", maxHp:50, atk:10, def:0.10, attacksPerTurn:2 },
+    { id:"Eroe5", name:"Eroe5", role:"dps",    maxHp:50, atk:10, def:0.10, attacksPerTurn:2 },
+  ];
+  const DEFAULT_ENEMY_TEMPLATE = { maxHp:20, atk:5, def:0.00, attacksPerTurn:1, priority:"random" };
+  const defaultSettings = { enemyCount:30, speed:1 };
+
+  // ====== Storage utils ======
+  const loadJSON = (k, fallback) => { try{ const r = localStorage.getItem(k); return r ? JSON.parse(r) : fallback; } catch{ return fallback; } };
+  const saveJSON = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+
+  const settings = loadJSON(LS_KEY_SETTINGS, defaultSettings);
+  const enemyTemplate = loadJSON(LS_KEY_ENEMY_TEMPLATE, DEFAULT_ENEMY_TEMPLATE);
+  let heroesBase = loadJSON(LS_KEY_HEROES, DEFAULT_HEROES);
+
+  // ====== Elements ======
+  const enemyCountInput = document.getElementById("enemyCount");
+  const dronePreview = document.getElementById("dronePreview");
+  const lastResultMeta = document.getElementById("lastResultMeta");
+  const heroesForm = document.getElementById("heroesForm");
+
+  const tabConfigBtn = document.getElementById("tabConfigBtn");
+  const tabLogBtn = document.getElementById("tabLogBtn");
+  const tabConfig = document.getElementById("tabConfig");
+  const tabLog = document.getElementById("tabLog");
+  tabConfigBtn.addEventListener("click", ()=>{ tabConfigBtn.classList.add("active"); tabLogBtn.classList.remove("active"); tabConfig.classList.remove("hidden"); tabLog.classList.add("hidden"); });
+  tabLogBtn.addEventListener("click", ()=>{ tabLogBtn.classList.add("active"); tabConfigBtn.classList.remove("active"); tabLog.classList.remove("hidden"); tabConfig.classList.add("hidden"); });
+
+  // ====== Canvas ======
+  const canvas = document.getElementById("arena");
+  const ctx = canvas.getContext("2d");
+  function fitCanvas(){
+    const dpr = window.devicePixelRatio || 1;
+    const cssW = canvas.clientWidth;
+    const cssH = canvas.clientHeight;
+    canvas.width = Math.round(cssW * dpr);
+    canvas.height = Math.round(cssH * dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    drawScene([]);
+  }
+  window.addEventListener('resize', fitCanvas, {passive:true});
+  fitCanvas();
+
+  // ====== Helpers ======
+  const clamp = (v, min, max)=> v<min?min:(v>max?max:v);
+  const choice = arr => arr[Math.floor(Math.random()*arr.length)];
+  const percent = (u)=> u.maxHp>0 ? (u.hp/u.maxHp) : 0;
+  const damageAfterDefense = (atk, effectiveDef)=> {
+    // effectiveDef can be negative; cap upper 0.95 and lower -0.9 to avoid extremes
+    const d = clamp(effectiveDef, -0.9, 0.95);
+    return Math.max(1, Math.floor(atk * (1 - d)));
+  };
+
+  // ====== Result meta ======
+  function renderLastResultMeta(){
+    const raw = localStorage.getItem(LS_KEY_LAST);
+    if(!raw){ lastResultMeta.textContent = "Nessun risultato precedente."; return; }
+    try{
+      const data = JSON.parse(raw);
+      const d = new Date(data.savedAt);
+      lastResultMeta.innerHTML = `Ultimo risultato: <span class="badge">${d.toLocaleString()}</span> · Vincitore: <b>${data.winner}</b> · Turni: <b>${data.turns}</b> · Eroi vivi: <b>${data.heroesAlive}</b> · Droni vivi: <b>${data.enemiesAlive}</b>`;
+    }catch{
+      lastResultMeta.textContent = "Nessun risultato precedente.";
+    }
+  }
+  renderLastResultMeta();
+
+  // ====== Draw ======
+  function drawScene(entities=[], highlightLine=null){
+    const W = canvas.clientWidth, H = canvas.clientHeight;
+    ctx.clearRect(0,0,W,H);
+    // grid
+    ctx.globalAlpha = .35;
+    ctx.strokeStyle = "#1f2533";
+    for(let x=0; x<W; x+=40){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+    for(let y=0; y<H; y+=40){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+    ctx.globalAlpha = 1;
+
+    ctx.strokeStyle = "#263041";
+    ctx.beginPath(); ctx.moveTo(W*0.5, 0); ctx.lineTo(W*0.5,H); ctx.stroke();
+
+    entities.forEach(u=>{
+      const alive = u.hp>0;
+      const r = u.team==="heroes" ? 18 : 12;
+      const color = u.team==="heroes" ? (u.status?.hidden ? "#22d3ee" : "#5eead4") : "#93a4b6";
+      const deadColor = "#3b455a";
+
+      ctx.beginPath();
+      ctx.fillStyle = alive?color:deadColor;
+      ctx.arc(u.x, u.y, r, 0, Math.PI*2);
+      ctx.fill();
+
+      ctx.font = "12px ui-monospace, monospace";
+      ctx.fillStyle = "#d6e2f0";
+      ctx.textAlign = "center";
+      ctx.fillText(u.id, u.x, u.y - (r+10));
+
+      const w = 46, h = 6;
+      const pct = Math.max(0, u.hp) / u.maxHp;
+      ctx.fillStyle = "#1f2636";
+      ctx.fillRect(u.x - w/2, u.y + r + 6, w, h);
+      ctx.fillStyle = pct>0.5 ? "#34d399" : (pct>0.25 ? "#fde047" : "#f87171");
+      ctx.fillRect(u.x - w/2, u.y + r + 6, Math.floor(w*pct), h);
+
+      // small status marks
+      if(u.status?.guard){ ctx.fillStyle="#fde047"; ctx.fillRect(u.x-3, u.y-3, 6,6); }
+      if(u.status?.reckless){ ctx.fillStyle="#fb7185"; ctx.fillRect(u.x+6, u.y-3, 6,6); }
+      if(u.status?.hidden){ ctx.fillStyle="#22d3ee"; ctx.fillRect(u.x-6, u.y-3, 6,6); }
+      if(u.status?.taunt){ ctx.fillStyle="#eab308"; ctx.fillRect(u.x-3, u.y+6, 6,6); }
+    });
+
+    if(highlightLine){
+      const {x1,y1,x2,y2} = highlightLine;
+      ctx.strokeStyle = "#eab308";
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+      ctx.lineWidth = 1;
+    }
+  }
+
+  // ====== Layout ======
+  function layoutEntities(heroes, enemies){
+    const pad = 24;
+    const W = canvas.clientWidth, H = canvas.clientHeight;
+
+    const heroX = pad + 40;
+    const heroGap = (H - pad*2) / (heroes.length+1);
+    heroes.forEach((h,idx)=>{ h.x = heroX; h.y = pad + heroGap*(idx+1); });
+
+    const cols = Math.ceil(Math.sqrt(enemies.length));
+    const rows = Math.ceil(enemies.length / cols);
+    const gridW = Math.max(1, W - (heroX + 120) - pad);
+    const cellW = gridW / cols;
+    const cellH = (H - pad*2) / rows;
+    const baseX = W - gridW - pad + cellW/2;
+    const baseY = pad + cellH/2;
+
+    enemies.forEach((e, i)=>{
+      const r = Math.floor(i / cols);
+      const c = i % cols;
+      e.x = baseX + c*cellW;
+      e.y = baseY + r*cellH;
+    });
+  }
+
+  // ====== Target selection (respect hidden & taunt) ======
+  function visibleAlive(units){ return units.filter(u=>u.hp>0 && !u.status?.hidden); }
+
+  function pickTarget(opponents, priority, tauntPool){
+    const candidates = visibleAlive(opponents);
+    if(!candidates.length) return null;
+
+    if(priority==="random"){
+      if(tauntPool && tauntPool.length){
+        // 50% chance to pick from taunted heroes
+        if(Math.random()<0.5){
+          const tauntedVisible = candidates.filter(c=> tauntPool.includes(c.id));
+          if(tauntedVisible.length) return choice(tauntedVisible);
+        }
+      }
+      return choice(candidates);
+    }
+    if(priority==="weakest"){
+      let minHp = Math.min(...candidates.map(o=>o.hp));
+      const cands = candidates.filter(o=>o.hp===minHp);
+      return choice(cands);
+    }
+    return choice(candidates);
+  }
+
+  // ====== Log ======
+  const logBox = document.getElementById("logBox");
+  function logLine(text){
+    logBox.insertAdjacentHTML('beforeend', text + "\n");
+    logBox.scrollTop = logBox.scrollHeight;
+  }
+  function clearLog(){ logBox.textContent=""; }
+
+  // ====== Live Summary ======
+  const liveSummaryEl = document.getElementById("liveSummary");
+  function renderLiveSummary(heroes, enemies){
+    const heroHtml = heroes.map(h=>{
+      const pct = Math.max(0, h.hp)/h.maxHp*100;
+      return `<div class="card" style="padding:10px; border-radius:12px;">
+        <div><b>${h.id}</b> <span class="badge">HP ${Math.max(0,Math.ceil(h.hp))}/${h.maxHp}</span> <span class="badge">Kills ${h.kills}</span> <span class="badge">${h.role}</span></div>
+        <div class="hpbar"><i style="width:${pct}%"></i></div>
+      </div>`;
+    }).join("");
+
+    const enemyAlive = enemies.filter(e=>e.hp>0).length;
+    const enemyHtml = `<div class="card" style="padding:10px; border-radius:12px;">
+       <div><b>Nemici vivi</b>: <span class="badge">${enemyAlive}/${enemies.length}</span></div>
+     </div>`;
+
+    liveSummaryEl.innerHTML = heroHtml + enemyHtml;
+  }
+
+  // ====== Forms ======
+  function numberInput(id, value, min=0, max=9999, step=1){ return `<input type="number" id="${id}" min="${min}" max="${max}" step="${step}" value="${value}">`; }
+
+  function renderHeroesForm(){
+    heroesForm.innerHTML = `
+      <div class="table-like">
+        <div style="display:grid; grid-template-columns: 1fr .7fr .7fr .8fr .8fr .9fr; gap:8px; padding:0 4px 6px;">
+          <div class="meta">Nome</div>
+          <div class="meta">Ruolo</div>
+          <div class="meta">HP</div>
+          <div class="meta">ATK</div>
+          <div class="meta">Attacchi/T</div>
+          <div class="meta">Difesa %</div>
+        </div>
+        ${heroesBase.map((h,idx)=>`
+          <div class="row-card">
+            <input type="text" id="h_${idx}_name" value="${h.name ?? h.id}">
+            <select id="h_${idx}_role">
+              <option value="tank" ${h.role==="tank"?"selected":""}>tank</option>
+              <option value="dps" ${h.role==="dps"?"selected":""}>dps</option>
+              <option value="healer" ${h.role==="healer"?"selected":""}>healer</option>
+            </select>
+            ${numberInput(`h_${idx}_hp`, h.maxHp, 1, 9999, 1)}
+            ${numberInput(`h_${idx}_atk`, h.atk, 1, 9999, 1)}
+            ${numberInput(`h_${idx}_apt`, h.attacksPerTurn, 1, 10, 1)}
+            ${numberInput(`h_${idx}_def`, Math.round((h.def||0)*100), 0, 95, 1)}
+          </div>
+        `).join('')}
+      </div>
+    `;
+
+    // wire
+    heroesBase.forEach((h,idx)=>{
+      const nameEl = document.getElementById(`h_${idx}_name`);
+      const roleEl = document.getElementById(`h_${idx}_role`);
+      const hpEl   = document.getElementById(`h_${idx}_hp`);
+      const atkEl  = document.getElementById(`h_${idx}_atk`);
+      const aptEl  = document.getElementById(`h_${idx}_apt`);
+      const defEl  = document.getElementById(`h_${idx}_def`);
+
+      const apply = ()=>{
+        h.name = (nameEl.value||`Eroe${idx+1}`).trim().slice(0,24);
+        h.id = h.name;
+        h.role = roleEl.value;
+        h.maxHp = clamp(parseInt(hpEl.value||h.maxHp,10), 1, 9999);
+        h.atk = clamp(parseInt(atkEl.value||h.atk,10), 1, 9999);
+        h.attacksPerTurn = clamp(parseInt(aptEl.value||h.attacksPerTurn,10), 1, 10);
+        h.def = clamp(parseInt(defEl.value||Math.round((h.def||0)*100),10), 0, 95)/100;
+        saveJSON(LS_KEY_HEROES, heroesBase);
+      };
+
+      [nameEl, roleEl, hpEl, atkEl, aptEl, defEl].forEach(el=>{
+        el.addEventListener('change', apply);
+        el.addEventListener('input', (e)=>{ if(e.target===nameEl){ apply(); }});
+      });
+    });
+  }
+
+  // Enemy template
+  const et_hp = document.getElementById("et_hp");
+  const et_atk = document.getElementById("et_atk");
+  const et_priority = document.getElementById("et_priority");
+  function loadEnemyTemplateForm(){
+    et_hp.value = enemyTemplate.maxHp;
+    et_atk.value = enemyTemplate.atk;
+    et_priority.value = enemyTemplate.priority;
+  }
+  function wireEnemyTemplateForm(){
+    const apply = ()=>{
+      enemyTemplate.maxHp = clamp(parseInt(et_hp.value||enemyTemplate.maxHp,10), 1, 9999);
+      enemyTemplate.atk = clamp(parseInt(et_atk.value||enemyTemplate.atk,10), 1, 9999);
+      enemyTemplate.priority = et_priority.value === "weakest" ? "weakest" : "random";
+      saveJSON(LS_KEY_ENEMY_TEMPLATE, enemyTemplate);
+    };
+    [et_hp, et_atk, et_priority].forEach(el=>{
+      el.addEventListener('change', apply);
+      el.addEventListener('input', apply);
+    });
+  }
+
+  renderHeroesForm();
+  loadEnemyTemplateForm();
+  wireEnemyTemplateForm();
+
+  // ====== Settings wiring ======
+  const fastBtn = document.getElementById("fastBtn");
+  let animSpeed = clamp(settings.speed||1, 1, 8);
+  function updateFastBtn(){ fastBtn.textContent = `Velocità ×${animSpeed}`; }
+  updateFastBtn();
+  fastBtn.addEventListener("click", ()=>{
+    animSpeed = animSpeed===1 ? 2 : animSpeed===2 ? 4 : animSpeed===4 ? 8 : 1;
+    updateFastBtn();
+    settings.speed = animSpeed;
+    saveJSON(LS_KEY_SETTINGS, settings);
+  });
+
+  enemyCountInput.value = settings.enemyCount ?? 30;
+  dronePreview.textContent = enemyCountInput.value;
+  enemyCountInput.addEventListener('change', ()=>{
+    settings.enemyCount = clamp(parseInt(enemyCountInput.value||"30",10), 1, 300);
+    enemyCountInput.value = settings.enemyCount;
+    dronePreview.textContent = settings.enemyCount;
+    saveJSON(LS_KEY_SETTINGS, settings);
+  });
+  enemyCountInput.dispatchEvent(new Event('change'));
+
+  // ====== Builders ======
+  function makeHeroesFromConfig(){
+    return heroesBase.map(h=>({
+      id: h.name || h.id,
+      name: h.name || h.id,
+      role: h.role || "dps",
+      team: "heroes",
+      baseDef: h.def || 0,
+      maxHp: h.maxHp,
+      atk: h.atk,
+      attacksPerTurn: h.attacksPerTurn,
+      priority: "weakest",
+      hp: h.maxHp,
+      kills: 0,
+      status: { guard:false, reckless:false, hidden:false, nextAttackMult:1, taunt:false },
+      x:0,y:0
+    }));
+  }
+  function makeEnemies(n){
+    return Array.from({length:n}, (_,i)=>({
+      id: `Drone${i+1}`,
+      team: "enemies",
+      baseDef: enemyTemplate.def || 0,
+      maxHp: enemyTemplate.maxHp,
+      atk: enemyTemplate.atk,
+      attacksPerTurn: enemyTemplate.attacksPerTurn || 1,
+      priority: enemyTemplate.priority || "random",
+      hp: enemyTemplate.maxHp,
+      kills: 0,
+      status: {},
+      x:0,y:0
+    }));
+  }
+
+  // ====== Effects helpers ======
+  function effectiveDefHero(h){
+    let d = h.baseDef || 0;
+    if(h.status?.guard) d = Math.min(0.8, d + 0.5);
+    if(h.status?.reckless) d = d - 0.5; // may go negative
+    return d;
+  }
+
+  // Reset effects that last "until the next turn" — remove at START of the hero's next activation
+  function startOfHeroActivation(hero){
+    if(hero.status._expireNextStart){
+      // effects applied previous turn are removed now
+      hero.status = { nextAttackMult: hero.status.nextAttackMult ?? 1 }; // keep multiplier if pending
+    }
+    // mark any current effects to expire at NEXT start
+    // We'll set _expireNextStart only when applying effects.
+  }
+
+  // ====== Turn Engine ======
+  async function sleep(ms){ return new Promise(r=>setTimeout(r, ms/animSpeed)); }
+  async function animateAttack(attacker, target, entities){
+    drawScene(entities, {x1:attacker.x, y1:attacker.y, x2:target.x, y2:target.y});
+    await sleep(220);
+    drawScene(entities, null);
+  }
+
+  // Heals
+  function healAmount(target, ratio){ return Math.floor(target.maxHp * ratio); }
+  function applyHeal(target, amount){
+    const before = target.hp;
+    target.hp = clamp(target.hp + amount, 0, target.maxHp);
+    return target.hp - before;
+  }
+
+  async function runBattle(enemyCount){
+    clearLog();
+    const heroes = makeHeroesFromConfig();
+    const enemies = makeEnemies(enemyCount);
+    layoutEntities(heroes, enemies);
+    drawScene([...heroes, ...enemies]);
+    renderLiveSummary(heroes, enemies);
+
+    let turn = 1;
+    let current = "heroes"; // heroes start
+    let provokePool = [];   // list of hero IDs taunting for next enemy turn
+
+    logLine(`--- Inizio battaglia: Eroi vs ${enemyCount} Droni ---`);
+    await sleep(400);
+
+    while( heroes.some(h=>h.hp>0) && enemies.some(e=>e.hp>0) ){
+      logLine(`\nTurno ${turn} · Muove: ${current==="heroes" ? "Eroi" : "Droni"}`);
+      const attackers = (current==="heroes" ? heroes : enemies).filter(a=>a.hp>0);
+      const defenders = (current==="heroes" ? enemies : heroes);
+
+      if(current==="heroes"){
+        // HERO PHASE
+        for(const a of attackers){
+          // effects start boundary
+          startOfHeroActivation(a);
+
+          let actionsLeft = a.attacksPerTurn;
+          while(actionsLeft>0 && defenders.some(d=>d.hp>0)){
+            const hpPct = percent(a);
+
+            if(a.role==="tank"){
+              if(hpPct>=0.80){
+                // Attack
+                const t = pickTarget(defenders, a.priority, null);
+                if(!t) break;
+                const dmg = damageAfterDefense(a.atk * (a.status.nextAttackMult||1), t.baseDef||0);
+                a.status.nextAttackMult = 1;
+                await animateAttack(a, t, [...heroes, ...enemies]);
+                t.hp = Math.max(0, t.hp - dmg);
+                logLine(`${a.id} (Tank) attacca ${t.id}, fa ${dmg} danni, ${t.id} ha ${t.hp}hp rimanenti.`);
+                if(t.hp<=0){ logLine(`→ ${t.id} è stato sconfitto!`); a.kills++; }
+                actionsLeft--;
+              } else if(hpPct>=0.40){
+                // Provoke: half damage + taunt for next enemy turn
+                const t = pickTarget(defenders, "random", null) || pickTarget(defenders, "weakest", null);
+                if(!t) break;
+                const base = a.atk * (a.status.nextAttackMult||1);
+                a.status.nextAttackMult = 1;
+                const dmg = Math.max(1, Math.floor(damageAfterDefense(base, t.baseDef||0)/2));
+                await animateAttack(a, t, [...heroes, ...enemies]);
+                t.hp = Math.max(0, t.hp - dmg);
+                logLine(`${a.id} (Tank) usa PROVOKE su ${t.id}: infligge ${dmg} (½), attira l'attenzione per il prossimo turno dei nemici.`);
+                if(t.hp<=0){ logLine(`→ ${t.id} è stato sconfitto!`); a.kills++; }
+                a.status.taunt = true; // mark on hero for UI
+                provokePool = Array.from(new Set([...provokePool, a.id]));
+                // end turn for this hero (non-stackable)
+                actionsLeft = 0;
+                // mark effect to expire next start
+                a.status._expireNextStart = true;
+              } else {
+                // Guard: +50% def (cap 80%) until next turn
+                a.status.guard = true;
+                a.status.reckless = false; // override if present
+                a.status._expireNextStart = true;
+                logLine(`${a.id} (Tank) usa GUARD: difesa aumentata fino al 80% fino al prossimo turno.`);
+                actionsLeft = 0;
+              }
+            }
+            else if(a.role==="dps"){
+              if(hpPct>=0.80){
+                // Reckless strike: x2 dmg, def -50% until next turn
+                const t = pickTarget(defenders, a.priority, null);
+                if(!t) break;
+                const mult = 2 * (a.status.nextAttackMult||1);
+                a.status.nextAttackMult = 1;
+                const dmg = damageAfterDefense(a.atk * mult, t.baseDef||0);
+                await animateAttack(a, t, [...heroes, ...enemies]);
+                t.hp = Math.max(0, t.hp - dmg);
+                logLine(`${a.id} (DPS) usa RECKLESS STRIKE su ${t.id}, fa ${dmg} danni (×2), difesa -50% fino al prossimo turno.`);
+                if(t.hp<=0){ logLine(`→ ${t.id} è stato sconfitto!`); a.kills++; }
+                a.status.reckless = true;
+                a.status.guard = false;
+                a.status._expireNextStart = true;
+                actionsLeft--;
+              } else if(hpPct>=0.40){
+                // Normal attack
+                const t = pickTarget(defenders, a.priority, null);
+                if(!t) break;
+                const dmg = damageAfterDefense(a.atk * (a.status.nextAttackMult||1), t.baseDef||0);
+                a.status.nextAttackMult = 1;
+                await animateAttack(a, t, [...heroes, ...enemies]);
+                t.hp = Math.max(0, t.hp - dmg);
+                logLine(`${a.id} (DPS) attacca ${t.id}, fa ${dmg} danni, ${t.id} ha ${t.hp}hp rimanenti.`);
+                if(t.hp<=0){ logLine(`→ ${t.id} è stato sconfitto!`); a.kills++; }
+                actionsLeft--;
+              } else {
+                // Hide: untargetable; next attack ×2; end turn
+                a.status.hidden = true;
+                a.status.nextAttackMult = 2;
+                a.status._expireNextStart = true;
+                logLine(`${a.id} (DPS) usa HIDE: non può essere preso di mira; il prossimo attacco farà ×2 danno.`);
+                actionsLeft = 0;
+              }
+            }
+            else if(a.role==="healer"){
+              if(hpPct>=0.80){
+                // Attack
+                const t = pickTarget(defenders, a.priority, null);
+                if(!t) break;
+                const dmg = damageAfterDefense(a.atk * (a.status.nextAttackMult||1), t.baseDef||0);
+                a.status.nextAttackMult = 1;
+                await animateAttack(a, t, [...heroes, ...enemies]);
+                t.hp = Math.max(0, t.hp - dmg);
+                logLine(`${a.id} (Healer) attacca ${t.id}, fa ${dmg} danni, ${t.id} ha ${t.hp}hp rimanenti.`);
+                if(t.hp<=0){ logLine(`→ ${t.id} è stato sconfitto!`); a.kills++; }
+                actionsLeft--;
+              } else if(hpPct>=0.40){
+                // Heal single: target lowest HP (absolute)
+                const allies = heroes.filter(h=>h.hp>0);
+                if(allies.length){
+                  const tgt = allies.reduce((m,cur)=> cur.hp<m.hp?cur:m, allies[0]);
+                  const amount = healAmount(tgt, 0.50);
+                  const healed = applyHeal(tgt, amount);
+                  logLine(`${a.id} (Healer) usa HEAL SINGLE su ${tgt.id}, cura ${healed} HP.`);
+                }
+                actionsLeft = 0;
+              } else {
+                // Mass heal: all allies +25% max HP
+                const allies = heroes.filter(h=>h.hp>0);
+                let total=0;
+                allies.forEach(tgt=>{
+                  const healed = applyHeal(tgt, healAmount(tgt, 0.25));
+                  total += healed;
+                });
+                logLine(`${a.id} (Healer) usa MASS HEAL: cura di squadra totale ${total} HP.`);
+                actionsLeft = 0;
+              }
+            }
+            else{
+              // Fallback: normal attack
+              const t = pickTarget(defenders, "weakest", null);
+              if(!t) break;
+              const dmg = damageAfterDefense(a.atk * (a.status.nextAttackMult||1), t.baseDef||0);
+              a.status.nextAttackMult = 1;
+              await animateAttack(a, t, [...heroes, ...enemies]);
+              t.hp = Math.max(0, t.hp - dmg);
+              logLine(`${a.id} attacca ${t.id}, fa ${dmg} danni, ${t.id} ha ${t.hp}hp rimanenti.`);
+              if(t.hp<=0){ logLine(`→ ${t.id} è stato sconfitto!`); a.kills++; }
+              actionsLeft--;
+            }
+
+            renderLiveSummary(heroes, enemies);
+            drawScene([...heroes, ...enemies]);
+            await sleep(140);
+          } // while actions
+
+          if(!defenders.some(d=>d.hp>0)) break;
+        } // for heroes
+
+        // after heroes phase, clear per-hero temporary flags that shouldn't persist? (taunt persists only visually)
+        // no-op here
+      }
+      else {
+        // ENEMY PHASE
+        for(const a of attackers){
+          let actionsLeft = a.attacksPerTurn || 1;
+          while(actionsLeft>0 && defenders.some(d=>d.hp>0)){
+            const visibleTaunters = defenders.filter(h=> provokePool.includes(h.id) && h.hp>0 && !h.status.hidden ).map(h=>h.id);
+            const t = pickTarget(defenders, a.priority, visibleTaunters);
+            if(!t) break; // maybe all hidden
+            const dmg = damageAfterDefense(a.atk, effectiveDefHero(t));
+            await animateAttack(a, t, [...heroes, ...enemies]);
+            t.hp = Math.max(0, t.hp - dmg);
+            logLine(`${a.id} attacca ${t.id}, fa ${dmg} danni, ${t.id} ha ${t.hp}hp rimanenti.`);
+            if(t.hp<=0){ logLine(`→ ${t.id} è stato sconfitto!`); a.kills++; }
+            renderLiveSummary(heroes, enemies);
+            drawScene([...heroes, ...enemies]);
+            await sleep(140);
+            actionsLeft--;
+            if(!defenders.some(d=>d.hp>0)) break;
+          }
+          if(!defenders.some(d=>d.hp>0)) break;
+        }
+        // provoke only lasts for this one enemy phase
+        provokePool = [];
+        heroes.forEach(h=> h.status.taunt = false);
+      }
+
+      // victory check
+      const heroesAlive = heroes.some(h=>h.hp>0);
+      const enemiesAlive = enemies.some(e=>e.hp>0);
+      if(!heroesAlive || !enemiesAlive) break;
+
+      // switch turn
+      current = (current==="heroes" ? "enemies" : "heroes");
+      if(current==="heroes") turn++;
+
+      await sleep(250);
+    }
+
+    // outcome
+    const heroesAliveN = heroes.filter(h=>h.hp>0).length;
+    const enemiesAliveN = enemies.filter(e=>e.hp>0).length;
+    const winner = enemiesAliveN===0 ? "Eroi" : "Droni";
+    logLine(`\n=== Fine Battaglia · Vincitore: ${winner} ===`);
+    logLine(`Turni totali: ${turn}`);
+    logLine(`\n— Riepilogo Eroi —`);
+    heroes.forEach(h=>{
+      logLine(`${h.id}: HP ${h.hp}/${h.maxHp}, Nemici sconfitti: ${h.kills}`);
+    });
+
+    saveJSON(LS_KEY_LAST, {
+      savedAt: Date.now(),
+      winner, turns: turn, heroesAlive: heroesAliveN, enemiesAlive: enemiesAliveN,
+      heroes: heroes.map(h=>({id:h.id, hp:h.hp, kills:h.kills})),
+      enemiesTotal: enemies.length
+    });
+    renderLastResultMeta();
+
+    drawScene([...heroes, ...enemies]);
+    renderLiveSummary(heroes, enemies);
+    return {winner, turn, heroes, enemies};
+  }
+
+  // ====== Buttons ======
+  document.getElementById("startBtn").addEventListener("click", async ()=>{
+    const n = clamp(parseInt(enemyCountInput.value||"30",10), 1, 300);
+    settings.enemyCount = n; saveJSON(LS_KEY_SETTINGS, settings);
+    // passa al tab Log per vedere l’azione
+    document.getElementById("tabLogBtn").click();
+    await runBattle(n);
+  });
+  document.getElementById("clearLog").addEventListener("click", ()=> clearLog());
+})();
+</script>
+</body>
+</html>
