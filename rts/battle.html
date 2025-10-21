@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Fantasy RTS – Canvas Prototype</title>
+<style>
+  :root{
+    --bg:#0d0f14;
+    --panel:#171a22;
+    --accent:#e0b168;
+    --accent-2:#67d3ff;
+    --danger:#ff6b6b;
+    --ok:#7ee081;
+    --muted:#a9b0c0;
+    --ink:#e6e9ef;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
+  .wrap{
+    display:flex;flex-direction:column;min-height:100%;
+  }
+  header{
+    padding:10px 12px;background:linear-gradient(180deg,#1b1f2a,#151823);
+    display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    position:sticky;top:0;z-index:5;border-bottom:1px solid rgba(255,255,255,0.06)
+  }
+  header .stats{display:flex;gap:16px;align-items:center;flex:1;flex-wrap:wrap}
+  .badge{padding:6px 10px; border-radius:999px; background:#11141c; border:1px solid rgba(255,255,255,0.06); font-weight:600}
+  .hpbar{display:flex;align-items:center;gap:8px}
+  .hpbar .bar{width:140px;max-width:28vw;height:10px;background:#2a2f3c;border-radius:6px;overflow:hidden}
+  .hpbar .fill{height:100%;background:linear-gradient(90deg,var(--ok),#e5df72,var(--danger))}
+  .controls{display:flex;gap:8px}
+  button{
+    background:var(--panel); color:var(--ink); border:1px solid rgba(255,255,255,0.08);
+    padding:10px 12px; border-radius:12px; font-weight:700; cursor:pointer;
+    box-shadow:0 2px 0 rgba(0,0,0,0.2); touch-action:manipulation
+  }
+  button:active{transform:translateY(1px)}
+  button[disabled]{opacity:.5; cursor:not-allowed}
+  #game{
+    flex:1; display:flex; align-items:stretch; justify-content:center; padding:8px;
+  }
+  canvas{
+    width:100%; height:auto; max-height:calc(100vh - 220px); background:linear-gradient(180deg,#0f1320 60%, #242b3a);
+    border-radius:16px; border:1px solid rgba(255,255,255,0.06)
+  }
+  /* Bottom action bar (mobile-first) */
+  .bar{
+    position:sticky;bottom:0;z-index:6;background:linear-gradient(180deg,#121521,#0e111a 40%);
+    border-top:1px solid rgba(255,255,255,0.06); padding:10px 8px;
+  }
+  .units{display:grid; grid-template-columns: repeat(5, 1fr); gap:8px}
+  .unit{
+    display:flex; flex-direction:column; align-items:center; gap:6px; padding:8px;
+    background:var(--panel); border:1px solid rgba(255,255,255,0.08); border-radius:14px
+  }
+  .unit button{width:100%; font-size:14px}
+  .unit small{color:var(--muted)}
+  .row{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-top:8px}
+  .note{color:var(--muted); font-size:12px}
+  .blink{animation:blink 1s infinite}
+  @keyframes blink{50%{opacity:.4}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="stats">
+      <span class="badge" id="goldBadge">💰 Gold: 100</span>
+      <div class="hpbar">
+        <span>🏰 You</span>
+        <div class="bar"><div class="fill" id="hpYouFill" style="width:100%"></div></div>
+        <span id="hpYouTxt">100/100</span>
+      </div>
+      <div class="hpbar">
+        <span>🏰 Enemy</span>
+        <div class="bar"><div class="fill" id="hpEnemyFill" style="width:100%"></div></div>
+        <span id="hpEnemyTxt">100/100</span>
+      </div>
+      <span class="badge" id="statusBadge">▶️ Running</span>
+    </div>
+    <div class="controls">
+      <button id="pauseBtn">⏸ Pause</button>
+      <button id="resumeBtn" disabled>▶️ Resume</button>
+      <button id="resetBtn">🔁 New Game</button>
+    </div>
+  </header>
+
+  <div id="game">
+    <canvas id="canvas" width="1200" height="520"></canvas>
+  </div>
+
+  <div class="bar">
+    <div class="units">
+      <div class="unit">
+        <div>⛏️ Miner</div>
+        <small>HP 10 • +10 GP/swing • Stop @10%</small>
+        <button data-type="miner">Buy (25)</button>
+      </div>
+      <div class="unit">
+        <div>🗡️ Warrior</div>
+        <small>HP 40 • 10 dmg • 3%/s</small>
+        <button data-type="warrior">Buy (50)</button>
+      </div>
+      <div class="unit">
+        <div>🛡️ Knight</div>
+        <small>HP 200 • 20 dmg • 5%/s</small>
+        <button data-type="knight">Buy (150)</button>
+      </div>
+      <div class="unit">
+        <div>🪵 Cart</div>
+        <small>HP 200 • Boulder/2s</small>
+        <button data-type="cart">Buy (250)</button>
+      </div>
+      <div class="unit">
+        <div>🐉 Dragon</div>
+        <small>HP 1000 • Fire</small>
+        <button data-type="dragon">Buy (1000)</button>
+      </div>
+    </div>
+    <div class="row">
+      <div class="note">Tip: i Miners si fermano presto e generano oro. Il Drago vola (colpibile solo dalle Cart).</div>
+      <div class="note" id="autosaveNote">💾 Auto-save attivo</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ------------------ Utility & Persistence ------------------
+  const SAVE_KEY = 'fantasy_rts_save_v1';
+  const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
+  const rand = (a,b)=>Math.random()*(b-a)+a;
+  const now = ()=>performance.now();
+
+  // ------------------ Game State ------------------
+  const W = 1200, H = 520;
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+
+  const ui = {
+    goldBadge: document.getElementById('goldBadge'),
+    hpYouFill: document.getElementById('hpYouFill'),
+    hpEnemyFill: document.getElementById('hpEnemyFill'),
+    hpYouTxt: document.getElementById('hpYouTxt'),
+    hpEnemyTxt: document.getElementById('hpEnemyTxt'),
+    statusBadge: document.getElementById('statusBadge'),
+    pauseBtn: document.getElementById('pauseBtn'),
+    resumeBtn: document.getElementById('resumeBtn'),
+    resetBtn: document.getElementById('resetBtn'),
+    autosaveNote: document.getElementById('autosaveNote'),
+  };
+
+  const COST = { miner:25, warrior:50, knight:150, cart:250, dragon:1000 };
+  const SPEED_PCT = { miner:2.5, warrior:3, knight:5, cart:1, dragon:6 }; // dragon flies a bit faster
+  const HP = { miner:10, warrior:40, knight:200, cart:200, dragon:1000 };
+  const DMG = { warrior:10, knight:20, cart:10, dragon:10 }; // dragon deals per flame tick
+  const RATE = { warrior:1.0, knight:0.8, cart:0.5, dragon:1.0 }; // attacks per second (cart = 1 shot/2s)
+  const MELEE_RANGE = 20;
+  const DRAGON_AOE_W = 50;
+
+  const groundY = H*0.72;     // baseline for ground units
+  const skyY = H*0.30;        // dragon flight line
+  const leftFortX = 40;
+  const rightFortX = W-40;
+
+  const state = {
+    running:true,
+    lastT: now(),
+    playerGold:100,
+    enemyGold:100,
+    youHP:100,
+    enemyHP:100,
+    units:[],       // {id, side:'left'|'right', type, hp, x, y, vx, facing, timers:{} ...}
+    projectiles:[], // {x,y,vx,vy,side,canHitDragon,ttl}
+    ai:{
+      maxMiners:5,
+      warriorCount:0, warriorCap:10,
+      knightCount:0, knightCap:10,
+      cartCount:0, cartCap:20,
+      lastMinerT:0, lastWarT:0, lastKniT:0, lastCartT:0, lastDragT:0,
+    },
+    time:0,
+    winner:null
+  };
+
+  let nextId=1;
+
+  function pxPerSec(pct){ return (pct/100)*canvas.width; }
+
+  function newUnit(side,type){
+    const u={
+      id: nextId++,
+      side,
+      type,
+      hp: HP[type],
+      x: side==='left'? leftFortX+20 : rightFortX-20,
+      y: type==='dragon'? skyY : groundY,
+      vx: (side==='left'? 1 : -1)*pxPerSec(SPEED_PCT[type]),
+      facing: side==='left'? 1 : -1,
+      timers:{ atk:0, mine:0, cart:0, dragon:0, knightBackCD:0 },
+      state:'move', // 'move','mine','melee'
+      meta:{}
+    };
+    if(type==='miner'){
+      // miners stop at 10% (or 90% for enemy)
+      const stopPct = (side==='left')? 10 : 90;
+      u.meta.mineX = (stopPct/100)*canvas.width;
+    }
+    return u;
+  }
+
+  function spawn(side, type){
+    if(side==='left'){
+      if(state.playerGold < COST[type]) return false;
+      state.playerGold -= COST[type];
+    }else{
+      if(state.enemyGold < COST[type]) return false;
+      state.enemyGold -= COST[type];
+    }
+    state.units.push(newUnit(side,type));
+    return true;
+  }
+
+  function tryBuyPlayer(type){
+    if(state.winner) return;
+    const ok = spawn('left', type);
+    flashGold(ok);
+  }
+
+  function flashGold(ok){
+    ui.goldBadge.classList.remove('blink');
+    void ui.goldBadge.offsetWidth;
+    if(!ok) ui.goldBadge.classList.add('blink');
+  }
+
+  // ---------- Saving / Loading ----------
+  function save(){
+    const slim = {
+      playerGold: state.playerGold, enemyGold: state.enemyGold,
+      youHP: state.youHP, enemyHP: state.enemyHP, time: state.time, ai: state.ai,
+      units: state.units.map(u=>({
+        id:u.id, side:u.side, type:u.type, hp:u.hp, x:u.x, y:u.y, vx:u.vx, facing:u.facing, state:u.state, timers:u.timers, meta:u.meta
+      })),
+      projectiles: state.projectiles
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(slim));
+  }
+  function load(){
+    try{
+      const raw = localStorage.getItem(SAVE_KEY);
+      if(!raw) return false;
+      const s = JSON.parse(raw);
+      state.playerGold = s.playerGold ?? 100;
+      state.enemyGold = s.enemyGold ?? 100;
+      state.youHP = s.youHP ?? 100;
+      state.enemyHP = s.enemyHP ?? 100;
+      state.time = s.time ?? 0;
+      state.ai = s.ai ?? state.ai;
+      state.units = (s.units??[]).map(u=>({...u}));
+      state.projectiles = (s.projectiles??[]).map(p=>({...p}));
+      nextId = (state.units.reduce((m,u)=>Math.max(m,u.id),0)||0)+1;
+      return true;
+    }catch(e){ console.warn('Load failed', e); return false;}
+  }
+  function reset(hard=false){
+    state.running=true;
+    state.playerGold=100;
+    state.enemyGold=100;
+    state.youHP=100;
+    state.enemyHP=100;
+    state.units=[];
+    state.projectiles=[];
+    state.time=0;
+    state.ai={maxMiners:5, warriorCount:0, warriorCap:10, knightCount:0, knightCap:10, cartCount:0, cartCap:20,
+      lastMinerT:0, lastWarT:0, lastKniT:0, lastCartT:0, lastDragT:0};
+    state.winner=null;
+    nextId=1;
+    save();
+  }
+
+  // Try autoload
+  load();
+
+  // ------------------ AI Controller ------------------
+  function aiUpdate(dt){
+    const t = state.time;
+    const ai = state.ai;
+
+    // Every 2s: miner up to max
+    if(t - ai.lastMinerT >= 2){
+      ai.lastMinerT = t;
+      const miners = state.units.filter(u=>u.side==='right' && u.type==='miner').length;
+      if(miners < ai.maxMiners){
+        spawn('right','miner');
+      }
+    }
+    // Every 5s: warrior up to 10
+    if(ai.warriorCount < ai.warriorCap && t - ai.lastWarT >= 5){
+      ai.lastWarT = t;
+      if(spawn('right','warrior')) ai.warriorCount++;
+    }
+    // Every 10s: knight up to 10
+    if(ai.knightCount < ai.knightCap && t - ai.lastKniT >= 10){
+      ai.lastKniT = t;
+      if(spawn('right','knight')) ai.knightCount++;
+    }
+    // Every 50s: cart up to 20
+    if(ai.cartCount < ai.cartCap && t - ai.lastCartT >= 50){
+      ai.lastCartT = t;
+      if(spawn('right','cart')) ai.cartCount++;
+    }
+    // Every 120s: dragon or increase miners cap and try miner
+    if(t - ai.lastDragT >= 120){
+      ai.lastDragT = t;
+      const ok = spawn('right','dragon');
+      if(!ok){
+        ai.maxMiners += 1;
+        spawn('right','miner');
+      }
+    }
+  }
+
+  // ------------------ Combat Helpers ------------------
+  function unitsInFront(u){
+    // Enemies in facing direction on same lane (ground vs sky)
+    const foes = state.units.filter(v => v.side!==u.side);
+    const sameLayer = foes.filter(v => (u.type==='dragon') === (v.type==='dragon')); // dragon vs dragon; ground vs ground
+    return sameLayer;
+  }
+
+  function enemyAtRange(u){
+    const foes = unitsInFront(u);
+    let nearest=null, bestD=1e9;
+    for(const v of foes){
+      const d = Math.abs(v.x - u.x);
+      if(d < bestD) {bestD=d; nearest=v;}
+    }
+    if(nearest && bestD <= MELEE_RANGE) return nearest;
+    return null;
+  }
+
+  function dealDamageToFort(side, amount){
+    if(side==='left'){
+      state.youHP = clamp(state.youHP - amount, 0, 100);
+      if(state.youHP<=0 && !state.winner){ state.winner='Enemy'; state.running=false; ui.statusBadge.textContent='💀 You Lose'; }
+    }else{
+      state.enemyHP = clamp(state.enemyHP - amount, 0, 100);
+      if(state.enemyHP<=0 && !state.winner){ state.winner='You'; state.running=false; ui.statusBadge.textContent='🏆 You Win'; }
+    }
+  }
+
+  function tryMelee(u, dt){
+    const rate = RATE[u.type] ?? 1;
+    u.timers.atk += dt;
+    const need = 1/rate;
+    if(u.timers.atk >= need){
+      u.timers.atk = 0;
+      // Hit enemy if in range, else fortress if at end
+      const foe = enemyAtRange(u);
+      if(foe){
+        foe.hp -= (u.type==='warrior'? DMG.warrior : DMG.knight);
+        // Knight jumps back 20% when it deals damage
+        if(u.type==='knight' && u.timers.knightBackCD<=0){
+          const back = (u.side==='left' ? -1 : 1) * (canvas.width*0.20);
+          u.x = clamp(u.x + back, leftFortX+10, rightFortX-10);
+          u.timers.knightBackCD = 1.2; // seconds cooldown
+        }
+        if(foe.hp<=0){ /* removed in sweep */ }
+      }else{
+        // Fortress in range?
+        if(u.side==='left'){
+          if(u.x >= rightFortX-10){
+            dealDamageToFort('right', (u.type==='warrior'? DMG.warrior : DMG.knight));
+          }
+        }else{
+          if(u.x <= leftFortX+10){
+            dealDamageToFort('left', (u.type==='warrior'? DMG.warrior : DMG.knight));
+          }
+        }
+      }
+    }
+  }
+
+  function spawnBoulder(u){
+    // forward arc projectile, can hit ground & dragon (only from carts it's allowed to damage dragon)
+    const dir = u.side==='left'? 1 : -1;
+    const p = {
+      x: u.x + dir*10,
+      y: u.y - 12,
+      vx: dir * (canvas.width*0.25), // px/sec horizontally
+      vy: - (canvas.height*0.15),    // initial upward
+      g: (canvas.height*0.45),       // gravity px/s^2
+      side: u.side,
+      canHitDragon: true,
+      ttl: 6
+    };
+    state.projectiles.push(p);
+  }
+
+  function dragonFlame(u, dt){
+    u.timers.dragon += dt;
+    if(u.timers.dragon >= (1/RATE.dragon)){
+      u.timers.dragon = 0;
+      // Damage ground units below in a narrow column
+      const minX = u.x - DRAGON_AOE_W/2, maxX = u.x + DRAGON_AOE_W/2;
+      for(const v of state.units){
+        if(v.side!==u.side && v.type!=='dragon'){
+          if(v.x>=minX && v.x<=maxX){
+            v.hp -= DMG.dragon;
+          }
+        }
+      }
+      // Fortress directly below?
+      if(u.side==='left'){
+        // dragon is moving right; damages enemy fort if above it
+        if(Math.abs(u.x - rightFortX) < DRAGON_AOE_W) dealDamageToFort('right', DMG.dragon);
+      }else{
+        if(Math.abs(u.x - leftFortX) < DRAGON_AOE_W) dealDamageToFort('left', DMG.dragon);
+      }
+    }
+  }
+
+  // ------------------ Update Loop ------------------
+  function update(dt){
+    if(!state.running) return;
+
+    state.time += dt;
+
+    // AI
+    aiUpdate(dt);
+
+    // Units behavior
+    for(const u of state.units){
+      // Cooldowns
+      if(u.timers.knightBackCD>0) u.timers.knightBackCD -= dt;
+
+      if(u.type==='miner'){
+        // Move until mineX then swing pick for gold
+        if( (u.side==='left' && u.x < u.meta.mineX) ||
+            (u.side==='right' && u.x > u.meta.mineX) ){
+          u.x += u.vx * dt;
+        }else{
+          u.state='mine';
+          u.timers.mine += dt;
+          if(u.timers.mine >= 1.5){ // swing cadence
+            u.timers.mine = 0;
+            if(u.side==='left') state.playerGold += 10;
+            else state.enemyGold += 10;
+          }
+        }
+      } else if(u.type==='cart'){
+        // move slowly always
+        u.x += u.vx * dt;
+        // shoot boulder every 2s (RATE.cart = 0.5/s)
+        u.timers.cart += dt;
+        if(u.timers.cart >= 2){ u.timers.cart = 0; spawnBoulder(u); }
+      } else if(u.type==='dragon'){
+        // fly forward
+        u.x += (u.vx || pxPerSec(SPEED_PCT.dragon)*(u.side==='left'?1:-1)) * dt;
+        dragonFlame(u, dt);
+      } else {
+        // Warrior / Knight: move or melee
+        const foe = enemyAtRange(u);
+        if(foe){
+          // stop & attack
+          tryMelee(u, dt);
+        }else{
+          // advance
+          u.x += u.vx * dt;
+        }
+      }
+
+      // Fortress collision for ground units (stop to attack if in melee)
+      if(u.type!=='dragon'){
+        if(u.side==='left' && u.x >= rightFortX - MELEE_RANGE){
+          tryMelee(u, dt); // treat as hitting fortress at cadence
+        }
+        if(u.side==='right' && u.x <= leftFortX + MELEE_RANGE){
+          tryMelee(u, dt);
+        }
+      }
+    }
+
+    // Projectiles
+    for(const p of state.projectiles){
+      p.ttl -= dt;
+      p.x += p.vx * dt;
+      p.vy += p.g * dt;
+      p.y += p.vy * dt;
+      // collide with units (can't hit same side)
+      for(const u of state.units){
+        if(u.side===p.side) continue;
+        // If u is dragon and projectile can't hit dragon, skip; carts can hit dragon
+        if(u.type==='dragon' && !p.canHitDragon) continue;
+        const dy = u.y - p.y;
+        const dx = u.x - p.x;
+        const d2 = dx*dx+dy*dy;
+        if(d2 < 18*18){
+          u.hp -= DMG.cart;
+          p.ttl = 0;
+          break;
+        }
+      }
+      // hit fortress if near
+      if(p.side==='left' && Math.abs(p.x - rightFortX) < 14 && p.y>groundY-30){
+        dealDamageToFort('right', DMG.cart);
+        p.ttl = 0;
+      }
+      if(p.side==='right' && Math.abs(p.x - leftFortX) < 14 && p.y>groundY-30){
+        dealDamageToFort('left', DMG.cart);
+        p.ttl = 0;
+      }
+    }
+
+    // Sweep dead / expired
+    state.units = state.units.filter(u=>u.hp>0 && u.x>leftFortX-60 && u.x<rightFortX+60);
+    state.projectiles = state.projectiles.filter(p=>p.ttl>0 && p.x>-40 && p.x<canvas.width+40 && p.y>-80 && p.y<canvas.height+80);
+
+    // UI
+    ui.goldBadge.textContent = `💰 Gold: ${state.playerGold}`;
+    const youPct = (state.youHP/100)*100;
+    const enPct = (state.enemyHP/100)*100;
+    ui.hpYouFill.style.width = youPct+'%';
+    ui.hpEnemyFill.style.width = enPct+'%';
+    ui.hpYouTxt.textContent = `${state.youHP}/100`;
+    ui.hpEnemyTxt.textContent = `${state.enemyHP}/100`;
+
+    // Auto-save occasionally
+    if(Math.floor(state.time) % 5 < dt){ save(); }
+  }
+
+  // ------------------ Render ------------------
+  function drawFort(x, side){
+    ctx.save();
+    ctx.translate(x, groundY);
+    ctx.fillStyle = '#30384a';
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 2;
+    // base
+    ctx.fillRect(side==='left'?-30:-40, -80, 70, 80);
+    ctx.strokeRect(side==='left'?-30:-40, -80, 70, 80);
+    // battlements
+    for(let i=0;i<5;i++){
+      const bx = (side==='left'?-30:-40) + i*14;
+      ctx.fillRect(bx, -90, 10, 10);
+    }
+    ctx.restore();
+  }
+
+  function drawUnit(u, t){
+    ctx.save();
+    // color by side/type
+    const colBase = (u.side==='left')? '#7ee081' : '#ff8aa6';
+    ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+    ctx.lineWidth = 2;
+
+    if(u.type==='miner'){
+      // triangle body + small pick oscillating when mining
+      ctx.fillStyle = colBase;
+      ctx.beginPath();
+      const dir = u.facing;
+      ctx.moveTo(u.x, u.y-12);
+      ctx.lineTo(u.x-10*dir, u.y+10);
+      ctx.lineTo(u.x+10*dir, u.y+10);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+
+      if(u.state==='mine'){
+        const swing = Math.sin(t*8)*6;
+        ctx.strokeStyle = '#e0b168';
+        ctx.beginPath();
+        ctx.moveTo(u.x+6, u.y-6);
+        ctx.lineTo(u.x+6 + swing, u.y-18);
+        ctx.stroke();
+      }
+    }
+    else if(u.type==='warrior'){
+      ctx.fillStyle=colBase;
+      // body rectangle
+      ctx.fillRect(u.x-10, u.y-20, 20, 20);
+      // head
+      ctx.beginPath(); ctx.arc(u.x, u.y-26, 6, 0, Math.PI*2); ctx.fill();
+      // sword swing
+      const swing = Math.sin((state.time*6)+u.id)*8;
+      ctx.strokeStyle='#e6e9ef';
+      ctx.beginPath();
+      ctx.moveTo(u.x+ (u.facing*12), u.y-16);
+      ctx.lineTo(u.x+ (u.facing*12)+ swing, u.y-28);
+      ctx.stroke();
+    }
+    else if(u.type==='knight'){
+      // rectangle + triangle facing dir
+      ctx.fillStyle=colBase;
+      ctx.fillRect(u.x-14, u.y-24, 28, 24);
+      ctx.beginPath();
+      if(u.facing>0){
+        ctx.moveTo(u.x+14, u.y-24);
+        ctx.lineTo(u.x+30, u.y-12);
+        ctx.lineTo(u.x+14, u.y);
+      }else{
+        ctx.moveTo(u.x-14, u.y-24);
+        ctx.lineTo(u.x-30, u.y-12);
+        ctx.lineTo(u.x-14, u.y);
+      }
+      ctx.closePath(); ctx.fill();
+    }
+    else if(u.type==='cart'){
+      // simple cart with arm
+      ctx.fillStyle=colBase;
+      ctx.fillRect(u.x-16, u.y-16, 32, 16);
+      ctx.beginPath(); ctx.arc(u.x-10, u.y, 6, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(u.x+10, u.y, 6, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle='#caa57a';
+      ctx.beginPath();
+      ctx.moveTo(u.x, u.y-16);
+      ctx.lineTo(u.x + u.facing*18, u.y-28);
+      ctx.stroke();
+    }
+    else if(u.type==='dragon'){
+      // flying shape
+      ctx.fillStyle=(u.side==='left')? '#67d3ff' : '#ffcf66';
+      ctx.beginPath();
+      ctx.ellipse(u.x, u.y-10, 24, 12, 0, 0, Math.PI*2);
+      ctx.fill();
+      // wings flapping
+      const flap = Math.sin(state.time*6 + u.id)*10;
+      ctx.beginPath();
+      ctx.moveTo(u.x-24, u.y-10);
+      ctx.lineTo(u.x-40, u.y-20-flap);
+      ctx.lineTo(u.x-12, u.y-14);
+      ctx.closePath(); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(u.x+24, u.y-10);
+      ctx.lineTo(u.x+40, u.y-20-flap);
+      ctx.lineTo(u.x+12, u.y-14);
+      ctx.closePath(); ctx.fill();
+
+      // flame cone indicator
+      ctx.fillStyle='rgba(255,110,64,0.35)';
+      ctx.beginPath();
+      ctx.moveTo(u.x-DRAGON_AOE_W/2, u.y);
+      ctx.lineTo(u.x+DRAGON_AOE_W/2, u.y);
+      ctx.lineTo(u.x, groundY);
+      ctx.closePath(); ctx.fill();
+    }
+
+    // HP bar
+    const maxHP = HP[u.type];
+    const pct = clamp(u.hp/maxHP,0,1);
+    ctx.fillStyle='#2a2f3c';
+    ctx.fillRect(u.x-16, u.y-34, 32, 4);
+    ctx.fillStyle = pct>0.5? '#7ee081' : pct>0.25? '#e5df72' : '#ff6b6b';
+    ctx.fillRect(u.x-16, u.y-34, 32*pct, 4);
+
+    ctx.restore();
+  }
+
+  function drawProjectile(p){
+    ctx.save();
+    ctx.fillStyle = '#caa57a';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 5, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function render(){
+    // background
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    // ground
+    ctx.strokeStyle='rgba(255,255,255,0.08)';
+    ctx.lineWidth=2;
+    ctx.beginPath();
+    ctx.moveTo(0, groundY+1);
+    ctx.lineTo(canvas.width, groundY+1);
+    ctx.stroke();
+
+    // forts
+    drawFort(leftFortX, 'left');
+    drawFort(rightFortX, 'right');
+
+    // units
+    for(const u of state.units){
+      drawUnit(u, state.time);
+    }
+    // projectiles
+    for(const p of state.projectiles){
+      drawProjectile(p);
+    }
+
+    // winner banner
+    if(state.winner){
+      ctx.save();
+      ctx.fillStyle='rgba(0,0,0,0.5)';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle='#fff';
+      ctx.font='bold 36px system-ui, sans-serif';
+      ctx.textAlign='center';
+      ctx.fillText(state.winner==='You'?'YOU WIN!':'YOU LOSE!', canvas.width/2, canvas.height/2);
+      ctx.restore();
+    }
+  }
+
+  // ------------------ Main Loop ------------------
+  function loop(){
+    const t = now();
+    let dt = (t - state.lastT)/1000;
+    state.lastT = t;
+    dt = Math.min(dt, 0.05); // clamp big frames
+    if(state.running) update(dt);
+    render();
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  // ------------------ UI Events ------------------
+  document.querySelectorAll('.unit button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const type = btn.dataset.type;
+      tryBuyPlayer(type);
+      save();
+    });
+  });
+
+  ui.pauseBtn.addEventListener('click', ()=>{
+    state.running=false;
+    ui.statusBadge.textContent='⏸ Paused';
+    ui.pauseBtn.disabled=true; ui.resumeBtn.disabled=false;
+    save();
+  });
+  ui.resumeBtn.addEventListener('click', ()=>{
+    state.running=true;
+    ui.statusBadge.textContent='▶️ Running';
+    ui.pauseBtn.disabled=false; ui.resumeBtn.disabled=true;
+  });
+  ui.resetBtn.addEventListener('click', ()=>{
+    reset(true);
+  });
+
+  // Resize canvas to container width, maintain designed aspect ratio
+  function fitCanvas(){
+    const rect = canvas.getBoundingClientRect();
+    // keep internal buffer proportional to client width to keep physics scale consistent with visual size
+    // We keep the internal resolution fixed to W x H for logic; CSS scales visually.
+    // No change required to canvas.width/height here (already set). Just re-render.
+  }
+  window.addEventListener('resize', fitCanvas);
+  fitCanvas();
+
+  // ------------- Minor QoL: enemy starting miners -------------
+  // Make the AI try to reach initial miners cap at start if gold permits
+  (function seedAI(){
+    for(let i=0;i<Math.min(4, state.ai.maxMiners); i++){
+      if(state.enemyGold>=COST.miner) spawn('right','miner');
+    }
+  })();
+
+})();
+</script>
+</body>
+</html>
