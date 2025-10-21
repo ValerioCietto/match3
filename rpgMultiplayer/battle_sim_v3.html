@@ -554,6 +554,8 @@
           let actionsLeft = a.attacksPerTurn;
           while(actionsLeft>0 && defenders.some(d=>d.hp>0)){
             const hpPct = percent(a);
+            const alliesAlive = heroes.filter(h=>h.hp>0);
+            const groupMinPct = alliesAlive.length ? Math.min(...alliesAlive.map(percent)) : 1;
 
             if(a.role==="tank"){
               if(hpPct>=0.80){
@@ -630,10 +632,9 @@
               }
             }
             else if(a.role==="healer"){
-              if(hpPct>=0.80){
+              if(groupMinPct>=0.80){
                 // Attack
-                const t = pickTarget(defenders, a.priority, null);
-                if(!t) break;
+                const t = pickTarget(defenders, a.priority, null); if(!t) break;
                 const dmg = damageAfterDefense(a.atk * (a.status.nextAttackMult||1), t.baseDef||0);
                 a.status.nextAttackMult = 1;
                 await animateAttack(a, t, [...heroes, ...enemies]);
@@ -641,8 +642,8 @@
                 logLine(`${a.id} (Healer) attacca ${t.id}, fa ${dmg} danni, ${t.id} ha ${t.hp}hp rimanenti.`);
                 if(t.hp<=0){ logLine(`→ ${t.id} è stato sconfitto!`); a.kills++; }
                 actionsLeft--;
-              } else if(hpPct>=0.40){
-                // Heal single: target lowest HP (absolute)
+              } else if(groupMinPct>=0.40){
+                // Heal single: target con meno HP (assoluti, coerente con specifica precedente)
                 const allies = heroes.filter(h=>h.hp>0);
                 if(allies.length){
                   const tgt = allies.reduce((m,cur)=> cur.hp<m.hp?cur:m, allies[0]);
@@ -652,7 +653,7 @@
                 }
                 actionsLeft = 0;
               } else {
-                // Mass heal: all allies +25% max HP
+                // Mass heal
                 const allies = heroes.filter(h=>h.hp>0);
                 let total=0;
                 allies.forEach(tgt=>{
