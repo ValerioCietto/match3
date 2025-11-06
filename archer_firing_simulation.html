@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Stickman Archer Animation</title>
+<style>
+  :root{
+    --bg:#0f1216;
+    --fg:#e8eef8;
+    --muted:#9fb2c7;
+    --accent:#5bb4ff;
+    --accent-2:#44d38c;
+    --danger:#ff6b6b;
+  }
+  *{box-sizing:border-box}
+  html,body{
+    margin:0;
+    height:100%;
+    background:var(--bg);
+    color:var(--fg);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
+  }
+  .wrap{
+    display:flex; flex-direction:column; gap:10px;
+    height:100%; max-width:900px; margin:0 auto; padding:12px;
+  }
+  .toolbar{
+    display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;
+    position:sticky; top:0; z-index:5;
+  }
+  button{
+    appearance:none; border:none; border-radius:14px;
+    padding:14px 12px; font-weight:700; font-size:16px;
+    background:#19202a; color:var(--fg); box-shadow:0 2px 0 #0008 inset, 0 2px 10px #0004;
+    touch-action:manipulation;
+  }
+  button:active{transform:translateY(1px)}
+  .primary{background:linear-gradient(180deg, #1f2b3a, #16202d); outline:1px solid #2a3a4e}
+  .accent{background:linear-gradient(180deg, #17334b, #112636); outline:1px solid #2a4d6f}
+  .good{background:linear-gradient(180deg, #124232, #0e2f24); outline:1px solid #1f6b51}
+  .danger{background:linear-gradient(180deg, #4b1a1a, #311010); outline:1px solid #6f2a2a}
+  .row{
+    display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap;
+  }
+  .info{
+    font-size:14px; color:var(--muted);
+    display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+  }
+  .badge{
+    padding:6px 10px; border-radius:999px; background:#1b2430; color:var(--fg); font-weight:700;
+    border:1px solid #2a3a4e; font-size:13px;
+  }
+  input[type=range]{
+    -webkit-appearance:none; appearance:none; width:100%; max-width:280px; height:6px;
+    border-radius:999px; background:#223042; outline:none; cursor:pointer;
+  }
+  input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; appearance:none; width:22px; height:22px; border-radius:50%; background:#5bb4ff; box-shadow:0 0 0 3px #0f1216 inset; border:2px solid #2a4d6f; }
+  input[type=range]::-moz-range-thumb{ width:22px; height:22px; border-radius:50%; background:#5bb4ff; border:2px solid #2a4d6f; }
+  canvas{
+    width:100%; height:100%;
+    background: radial-gradient(1200px 500px at 20% 110%, #0b1016, #070a0f);
+    border-radius:18px; border:1px solid #1f2a38;
+    box-shadow:0 10px 40px #000a inset, 0 10px 30px #0006;
+  }
+  .stage{
+    flex:1; min-height:300px; position:relative;
+  }
+  .legend{
+    font-size:13px; color:var(--muted); text-align:center; margin-top:4px;
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="toolbar">
+      <button id="btnPlayPause" class="primary">▶️ Play</button>
+      <button id="btnLoop" class="accent">🔁 Loop: OFF</button>
+      <button id="btnReplayPhase" class="good">↩️ Replay Phase</button>
+    </div>
+
+    <div class="row">
+      <div class="info">
+        <span class="badge" id="phaseBadge">Phase: –</span>
+        <span class="badge" id="timeBadge">t = 0.00s</span>
+      </div>
+      <div class="info">
+        <span>Tip: tocca i pulsanti per controllare il ciclo. L’arciere è in vista laterale.</span>
+      </div>
+    </div>
+
+    <!-- Firing angle slider -->
+    <div class="row">
+      <div class="info" style="gap:14px; align-items:center; width:100%;">
+        <span class="badge">Firing angle: <span id="angleLabel">-3°</span></span>
+        <input id="angleSlider" type="range" min="-30" max="45" step="1" value="0" />
+      </div>
+    </div>
+
+    <div class="stage">
+      <canvas id="cv"></canvas>
+      <div class="legend">Stickman Archer • Focus su pose e cinematica di arco, corda e freccia</div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // ====== Canvas setup (HiDPI, responsive) ======
+  const canvas = document.getElementById('cv');
+  const ctx = canvas.getContext('2d');
+  const DPR = Math.max(1, window.devicePixelRatio || 1);
+
+  function resize() {
+    const rect = canvas.getBoundingClientRect();
+    canvas.width  = Math.floor(rect.width  * DPR);
+    canvas.height = Math.floor(rect.height * DPR);
+  }
+  window.addEventListener('resize', resize, {passive:true});
+  resize();
+
+  // ====== Controls ======
+  const btnPlayPause = document.getElementById('btnPlayPause');
+  const btnLoop = document.getElementById('btnLoop');
+  const btnReplayPhase = document.getElementById('btnReplayPhase');
+  const phaseBadge = document.getElementById('phaseBadge');
+  const timeBadge = document.getElementById('timeBadge');
+  const angleSlider = document.getElementById('angleSlider');
+  const angleLabel  = document.getElementById('angleLabel');
+
+  let isPlaying = false;
+  let loopWhole = false;
+
+  btnPlayPause.addEventListener('click', () => {
+    isPlaying = !isPlaying;
+    btnPlayPause.textContent = isPlaying ? '⏸️ Pause' : '▶️ Play';
+    if (isPlaying) lastTs = performance.now();
+    requestAnimationFrame(tick);
+  });
+
+  btnLoop.addEventListener('click', () => {
+    loopWhole = !loopWhole;
+    btnLoop.textContent = loopWhole ? '🔁 Loop: ON' : '🔁 Loop: OFF';
+  });
+
+  btnReplayPhase.addEventListener('click', () => {
+    phaseTime = 0;
+    // Reset micro-state that belongs to phase
+    if (PHASES[currentPhase].onStart) PHASES[currentPhase].onStart(true);
+  });
+
+  // ====== Helpers ======
+  const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
+  const lerp = (a,b,t)=>a+(b-a)*t;
+  const easeInOut = (t)=>0.5-(Math.cos(Math.PI*t)/2);
+  const TAU = Math.PI*2;
+  const deg2rad = d => d * Math.PI / 180;
+  const rad2deg = r => r * 180 / Math.PI;
+
+  // Firing angle (deg/rad) controlled by slider
+  let fireAngleDeg = -3; // slight upward by default
+  let fireAngleRad = deg2rad(fireAngleDeg);
+  function updateAngleFromUI(){
+    fireAngleDeg = parseFloat(angleSlider.value);
+    fireAngleRad = deg2rad(fireAngleDeg);
+    angleLabel.textContent = `${fireAngleDeg.toFixed(0)}°`;
+  }
+  angleSlider.addEventListener('input', updateAngleFromUI);
+  updateAngleFromUI();
+
+  // ====== World / scale ======
+  function world() {
+    const W = canvas.width, H = canvas.height;
+    const groundY = H*0.85;
+    const scale = Math.min(W, H) * 0.18; // character scale
+    const archerX = W*0.22;
+    return {W,H,groundY,scale,archerX};
+  }
+
+  // ====== Model (stickman joints) ======
+  // Base proportions (in "meters" scaled by scale)
+  const BASE = {
+    headR: 0.18,
+    torso: 0.7,
+    upperArm: 0.45,
+    foreArm: 0.45,
+    thigh: 0.55,
+    shin: 0.55
+  };
+
+  // Live arrow state (detached when fired)
+  let flyingArrows = []; // {x,y,vx,vy,alive}
+  function spawnArrow(x,y,vx,vy){
+    flyingArrows.push({x,y,vx,vy,alive:true});
+  }
+
+  // ====== Phase machine ======
+  const PHASE = {
+    TAKE: 0,   // prende freccia dalla faretra
+    LOAD: 1,   // incocca
+    DRAW: 2,   // tende
+    AIM:  3,   // mira (wiggle)
+    FIRE: 4,   // rilascia
+    RELAX:5    // abbassa
+  };
+
+  const PHASE_NAMES = ['Take Arrow','Load Arrow','Draw Bow','Aim','Fire','Relax'];
+
+  const DUR = {
+    [PHASE.TAKE]:  0.90,
+    [PHASE.LOAD]:  0.80,
+    [PHASE.DRAW]:  0.90,
+    [PHASE.AIM]:   1.00,
+    [PHASE.FIRE]:  0.35,
+    [PHASE.RELAX]: 0.75
+  };
+
+  let currentPhase = PHASE.TAKE;
+  let phaseTime = 0;
+  let lastTs = 0;
+
+  // Phase-local state
+  let hasArrowInHand = false;       // true when picked from quiver
+  let arrowAttached = false;        // true when tail is on string
+  let stringPull = 0;               // 0..1 how much the string is pulled
+  let bowAngle = -0.05;             // slight upward default
+  let aimWiggleT = 0;               // time for AIM wiggle
+
+  // Initialize on start of each phase
+  const PHASES = {
+    [PHASE.TAKE]: {
+      onStart: (replay=false)=>{ hasArrowInHand=false; arrowAttached=false; stringPull=0; bowAngle=fireAngleRad; },
+      logic: (tNorm)=>{ // reach back with right arm, relax string a bit
+        if (tNorm>0.5) hasArrowInHand = true;
+      }
+    },
+    [PHASE.LOAD]: {
+      onStart: (replay=false)=>{},
+      logic: (tNorm)=>{ // bring right hand forward to place arrow; attach near end
+        if (tNorm>0.65){ arrowAttached=true; stringPull = 0.05; }
+      }
+    },
+    [PHASE.DRAW]: {
+      onStart: (replay=false)=>{},
+      logic: (tNorm)=>{ // pull string back to 1.0
+        stringPull = easeInOut(clamp(tNorm,0,1)); // 0..1
+      }
+    },
+    [PHASE.AIM]: {
+      onStart: (replay=false)=>{ aimWiggleT=0; },
+      logic: (tNorm, dt)=>{ // keep at full draw, wiggle bow angle slightly
+        stringPull = 1;
+        aimWiggleT += dt;
+        const wiggle = Math.sin(aimWiggleT*6.0)*0.02; // ~±1.1°
+        bowAngle = fireAngleRad + wiggle; // aim around slider-defined angle
+      }
+    },
+    [PHASE.FIRE]: {
+      onStart: (replay=false)=>{},
+      logic: (tNorm,dt,env,poses)=>{ // release quickly
+        // On the first half, the string snaps forward and arrow launches once.
+        const snap = 1 - tNorm; // goes 1..0
+        const handRelease = clamp(1 - tNorm*3, 0, 1);
+        stringPull = handRelease * 0.15; // residual forward bend
+
+        if (arrowAttached){ // launch once
+          arrowAttached = false;
+          // compute arrow tip direction from bow hand to target direction
+          const dir = fireAngleRad; // launch using slider-defined firing angle
+          const speed = env.scale * 5.5; // pixels per second
+          const vx = Math.cos(dir)*speed;
+          const vy = Math.sin(dir)*speed - env.scale*0.2; // slight upward bias
+          spawnArrow(poses.stringPoint.x, poses.stringPoint.y, vx, vy);
+        }
+      }
+    },
+    [PHASE.RELAX]: {
+      onStart: (replay=false)=>{},
+      logic: (tNorm)=>{ // bring arms down, reset bow angle and string pull
+        stringPull = lerp(0.1, 0.0, easeInOut(tNorm));
+        bowAngle = lerp(-0.02, -0.05, easeInOut(tNorm));
+        hasArrowInHand = false;
+      }
+    }
+  };
+
+  function nextPhase(){
+    currentPhase = (currentPhase+1);
+    if (currentPhase>PHASE.RELAX){
+      if (loopWhole){ currentPhase = PHASE.TAKE; }
+      else { currentPhase = PHASE.RELAX; isPlaying=false; btnPlayPause.textContent='▶️ Play'; }
+    }
+    phaseTime = 0;
+    if (PHASES[currentPhase].onStart) PHASES[currentPhase].onStart(false);
+  }
+
+  // ====== Kinematics (pose solver for each phase) ======
+  function solvePose(env, tNorm){
+    const {archerX, groundY, scale} = env;
+
+    // Base anchor points
+    const hip = { x: archerX, y: groundY - scale*(BASE.thigh+BASE.shin) };
+    const shoulder = { x: hip.x, y: hip.y - scale*BASE.torso };
+    const head = { x: shoulder.x + scale*0.02, y: shoulder.y - scale*BASE.headR*2 };
+
+    // Legs (simple A-pose)
+    const footY = groundY;
+    const stance = scale*0.20;
+    const kneeY = lerp(footY - BASE.shin*scale*0.95, footY - BASE.shin*scale*0.85, 0.5);
+    const leftFoot =  { x: hip.x - stance, y: footY };
+    const rightFoot = { x: hip.x + stance*0.5, y: footY };
+    const leftKnee =  { x: lerp(hip.x-stance*0.2, hip.x-stance*0.4, 0.5), y: kneeY };
+    const rightKnee = { x: lerp(hip.x+stance*0.1, hip.x+stance*0.2, 0.5), y: kneeY };
+
+    // Bow hand (left) and string hand (right) positions depend on phase
+    // Build a forward target direction (slightly up)
+    const dirBase = bowAngle; // updated in AIM
+    const bowLen = scale*0.95;
+
+    // Left hand holds the bow grip:
+    const leftHand = {
+      x: shoulder.x + Math.cos(dirBase)*bowLen*0.5,
+      y: shoulder.y + Math.sin(dirBase)*bowLen*0.5
+    };
+
+    // Right hand pulls the string along the arrow line:
+    // When not pulled: near leftHand. When fully: behind face.
+    const fullDraw = scale*0.65;
+    const pull = stringPull; // 0..1
+    const drawX = leftHand.x - Math.cos(dirBase)*(pull*fullDraw);
+    const drawY = leftHand.y - Math.sin(dirBase)*(pull*fullDraw);
+    const rightHand = { x: drawX, y: drawY };
+
+    // During TAKE and LOAD we override right hand trajectory:
+    if (currentPhase === PHASE.TAKE){
+      // Move right hand behind the shoulder to the quiver
+      const back = { x: shoulder.x - scale*0.35, y: shoulder.y + scale*0.05 };
+      const mid = { x: lerp(shoulder.x, back.x, easeInOut(tNorm)),
+                    y: lerp(shoulder.y, back.y, easeInOut(tNorm)) };
+      rightHand.x = mid.x; rightHand.y = mid.y;
+    }
+    if (currentPhase === PHASE.LOAD){
+      // Bring hand from quiver to bow grip (leftHand)
+      const back = { x: shoulder.x - scale*0.35, y: shoulder.y + scale*0.05 };
+      rightHand.x = lerp(back.x, leftHand.x, easeInOut(tNorm));
+      rightHand.y = lerp(back.y, leftHand.y, easeInOut(tNorm));
+    }
+
+    // Left arm straight when DRAW/AIM/FIRE; a bit bent otherwise
+    const leftElbow = {
+      x: lerp(shoulder.x + (leftHand.x-shoulder.x)*0.45, shoulder.x + (leftHand.x-shoulder.x)*0.5, 1),
+      y: lerp(shoulder.y + (leftHand.y-shoulder.y)*0.45, shoulder.y + (leftHand.y-shoulder.y)*0.5, 1)
+    };
+
+    // Right elbow naturally behind during draw
+    const rightElbow = {
+      x: lerp(shoulder.x + (rightHand.x-shoulder.x)*0.55, shoulder.x + (rightHand.x-shoulder.x)*0.6, 1),
+      y: lerp(shoulder.y + (rightHand.y-shoulder.y)*0.55, shoulder.y + (rightHand.y-shoulder.y)*0.6, 1)
+    };
+
+    // Bow geometry
+    const bowTop = {
+      x: leftHand.x + Math.cos(dirBase - Math.PI/2)*bowLen*0.5,
+      y: leftHand.y + Math.sin(dirBase - Math.PI/2)*bowLen*0.5
+    };
+    const bowBot = {
+      x: leftHand.x + Math.cos(dirBase + Math.PI/2)*bowLen*0.5,
+      y: leftHand.y + Math.sin(dirBase + Math.PI/2)*bowLen*0.5
+    };
+
+    // Arm is rigid: when drawing, the bow tips shift left; when firing (stringPull decreases) they shift back right
+    const bowXShift = -scale * 0.22 * clamp(stringPull,0,1);
+    bowTop.x += bowXShift;
+    bowBot.x += bowXShift;
+
+    // String point (nock) is between bow ends, displaced by pull
+    const midBow = { x: (bowTop.x+bowBot.x)/2, y:(bowTop.y+bowBot.y)/2 };
+    const stringPoint = {
+      x: lerp(midBow.x, rightHand.x, clamp(stringPull,0,1)),
+      y: lerp(midBow.y, rightHand.y, clamp(stringPull,0,1))
+    };
+
+    return {
+      hip, shoulder, head,
+      leftKnee, rightKnee, leftFoot, rightFoot,
+      leftHand, rightHand, leftElbow, rightElbow,
+      bowTop, bowBot, stringPoint
+    };
+  }
+
+  // ====== Rendering ======
+  function drawStick(ctx, a, b, w){
+    ctx.lineWidth = w; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+  }
+  function drawCircle(ctx, c, r, fill=true){
+    ctx.beginPath(); ctx.arc(c.x,c.y,r,0,TAU);
+    if (fill) ctx.fill(); else ctx.stroke();
+  }
+
+  function render(env, poses){
+    const {W,H,groundY,scale} = env;
+
+    // Clear
+    ctx.clearRect(0,0,W,H);
+
+    // Ground
+    ctx.strokeStyle = '#243041'; ctx.lineWidth = 2*DPR;
+    ctx.beginPath(); ctx.moveTo(0,groundY); ctx.lineTo(W,groundY); ctx.stroke();
+
+    // Draw arrows in flight
+    stepArrows(env);
+    for (const a of flyingArrows){
+      if (!a.alive) continue;
+      ctx.strokeStyle = '#d8e5ff'; ctx.lineWidth = 2*DPR; ctx.lineCap='round';
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      // small line to show orientation
+      const tail = { x: a.x - a.vx*0.015, y: a.y - a.vy*0.015 };
+      ctx.lineTo(tail.x, tail.y);
+      ctx.stroke();
+    }
+
+    // Stickman body
+    ctx.strokeStyle = '#e8eef8';
+    // Torso
+    drawStick(ctx, poses.hip, poses.shoulder, 6*DPR);
+    // Head
+    ctx.fillStyle = '#e8eef8';
+    drawCircle(ctx, poses.head, BASE.headR*scale*0.9, true);
+    // Legs
+    drawStick(ctx, poses.hip, poses.leftKnee, 5*DPR);
+    drawStick(ctx, poses.leftKnee, poses.leftFoot, 5*DPR);
+    drawStick(ctx, poses.hip, poses.rightKnee, 5*DPR);
+    drawStick(ctx, poses.rightKnee, poses.rightFoot, 5*DPR);
+    // Arms
+    drawStick(ctx, poses.shoulder, poses.leftElbow, 5*DPR);
+    drawStick(ctx, poses.leftElbow, poses.leftHand, 5*DPR);
+    drawStick(ctx, poses.shoulder, poses.rightElbow, 5*DPR);
+    drawStick(ctx, poses.rightElbow, poses.rightHand, 5*DPR);
+
+    // Quiver (simple line behind shoulder)
+    ctx.strokeStyle = '#9fb2c7';
+    const qTop = { x: poses.shoulder.x- scale*0.20, y: poses.shoulder.y + scale*0.00 };
+    const qBot = { x: poses.shoulder.x- scale*0.05, y: poses.hip.y + scale*0.10 };
+    drawStick(ctx, qTop, qBot, 3*DPR);
+
+    // Bow (cubic Bezier, inverted curvature) with the grip (leftHand) constrained to be at the curve midpoint
+    ctx.strokeStyle = '#44d38c';
+    ctx.lineWidth = 4*DPR;
+    ctx.beginPath();
+    ctx.moveTo(poses.bowTop.x, poses.bowTop.y);
+
+    // Normal pointing toward the grip
+    const vx = poses.bowBot.x - poses.bowTop.x;
+    const vy = poses.bowBot.y - poses.bowTop.y;
+    const vlen = Math.hypot(vx, vy) || 1;
+    let nx = -vy / vlen;
+    let ny =  vx / vlen;
+    const midX = (poses.bowTop.x + poses.bowBot.x) / 2;
+    const midY = (poses.bowTop.y + poses.bowBot.y) / 2;
+    const toHandX = poses.leftHand.x - midX;
+    const toHandY = poses.leftHand.y - midY;
+    if (nx*toHandX + ny*toHandY < 0){ nx = -nx; ny = -ny; }
+
+    // Slight constant flex: keep the bow gently bent by ~10px regardless of draw
+    const bendBase = 10 * DPR; // requested ~10px flex
+    const bend = bendBase;
+
+    // Constrain Bezier so that B(0.5) == leftHand
+    // For a cubic Bezier: B(0.5) = (P0 + 3*C1 + 3*C2 + P3)/8
+    // We choose C1 and C2 identical (keeps a clean bow) then solve a shift so midpoint hits leftHand
+    const Sx = (8/3) * poses.leftHand.x - (poses.bowTop.x + poses.bowBot.x) / 3;
+    const Sy = (8/3) * poses.leftHand.y - (poses.bowTop.y + poses.bowBot.y) / 3;
+
+    const baseSumX = 2*poses.leftHand.x + 2*nx*bend;
+    const baseSumY = 2*poses.leftHand.y + 2*ny*bend;
+
+    const shiftX = 0.5 * (Sx - baseSumX);
+    const shiftY = 0.5 * (Sy - baseSumY);
+
+    const ctrl1 = { x: poses.leftHand.x + nx*bend + shiftX, y: poses.leftHand.y + ny*bend + shiftY };
+    const ctrl2 = { x: poses.leftHand.x + nx*bend + shiftX, y: poses.leftHand.y + ny*bend + shiftY };
+
+    ctx.bezierCurveTo(ctrl1.x, ctrl1.y, ctrl2.x, ctrl2.y, poses.bowBot.x, poses.bowBot.y);
+    ctx.stroke();
+
+    // String
+    ctx.strokeStyle = '#5bb4ff';
+    ctx.lineWidth = 2*DPR;
+    ctx.beginPath();
+    ctx.moveTo(poses.bowTop.x, poses.bowTop.y);
+    ctx.lineTo(poses.stringPoint.x, poses.stringPoint.y);
+    ctx.lineTo(poses.bowBot.x, poses.bowBot.y);
+    ctx.stroke();
+    ctx.strokeStyle = '#5bb4ff';
+    ctx.lineWidth = 2*DPR;
+    ctx.beginPath();
+    ctx.moveTo(poses.bowTop.x, poses.bowTop.y);
+    ctx.lineTo(poses.stringPoint.x, poses.stringPoint.y);
+    ctx.lineTo(poses.bowBot.x, poses.bowBot.y);
+    ctx.stroke();
+
+    // Arrow attached to string
+    if (arrowAttached){
+      ctx.strokeStyle = '#d8e5ff';
+      ctx.lineWidth = 2*DPR;
+      ctx.beginPath();
+      // From string point forward along bow direction
+      const dir = Math.atan2(poses.leftHand.y - poses.rightHand.y, poses.leftHand.x - poses.rightHand.x);
+      const tip = { x: poses.stringPoint.x + Math.cos(dir)*scale*0.75,
+                    y: poses.stringPoint.y + Math.sin(dir)*scale*0.75 };
+      ctx.moveTo(poses.stringPoint.x, poses.stringPoint.y);
+      ctx.lineTo(tip.x, tip.y);
+      ctx.stroke();
+
+      // Fletching near string point
+      ctx.beginPath();
+      const side = { x: poses.stringPoint.x + Math.cos(dir+Math.PI*0.5)*scale*0.06,
+                     y: poses.stringPoint.y + Math.sin(dir+Math.PI*0.5)*scale*0.06 };
+      const side2= { x: poses.stringPoint.x + Math.cos(dir-Math.PI*0.5)*scale*0.06,
+                     y: poses.stringPoint.y + Math.sin(dir-Math.PI*0.5)*scale*0.06 };
+      ctx.moveTo(poses.stringPoint.x, poses.stringPoint.y);
+      ctx.lineTo(side.x, side.y);
+      ctx.moveTo(poses.stringPoint.x, poses.stringPoint.y);
+      ctx.lineTo(side2.x, side2.y);
+      ctx.stroke();
+    }
+  }
+
+  // ====== Arrow physics ======
+  function stepArrows(env){
+    const g = env.scale * 3.4; // px/s^2 gravity
+    const dt = frameDt;
+    for (const a of flyingArrows){
+      if (!a.alive) continue;
+      a.vy += g * dt;
+      a.x += a.vx * dt;
+      a.y += a.vy * dt;
+      // kill when offscreen
+      if (a.x < -50 || a.x > env.W+50 || a.y < -50 || a.y > env.H+50){
+        a.alive=false;
+      }
+    }
+    // compact
+    if (flyingArrows.length>20) flyingArrows = flyingArrows.filter(x=>x.alive);
+  }
+
+  // ====== Animation loop ======
+  let frameDt = 0;
+
+  function tick(ts){
+    if (!isPlaying) return;
+    const env = world();
+    frameDt = Math.min(0.05, (ts - lastTs)/1000); // clamp large dt
+    lastTs = ts;
+
+    const dur = DUR[currentPhase];
+    phaseTime += frameDt;
+    const tNorm = clamp(phaseTime / dur, 0, 1);
+
+    // Run phase logic
+    PHASES[currentPhase].logic(tNorm, frameDt, env, solvePose(env, tNorm));
+
+    // Solve pose *after* logic (to reflect updates like stringPull)
+    const poses = solvePose(env, tNorm);
+    render(env, poses);
+
+    // UI badges
+    phaseBadge.textContent = `Phase: ${PHASE_NAMES[currentPhase]}`;
+    timeBadge.textContent  = `t = ${phaseTime.toFixed(2)}s`;
+
+    if (phaseTime >= dur){ nextPhase(); }
+    requestAnimationFrame(tick);
+  }
+
+  // Kick initial draw
+  const env0 = world();
+  const poses0 = solvePose(env0, 0);
+  render(env0, poses0);
+  phaseBadge.textContent = 'Phase: Take Arrow';
+  timeBadge.textContent = 't = 0.00s';
+})();
+</script>
+</body>
+</html>
