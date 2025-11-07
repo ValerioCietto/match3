@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>Simulatore Fiscal Drag & Mini Legge di Bilancio (IRPEF)</title>
   <style>
-    /* Mobile-first layout, sticky controls, card UI */
     :root{--bg:#0b0f14;--card:#121821;--ink:#eaf2ff;--muted:#a6b0c0;--accent:#5bb0ff;--ok:#4cd964;--warn:#ffcc00;--bad:#ff6363;}
     *{box-sizing:border-box} html,body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;}
     header{position:sticky;top:0;z-index:5;background:linear-gradient(180deg,rgba(11,15,20,.98),rgba(11,15,20,.9));backdrop-filter:blur(6px);border-bottom:1px solid #1c2430}
@@ -41,7 +40,7 @@
     <div class="stickybar">
       <span class="pill">Aliquote 2025 di default • certezza 95%</span>
       <span class="pill">Distribuzione ISTAT/MEF sintetica • certezza 75%</span>
-      <span class="pill">Inflazione previsionale modificabile</span>
+      <span class="pill">No tax area: 8.000 € (imposta 0) • certezza 90%</span>
     </div>
   </div>
 </header>
@@ -51,12 +50,17 @@
     <h2>Controlli</h2>
     <div class="row">
       <label>Inflazione %</label>
-      <input id="inflation" type="number" step="0.1" value="5" /> 
+      <input id="inflation" type="number" step="0.1" value="5" />
       <button class="ghost" id="applyInfl">Applica</button>
-      <span class="muted tiny">Impatta solo i redditi (fiscal drag)</span>
+      <button class="ghost" id="sterilize">Sterilizza fiscal drag (alza soglie di inflazione)</button>
+      <span class="muted tiny">Sterilizzazione: t1 e t2 ↑ della stessa % di inflazione.</span>
     </div>
 
     <h3>Scaglioni IRPEF</h3>
+    <div class="row">
+      <label>No tax area (€)</label><input id="noTax" type="number" value="8000" disabled />
+      <span class="pill">Reddito ≤ 8.000 € ⇒ imposta 0</span>
+    </div>
     <div class="row">
       <label>Soglia 1 (€)</label><input id="t1" type="number" value="28000"/>
       <label>Aliquota 1 (%)</label><input id="r1" type="number" step="0.1" value="23"/>
@@ -77,7 +81,7 @@
       <button id="importCsv" class="ghost">Import CSV</button>
       <button id="exportJson" class="ghost">Export JSON</button>
       <input id="file" type="file" accept=".csv,.json" />
-      <span class="muted tiny">Formato CSV: <span class="mono">min,max,percentuale</span> (percentuale in %)</span>
+      <span class="muted tiny">CSV: <span class="mono">min,max,percentuale</span> (percentuale in %)</span>
     </div>
   </section>
 
@@ -123,38 +127,25 @@
   </section>
 
   <section class="card">
-    <h2>Note & fonti</h2>
-    <p class="tiny">
-      Aliquote 2025 (Agenzia Entrate) e riforma a 3 scaglioni strutturale (23-35-43); proposta 2026 in iter per 33% sullo scaglione 28–50k. Dati distribuzione: ISTAT “Redistribuzione del reddito” e MEF (Dipartimento Finanze) classi di reddito.<br/>
-      Certezza fonti aliquote correnti: 95%. Proposta 33%: 80%. Distribuzione sintetizzata: 75%. Assunzioni spiegate nel codice.
-    </p>
+    <h2>Note</h2>
+    <p class="tiny">La “no tax area” qui è modellata come tax=0 per redditi ≤ 8.000 € (semplificazione). La sterilizzazione alza t1 e t2 della % di inflazione impostata. Certezza modellazione semplificata: 85%.</p>
   </section>
 </main>
 
 <script>
 /*
-# Come avviare in locale (da terminale):
+# Comando da terminale per avviare in locale:
 #   python3 -m http.server 8000
 # poi apri http://localhost:8000
-
-# Nota dati:
-# - Aliquote/scaglioni iniziali: IRPEF 2025 (Agenzia Entrate).
-# - Pulsante "Proposta 2026" imposta 33% per lo scaglione 28–50k (DDL in discussione).
-# - Distribuzione redditi: vettore sintetico (min,max,%) basato su fasce MEF/ISTAT tipiche;
-#   puoi sostituire via CSV/JSON. I valori % devono sommare ~100.
 */
 
 const fmtEUR = v => (isNaN(v)?'—':v.toLocaleString('it-IT',{style:'currency',currency:'EUR',maximumFractionDigits:0}));
-const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
-const LSKEY='irpef-sim-2025-v1';
+const LSKEY='irpef-sim-2025-v2';
 
 const state = {
   inflation: 5,
-  // Scaglioni: [ soglia1, soglia2 ] e aliquote [%] r1, r2, r3
+  noTaxArea: 8000,            // NEW: soglia no tax area
   t1: 28000, t2: 50000, r1: 23, r2: 35, r3: 43,
-  // Distribuzione sintetica (sommatoria ≈100). Fonte: classi MEF + consolidata curva ISTAT.
-  // Puoi sostituire via Import CSV (min,max,percentuale).
-  // L'interpretazione è "quota contribuenti in ciascuna classe".
   dist: [
     [    0,  7500,  7.0],
     [ 7500, 10000,  5.0],
@@ -168,37 +159,33 @@ const state = {
     [100000,200000, 1.7],
     [200000,9999999,0.3]
   ],
-  // Numero contribuenti “scala” per trasformare percentuali in teste (non influisce sulle percentuali)
   taxpayers: 1_000_000,
-  // Valore medio all'interno di ogni classe per il calcolo (assunzione: media aritmetica troncata)
   classMean: (min,max)=> (min+max)/2
 };
 
-// Carica stato da localStorage se presente
-(function loadLS(){
+// load LS
+(function(){
   try{
     const s = JSON.parse(localStorage.getItem(LSKEY)||'null');
-    if(s){
-      Object.assign(state,s);
-      document.getElementById('inflation').value = state.inflation;
-      document.getElementById('t1').value = state.t1;
-      document.getElementById('t2').value = state.t2;
-      document.getElementById('r1').value = state.r1;
-      document.getElementById('r2').value = state.r2;
-      document.getElementById('r3').value = state.r3;
-    }
+    if(s){ Object.assign(state,s); }
   }catch(e){}
+  document.getElementById('inflation').value = state.inflation;
+  document.getElementById('t1').value = state.t1;
+  document.getElementById('t2').value = state.t2;
+  document.getElementById('r1').value = state.r1;
+  document.getElementById('r2').value = state.r2;
+  document.getElementById('r3').value = state.r3;
+  document.getElementById('noTax').value = state.noTaxArea;
 })();
 
-function saveLS(){
-  localStorage.setItem(LSKEY, JSON.stringify(state));
-}
+function saveLS(){ localStorage.setItem(LSKEY, JSON.stringify(state)); }
 
-function taxDue(y, t1,t2,r1,r2,r3){
-  // Calcolo IRPEF a scaglioni secca (no detrazioni, no bonus):
-  // imposta = 23% fino t1, poi 35% per la parte (t1..t2), poi 43% oltre t2
-  let tax=0;
+function taxDue(y, t1,t2,r1,r2,r3, noTax){
   if(y<=0) return 0;
+  // NEW: no tax area — se reddito lordo <= soglia, imposta zero
+  if(y<=noTax) return 0;
+
+  let tax=0;
   if(y<=t1) return y*(r1/100);
   tax += t1*(r1/100);
   if(y<=t2){ tax += (y-t1)*(r2/100); return tax; }
@@ -218,24 +205,28 @@ function totalsFor(brackets){
     const yBase = state.classMean(min,max);
     const yInfl = yBase*inflMult;
 
-    base   += heads * taxDue(yBase,  state.t1,state.t2,state.r1,state.r2,state.r3);
-    infl   += heads * taxDue(yInfl,  state.t1,state.t2,state.r1,state.r2,state.r3);
-    reform += heads * taxDue(yInfl,  t1,     t2,     r1,     r2,     r3    );
+    base   += heads * taxDue(yBase,  state.t1,state.t2,state.r1,state.r2,state.r3, state.noTaxArea);
+    infl   += heads * taxDue(yInfl,  state.t1,state.t2,state.r1,state.r2,state.r3, state.noTaxArea);
+    reform += heads * taxDue(yInfl,  t1,     t2,     r1,     r2,     r3,           state.noTaxArea);
   }
   return {base, infl, reform};
 }
 
-function updateKPIs(){
-  const b = {t1:state.t1,t2:state.t2,r1:state.r1,r2:state.r2,r3:state.r3};
-  const res = totalsFor(b);
-  const elB=document.getElementById('kpiBase');
-  const elI=document.getElementById('kpiInfl');
-  const elR=document.getElementById('kpiReform');
-  elB.textContent = fmtEUR(res.base);
-  elI.textContent = fmtEUR(res.infl);
-  elR.textContent = fmtEUR(res.reform);
+function readInputsToState(){
+  state.inflation = Number(document.getElementById('inflation').value)||0;
+  state.t1 = Number(document.getElementById('t1').value)||28000;
+  state.t2 = Number(document.getElementById('t2').value)||50000;
+  state.r1 = Number(document.getElementById('r1').value)||23;
+  state.r2 = Number(document.getElementById('r2').value)||35;
+  state.r3 = Number(document.getElementById('r3').value)||43;
+}
 
-  // Fiscal drag = inflazione che aumenta gettito a parità di scaglioni
+function updateKPIs(){
+  const res = totalsFor({t1:state.t1,t2:state.t2,r1:state.r1,r2:state.r2,r3:state.r3});
+  document.getElementById('kpiBase').textContent = fmtEUR(res.base);
+  document.getElementById('kpiInfl').textContent = fmtEUR(res.infl);
+  document.getElementById('kpiReform').textContent = fmtEUR(res.reform);
+
   const drag = res.infl - res.base;
   const reformImpact = res.reform - res.infl;
 
@@ -247,7 +238,7 @@ function updateKPIs(){
   reformTag.className = 'tag-' + (reformImpact>0?'bad':(reformImpact<0?'ok':'muted'));
 
   drawCharts(res);
-  fillExamples(res);
+  fillExamples();
 }
 
 function drawCharts(res){
@@ -261,17 +252,23 @@ function drawRates(){
   const ctx = c.getContext('2d');
   ctx.clearRect(0,0,c.width,c.height);
   const pad=30, w=c.width-2*pad, h=c.height-2*pad;
-  const {t1,t2,r1,r2,r3}=state;
+  const {t1,t2,r1,r2,r3,noTaxArea}=state;
   const maxX = Math.max(120000,t2*1.2);
   const maxY = Math.max(r3,45);
-  const zx = 1, zy = Number(document.getElementById('zoomRate').value);
+  const zy = Number(document.getElementById('zoomRate').value);
 
-  function X(x){ return pad + (x/maxX)*w*zx; }
-  function Y(y){ return pad + h - (y/maxY)*h*zy; }
+  const X = x => pad + (x/maxX)*(w);
+  const Y = y => pad + h - (y/maxY)*h*zy;
 
+  // 0% fino a noTaxArea
+  ctx.strokeStyle='#a6b0c0'; ctx.lineWidth=3;
+  ctx.beginPath();
+  ctx.moveTo(X(0), Y(0)); ctx.lineTo(X(noTaxArea), Y(0)); ctx.stroke();
+
+  // Scaglioni standard
   ctx.strokeStyle = '#5bb0ff'; ctx.lineWidth=3;
   ctx.beginPath();
-  ctx.moveTo(X(0), Y(r1));
+  ctx.moveTo(X(noTaxArea), Y(r1));
   ctx.lineTo(X(t1), Y(r1));
   ctx.lineTo(X(t1), Y(r2));
   ctx.lineTo(X(t2), Y(r2));
@@ -279,11 +276,11 @@ function drawRates(){
   ctx.lineTo(X(maxX), Y(r3));
   ctx.stroke();
 
-  // Axes
+  // Assi
   ctx.strokeStyle='#273144'; ctx.lineWidth=1;
   ctx.beginPath(); ctx.moveTo(pad,pad); ctx.lineTo(pad,pad+h); ctx.lineTo(pad+w,pad+h); ctx.stroke();
   ctx.fillStyle='#a6b0c0'; ctx.font='12px system-ui';
-  ctx.fillText('Aliquota %',6,14);
+  ctx.fillText('Aliquota % (0% fino a 8.000 €)',6,14);
   ctx.fillText('Reddito (€)', pad+w-80, pad+h+20);
 }
 
@@ -305,7 +302,6 @@ function drawRevenueBars(res){
     ctx.fillText(labels[i], x-6, c.height-8);
     ctx.fillText(fmtEUR(vals[i]).replace('€','€ '), x-10, c.height-pad-h-6);
   }
-  // axis
   ctx.strokeStyle='#273144';
   ctx.beginPath(); ctx.moveTo(pad,pad); ctx.lineTo(pad,c.height-pad); ctx.lineTo(c.width-pad,c.height-pad); ctx.stroke();
 }
@@ -315,11 +311,10 @@ function drawIncome(){
   const ctx = c.getContext('2d');
   ctx.clearRect(0,0,c.width,c.height);
   const pad=30, w=c.width-2*pad, h=c.height-2*pad;
-  const maxX = 100000; // tronchiamo la coda per visual
+  const maxX = 100000;
   const maxY = Math.max(...state.dist.map(d=>d[2]))*1.2;
-
-  function X(x){ return pad + Math.min(x,maxX)/maxX*w; }
-  function Y(y){ return pad + h - (y/maxY)*h; }
+  const X = x => pad + Math.min(x,maxX)/maxX*w;
+  const Y = y => pad + h - (y/maxY)*h;
 
   ctx.strokeStyle='#5bb0ff'; ctx.lineWidth=2; ctx.beginPath();
   let started=false;
@@ -336,33 +331,25 @@ function drawIncome(){
   ctx.fillText('Distribuzione contribuenti (%) per classe reddito', pad+6, pad+12);
 }
 
-function fillExamples(res){
+function fillExamples(){
   const tbody = document.querySelector('#examples tbody');
   tbody.innerHTML='';
   const incomes=[15000,25000,35000,50000,80000,120000];
   for(const y of incomes){
     const inflMult = 1 + (state.inflation/100);
-    const base = taxDue(y,state.t1,state.t2,state.r1,state.r2,state.r3);
-    const infl = taxDue(y*inflMult,state.t1,state.t2,state.r1,state.r2,state.r3);
-    const reform = taxDue(y*inflMult,state.t1,state.t2,state.r1,state.r2,state.r3); // will be replaced below
+    const base = taxDue(y,state.t1,state.t2,state.r1,state.r2,state.r3,state.noTaxArea);
+    const infl = taxDue(y*inflMult,state.t1,state.t2,state.r1,state.r2,state.r3,state.noTaxArea);
+    const reform = taxDue(y*inflMult,state.t1,state.t2,state.r1,state.r2,state.r3,state.noTaxArea);
     const b = {t1:Number(document.getElementById('t1').value),t2:Number(document.getElementById('t2').value),
                r1:Number(document.getElementById('r1').value),r2:Number(document.getElementById('r2').value),r3:Number(document.getElementById('r3').value)};
-    const reform2 = taxDue(y*inflMult,b.t1,b.t2,b.r1,b.r2,b.r3);
+    const reform2 = taxDue(y*inflMult,b.t1,b.t2,b.r1,b.r2,b.r3,state.noTaxArea);
     const tr=document.createElement('tr');
     tr.innerHTML=`<td>${fmtEUR(y)}</td><td>${fmtEUR(base)}</td><td>${fmtEUR(infl)}</td><td>${fmtEUR(reform2)}</td>`;
     tbody.appendChild(tr);
   }
 }
 
-function readInputsToState(){
-  state.inflation = Number(document.getElementById('inflation').value)||0;
-  state.t1 = Number(document.getElementById('t1').value)||28000;
-  state.t2 = Number(document.getElementById('t2').value)||50000;
-  state.r1 = Number(document.getElementById('r1').value)||23;
-  state.r2 = Number(document.getElementById('r2').value)||35;
-  state.r3 = Number(document.getElementById('r3').value)||43;
-}
-
+// UI events
 document.getElementById('applyInfl').onclick=()=>{ readInputsToState(); saveLS(); updateKPIs(); };
 document.getElementById('zoomRate').oninput=()=> drawRates();
 document.getElementById('save').onclick=()=>{ readInputsToState(); saveLS(); updateKPIs(); };
@@ -376,8 +363,16 @@ document.getElementById('set2026').onclick=()=>{
   document.getElementById('r2').value=33;
   readInputsToState(); saveLS(); updateKPIs();
 };
+// NEW: Sterilizzazione fiscal drag — aumenta soglie del tasso di inflazione corrente
+document.getElementById('sterilize').onclick=()=>{
+  const infl = Number(document.getElementById('inflation').value)||0;
+  const mult = 1 + infl/100;
+  document.getElementById('t1').value = Math.round(Number(document.getElementById('t1').value)*mult);
+  document.getElementById('t2').value = Math.round(Number(document.getElementById('t2').value)*mult);
+  readInputsToState(); saveLS(); updateKPIs();
+};
 
-// Import CSV/JSON
+// Import/Export
 document.getElementById('importCsv').onclick=()=> document.getElementById('file').click();
 document.getElementById('file').addEventListener('change', async (e)=>{
   const f=e.target.files[0]; if(!f) return;
