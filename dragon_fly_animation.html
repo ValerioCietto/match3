@@ -1,0 +1,432 @@
+<!DOCTYPE html><html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>Medium-Poly Dragon Flight</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body {
+    margin: 0; padding: 0; height: 100%; background:#0b1020; overflow: hidden;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial, sans-serif;
+  }
+  #wrap { position: fixed; inset: 0; display: grid; grid-template-rows: 1fr auto; }
+  canvas { width: 100%; height: 100%; touch-action: none; display:block; }
+  .hud {
+    display: flex; gap: .75rem; align-items: center; justify-content: space-between;
+    padding: .75rem env(safe-area-inset-right) .75rem env(safe-area-inset-left);
+    background: linear-gradient(180deg, rgba(10,14,30,.25), rgba(10,14,30,.75));
+    backdrop-filter: blur(6px);
+    border-top: 1px solid rgba(255,255,255,.08);
+  }
+  .cluster { display:flex; gap:.5rem; align-items:center; }
+  .pill {
+    padding: .35rem .6rem; font-size:.9rem; border-radius: 999px;
+    background: rgba(255,255,255,.08); color:#cfd8ff; border:1px solid rgba(255,255,255,.1);
+  }
+  .btn {
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    min-width: 120px;
+    padding: .9rem 1.1rem;
+    border-radius: 16px;
+    font-size: 1.1rem; font-weight: 700; letter-spacing:.2px;
+    border: 0;
+    color: #0b1020; background: #ffd166;
+    box-shadow: 0 6px 16px rgba(255, 209, 102, .35), inset 0 -3px 0 rgba(0,0,0,.15);
+  }
+  .btn:active { transform: translateY(1px); box-shadow: 0 4px 12px rgba(255, 209, 102, .3), inset 0 -2px 0 rgba(0,0,0,.2); }
+  .btn.secondary {
+    background:#8ecae6; color:#0b1020; box-shadow: 0 6px 16px rgba(142,202,230,.35), inset 0 -3px 0 rgba(0,0,0,.15);
+    min-width: 56px; padding:.8rem .9rem; border-radius: 14px;
+  }
+  .tiny { font-size:.85rem; opacity:.75; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c"></canvas>
+  <div class="hud">
+    <div class="cluster">
+      <span class="pill">Total Fires: <b id="firesCount">0</b></span>
+      <span class="pill">Speed: <b id="speedVal">1.0x</b></span>
+    </div>
+    <div class="cluster">
+      <button id="speedBtn" class="btn secondary" aria-label="Toggle speed">⏩</button>
+      <button id="fireBtn" class="btn" aria-label="Fire breath">🔥 Fire</button>
+    </div>
+  </div>
+</div><script>
+(() => {
+  // ======= CONFIG & STATE =======
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  const DPR = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
+  const GROUND_H = 70;          // px in CSS pixels (scaled later)
+  const SKY_GRAD = ['#0b1020','#17233f']; // background grad
+  const FIRE_LIFETIME = 950;    // ms
+  const WING_FREQ = 1.2;        // Hz
+  const BODY_BOB_AMPL = 10;     // px (CSS)
+  const DRAGON_BASE_SPEED = 120; // px/s (CSS)
+  const SPEED_STEPS = [0.5, 1, 1.5, 2];
+  let speedIdx = Number(localStorage.getItem('dragon.speedIdx') || '1') % SPEED_STEPS.length;
+  let totalFires = Number(localStorage.getItem('dragon.totalFires') || '0') || 0;
+
+  const ui = {
+    firesCount: document.getElementById('firesCount'),
+    speedVal: document.getElementById('speedVal'),
+    fireBtn: document.getElementById('fireBtn'),
+    speedBtn: document.getElementById('speedBtn'),
+  };
+  ui.firesCount.textContent = totalFires;
+  ui.speedVal.textContent = SPEED_STEPS[speedIdx].toFixed(1)+'x';
+
+  // Canvas sizing
+  function resize() {
+    const { clientWidth: w, clientHeight: h } = canvas;
+    canvas.width = Math.max(1, Math.floor(w * DPR));
+    canvas.height = Math.max(1, Math.floor(h * DPR));
+    ctx.setTransform(DPR,0,0,DPR,0,0); // draw using CSS pixels
+  }
+  new ResizeObserver(resize).observe(canvas);
+  resize();
+
+  // ======= INPUT =======
+  const fire = () => createFire();
+  ui.fireBtn.addEventListener('click', fire, {passive:true});
+  ui.fireBtn.addEventListener('touchstart', e => { e.preventDefault(); fire(); }, {passive:false});
+  ui.speedBtn.addEventListener('click', () => {
+    speedIdx = (speedIdx + 1) % SPEED_STEPS.length;
+    localStorage.setItem('dragon.speedIdx', String(speedIdx));
+    ui.speedVal.textContent = SPEED_STEPS[speedIdx].toFixed(1)+'x';
+  }, {passive:true});
+
+  // ======= DRAGON MODEL (medium-poly) =======
+  // Local coordinate system: origin at torso centerline.
+  const dragon = {
+    x: -120,               // starting x (CSS px)
+    yBase: 0,              // will be set after first resize
+    scale: 1,              // scales for different screens
+    t: 0,                  // time accumulator
+    wingPhase: 0,
+    fires: [],
+  };
+
+  function updateScale() {
+    const W = canvas.clientWidth, H = canvas.clientHeight;
+    // Make dragon ~ 26% of min dimension
+    dragon.scale = Math.max(0.6, Math.min(1.4, Math.min(W, H) * 0.26 / 300));
+    dragon.yBase = H * 0.42; // flight altitude
+  }
+  updateScale();
+  window.addEventListener('resize', updateScale);
+
+  // Helpers to create polygons quickly
+  function poly(points) {
+    ctx.beginPath();
+    ctx.moveTo(points[0][0], points[0][1]);
+    for (let i=1; i<points.length; i++) ctx.lineTo(points[i][0], points[i][1]);
+    ctx.closePath();
+  }
+
+  // Colors
+  const COL = {
+    bodyDark: '#1f5e3c',
+    bodyMid: '#2b7a42',
+    bodyLight: '#3fa35c',
+    spikes: '#1c3b2a',
+    belly: '#2a6641',
+    eye: '#ffef73',
+    fireA: 'rgba(255,190,70,',
+    fireB: 'rgba(255,120,40,',
+    smoke: 'rgba(180,180,180,',
+  };
+
+  // Build a frame of the dragon with sine-driven wing and small jaw movement
+  function drawDragon(x, y, t, scale=1) {
+    ctx.save();
+    ctx.translate(x, y);
+
+    const s = scale * dragon.scale;
+    const flap = Math.sin(t * Math.PI * 2 * WING_FREQ) * 0.6;   // -0.6..0.6
+    const bob  = Math.sin(t * Math.PI * 2 * WING_FREQ + Math.PI/6) * BODY_BOB_AMPL;
+
+    ctx.translate(0, bob);
+
+    // BODY segments (upper/lower) as medium-poly blocks
+    // Basic guide sizes
+    const L = 180 * s; // length reference
+    const H = 60  * s; // height reference
+
+    // Lower body (abdomen)
+    ctx.fillStyle = COL.belly;
+    poly([
+      [-L*0.20,  H*0.25],
+      [ L*0.18,  H*0.18],
+      [ L*0.26,  H*0.10],
+      [ L*0.18,  H*0.35],
+      [-L*0.18,  H*0.42],
+    ]); ctx.fill();
+
+    // Upper body (torso)
+    ctx.fillStyle = COL.bodyMid;
+    poly([
+      [-L*0.26,  -H*0.05],
+      [ L*0.16,  -H*0.12],
+      [ L*0.30,  -H*0.02],
+      [ L*0.12,   H*0.05],
+      [-L*0.20,   H*0.02],
+    ]); ctx.fill();
+
+    // Neck (two polygons)
+    ctx.fillStyle = COL.bodyMid;
+    poly([
+      [-L*0.28, -H*0.02],
+      [-L*0.42, -H*0.20],
+      [-L*0.30, -H*0.26],
+      [-L*0.18, -H*0.14],
+    ]); ctx.fill();
+
+    ctx.fillStyle = COL.bodyDark;
+    poly([
+      [-L*0.42, -H*0.20],
+      [-L*0.56, -H*0.30],
+      [-L*0.46, -H*0.36],
+      [-L*0.30, -H*0.26],
+    ]); ctx.fill();
+
+    // Head (multi-poly with jaw hinge)
+    const jawOpen = 0.12 + Math.max(0, Math.sin((t*2)%Math.PI)*0.02); // subtle idle
+    const headBaseX = -L*0.56, headBaseY = -H*0.30;
+
+    // Head top
+    ctx.fillStyle = COL.bodyLight;
+    poly([
+      [headBaseX, headBaseY],
+      [headBaseX - L*0.18, headBaseY - H*0.06],
+      [headBaseX - L*0.12, headBaseY - H*0.18],
+      [headBaseX + L*0.03, headBaseY - H*0.14],
+    ]); ctx.fill();
+
+    // Snout
+    ctx.fillStyle = COL.bodyMid;
+    poly([
+      [headBaseX - L*0.18, headBaseY - H*0.06],
+      [headBaseX - L*0.30, headBaseY - H*0.00],
+      [headBaseX - L*0.26, headBaseY - H*0.12],
+      [headBaseX - L*0.12, headBaseY - H*0.18],
+    ]); ctx.fill();
+
+    // Jaw (lower) slightly animated
+    ctx.fillStyle = COL.belly;
+    poly([
+      [headBaseX - L*0.18, headBaseY - H*0.02],
+      [headBaseX - L*0.30, headBaseY + H*(0.06 + jawOpen)],
+      [headBaseX - L*0.10, headBaseY + H*(0.08 + jawOpen)],
+      [headBaseX - L*0.02, headBaseY + H*(0.02 + jawOpen*0.2)],
+    ]); ctx.fill();
+
+    // Eye
+    ctx.fillStyle = COL.eye;
+    ctx.beginPath();
+    ctx.arc(headBaseX - L*0.10, headBaseY - H*0.10, 3.5*s, 0, Math.PI*2);
+    ctx.fill();
+
+    // Dorsal spikes (behind wing -> draw first)
+    ctx.fillStyle = COL.spikes;
+    for (let i=0;i<7;i++){
+      const px = -L*0.18 + i*(L*0.06);
+      const py = -H*0.02 - Math.sin(i*0.7)*H*0.05;
+      poly([
+        [px, py - H*0.18],
+        [px + L*0.02, py - H*0.05],
+        [px - L*0.02, py - H*0.03],
+      ]); ctx.fill();
+    }
+
+    // Wing (foreground single wing)
+    // Hinge point on upper body
+    const wx = L*0.02, wy = -H*0.07;
+    ctx.save();
+    ctx.translate(wx, wy);
+    const wingAngle = -0.8 + flap*0.9; // radians
+    ctx.rotate(wingAngle);
+    ctx.fillStyle = COL.bodyDark;
+    // Triangular segments for a medium-poly look
+    const wingSpan = L*0.65;
+    const wingThick = H*0.22;
+    poly([[0,0],[ wingSpan*0.55, -wingThick*0.25],[ wingSpan*0.8, 0]]); ctx.fill();
+    ctx.fillStyle = COL.bodyMid;
+    poly([[0,0],[ wingSpan*0.45,  wingThick*0.10],[ wingSpan*0.75, wingThick*0.15]]); ctx.fill();
+    ctx.restore();
+
+    // Tail base to tip (several polys)
+    const tailBaseX =  L*0.28, tailBaseY =  H*0.06;
+    const tailWave = Math.sin(t*4 + 0.5) * H*0.06;
+    ctx.fillStyle = COL.bodyMid;
+    poly([
+      [tailBaseX, tailBaseY],
+      [tailBaseX + L*0.18, tailBaseY + tailWave*0.3],
+      [tailBaseX + L*0.10, tailBaseY + H*0.08],
+      [tailBaseX - L*0.02, tailBaseY + H*0.04],
+    ]); ctx.fill();
+
+    ctx.fillStyle = COL.bodyDark;
+    poly([
+      [tailBaseX + L*0.18, tailBaseY + tailWave*0.3],
+      [tailBaseX + L*0.34, tailBaseY + tailWave*0.7],
+      [tailBaseX + L*0.28, tailBaseY + H*0.04],
+      [tailBaseX + L*0.10, tailBaseY + H*0.08],
+    ]); ctx.fill();
+
+    // Tail point (arrowhead)
+    ctx.fillStyle = COL.spikes;
+    poly([
+      [tailBaseX + L*0.34, tailBaseY + tailWave*0.7],
+      [tailBaseX + L*0.45, tailBaseY + tailWave*0.55 - H*0.04],
+      [tailBaseX + L*0.40, tailBaseY + tailWave*0.95 + H*0.02],
+    ]); ctx.fill();
+
+    // Mouth location for fire emitter (return local coords)
+    const mouth = {
+      x: headBaseX - L*0.30,
+      y: headBaseY - H*0.01 + H*(0.05*jawOpen),
+    };
+
+    ctx.restore();
+    return { mouthX: x + mouth.x, mouthY: y + bob + mouth.y, dirX: 1, dirY: 0.06 };
+  }
+
+  // ======= FIRE SYSTEM =======
+  function createFire() {
+    const now = performance.now();
+    // Convert mouth position from current frame
+    const sample = drawDragon(-9999, -9999, dragon.t); // offscreen dry run to get mouth coords (cheap)
+    const fireObj = {
+      birth: now,
+      life: FIRE_LIFETIME,
+      // These get updated in the next draw call with real mouth coords
+      x: 0, y: 0, dirX: 1, dirY: 0.06,
+    };
+    dragon.fires.push(fireObj);
+    totalFires++;
+    localStorage.setItem('dragon.totalFires', String(totalFires));
+    ui.firesCount.textContent = totalFires;
+
+    // Haptic (mobile)
+    if (navigator.vibrate) navigator.vibrate(10);
+  }
+
+  function renderFire(fire, mouth) {
+    // Update spawn to current mouth
+    if (!fire._anchored) {
+      fire.x = mouth.mouthX; fire.y = mouth.mouthY;
+      fire.dirX = mouth.dirX; fire.dirY = mouth.dirY;
+      fire._anchored = true;
+    }
+    const age = performance.now() - fire.birth;
+    const k = Math.max(0, 1 - age / fire.life); // 1 -> 0
+    const len = 160 * (0.7 + 0.6*k); // shrink over time
+    const width = 60 * (0.6 + 0.5*k);
+
+    const nx = fire.dirX, ny = fire.dirY;
+    const tipX = fire.x + nx * len;
+    const tipY = fire.y + ny * len;
+
+    // Outer cone (orange)
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = COL.fireB + (0.35 + 0.45*k) + ')';
+    poly([
+      [fire.x, fire.y - width*0.25],
+      [tipX,   tipY],
+      [fire.x, fire.y + width*0.25],
+    ]);
+    ctx.fill();
+
+    // Inner cone (yellow)
+    ctx.fillStyle = COL.fireA + (0.25 + 0.45*k) + ')';
+    poly([
+      [fire.x + nx*10, fire.y - width*0.16],
+      [tipX - nx*10,   tipY],
+      [fire.x + nx*10, fire.y + width*0.16],
+    ]);
+    ctx.fill();
+
+    // Light smoke afterglow
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = COL.smoke + (0.12 * (1-k)) + ')';
+    ctx.beginPath();
+    ctx.ellipse(tipX, tipY, 18*(1-k), 10*(1-k), 0, 0, Math.PI*2);
+    ctx.fill();
+
+    return age < fire.life;
+  }
+
+  // ======= SCENE =======
+  function drawBackground() {
+    const W = canvas.clientWidth, H = canvas.clientHeight;
+    // sky
+    const g = ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0, SKY_GRAD[0]);
+    g.addColorStop(1, SKY_GRAD[1]);
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,W,H);
+
+    // subtle parallax stars
+    const t = performance.now()*0.0001;
+    ctx.globalAlpha = 0.25;
+    for (let i=0;i<30;i++){
+      const sx = ((i*137 + t*60) % W);
+      const sy = (i*89 % (H*0.8));
+      ctx.fillStyle = 'white';
+      ctx.fillRect(sx, sy, 2, 2);
+    }
+    ctx.globalAlpha = 1;
+
+    // ground line
+    ctx.strokeStyle = 'rgba(200,220,255,.15)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, H - GROUND_H);
+    ctx.lineTo(W, H - GROUND_H);
+    ctx.stroke();
+  }
+
+  // ======= MAIN LOOP =======
+  let last = performance.now();
+  function loop(now) {
+    requestAnimationFrame(loop);
+    const dt = Math.min(0.05, (now - last)/1000);
+    last = now;
+
+    const W = canvas.clientWidth, H = canvas.clientHeight;
+    drawBackground();
+
+    // Dragon progression
+    dragon.t += dt;
+    const speed = DRAGON_BASE_SPEED * SPEED_STEPS[speedIdx];
+    dragon.x += speed * dt;
+    const y = dragon.yBase;
+
+    // Wrap-around
+    const offRight = 220 * dragon.scale;
+    if (dragon.x > W + offRight) dragon.x = -offRight;
+
+    // Draw dragon and get mouth for fire
+    const mouth = drawDragon(dragon.x, y - 40, dragon.t);
+
+    // Fires
+    dragon.fires = dragon.fires.filter(f => renderFire(f, mouth));
+  }
+  requestAnimationFrame(loop);
+
+  // ======= QUALITY OF LIFE =======
+  // Keyboard support (desktop)
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') { e.preventDefault(); fire(); }
+    if (e.key.toLowerCase() === 'f') { fire(); }
+    if (e.key.toLowerCase() === 'x') { ui.speedBtn.click(); }
+  });
+
+})();
+</script></body>
+</html>
