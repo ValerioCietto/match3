@@ -1,0 +1,694 @@
+<!-- Run with: open this file in a browser (e.g. firefox starship-builder.html) -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Starship Builder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #05060a;
+      color: #f4f4f4;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+    }
+
+    .app {
+      display: flex;
+      height: 100vh;
+      max-height: 100vh;
+      overflow: hidden;
+    }
+
+    .sidebar,
+    .stats {
+      padding: 10px;
+      background: #10121a;
+      border-right: 1px solid #272b3b;
+      min-width: 180px;
+      flex: 0 0 200px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .stats {
+      border-right: none;
+      border-left: 1px solid #272b3b;
+    }
+
+    .sidebar h2,
+    .stats h2 {
+      font-size: 16px;
+      margin: 0 0 6px 0;
+    }
+
+    .palette {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .palette-item {
+      padding: 6px 8px;
+      border-radius: 6px;
+      background: #1b1f2d;
+      border: 1px solid #2f3550;
+      font-size: 12px;
+      cursor: grab;
+      user-select: none;
+    }
+
+    .palette-item:active {
+      cursor: grabbing;
+    }
+
+    .palette-item span {
+      display: block;
+      font-weight: 600;
+    }
+
+    .palette-item small {
+      display: block;
+      font-size: 10px;
+      opacity: 0.7;
+    }
+
+    .sidebar button {
+      margin-top: auto;
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: none;
+      background: #ff3b30;
+      color: white;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .sidebar button:hover {
+      background: #ff554c;
+    }
+
+    .canvas-container {
+      flex: 1 1 auto;
+      padding: 8px;
+      display: flex;
+      align-items: stretch;
+      justify-content: stretch;
+    }
+
+    #shipCanvas {
+      border-radius: 10px;
+      background: radial-gradient(circle at top, #1a2340, #05060a 60%);
+      width: 100%;
+      height: 100%;
+      max-height: 100%;
+      touch-action: none;
+    }
+
+    .stat-row {
+      font-size: 13px;
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 2px;
+    }
+
+    #readyStatus {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    #readyStatus.ready {
+      color: #4cd964;
+    }
+
+    #readyStatus.not-ready {
+      color: #ffcc00;
+    }
+
+    #warningText {
+      font-size: 11px;
+      color: #ffcc00;
+      min-height: 32px;
+    }
+
+    #blockList {
+      margin-top: 6px;
+      padding: 4px;
+      border-radius: 6px;
+      background: #151827;
+      font-size: 11px;
+      max-height: 40vh;
+      overflow: auto;
+    }
+
+    #blockList div {
+      padding: 2px 0;
+    }
+
+    @media (max-width: 900px) {
+      .app {
+        flex-direction: column;
+        height: auto;
+        max-height: none;
+      }
+
+      .sidebar,
+      .stats {
+        flex: 0 0 auto;
+        border-right: none;
+        border-left: none;
+        border-bottom: 1px solid #272b3b;
+      }
+
+      .stats {
+        border-top: 1px solid #272b3b;
+        border-bottom: none;
+      }
+
+      .canvas-container {
+        height: 60vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="sidebar">
+      <h2>Blocks</h2>
+      <div class="palette" id="palette"></div>
+      <button id="clearBtn" type="button">Clear ship</button>
+    </div>
+
+    <div class="canvas-container">
+      <canvas id="shipCanvas"></canvas>
+    </div>
+
+    <div class="stats">
+      <h2>Ship Stats</h2>
+      <div id="readyStatus" class="not-ready">Ready To Fly: NO</div>
+      <div id="warningText">Warning: add a cockpit, vital supply and engine.</div>
+      <div class="stat-row">
+        <span>Mass</span><span id="massValue">0</span>
+      </div>
+      <div class="stat-row">
+        <span>Engine thrust</span><span id="thrustValue">0</span>
+      </div>
+      <div class="stat-row">
+        <span>Steering thrust</span><span id="steeringValue">0</span>
+      </div>
+      <div class="stat-row">
+        <span>Blocks</span><span id="blockCountValue">0</span>
+      </div>
+      <div id="blockList"></div>
+    </div>
+  </div>
+
+  <script>
+    // Run with: open this file in a browser (e.g. firefox starship-builder.html)
+
+    const STORAGE_KEY = 'starshipBuilderStateV1';
+
+    const BLOCK_TYPES = [
+      {
+        id: 'cockpit',
+        label: 'Cockpit',
+        mass: 5,
+        thrust: 0,
+        steering: 0,
+        color: '#ff9500',
+      },
+      {
+        id: 'engine',
+        label: 'Engine',
+        mass: 8,
+        thrust: 10,
+        steering: 0,
+        color: '#ff3b30',
+      },
+      {
+        id: 'wings',
+        label: 'Wings',
+        mass: 4,
+        thrust: 0,
+        steering: 6,
+        color: '#5ac8fa',
+      },
+      {
+        id: 'weapon',
+        label: 'Weapon Gun Wing',
+        mass: 6,
+        thrust: 0,
+        steering: 2,
+        color: '#af52de',
+      },
+      {
+        id: 'turret',
+        label: 'Turret Block',
+        mass: 7,
+        thrust: 0,
+        steering: 1,
+        color: '#ff2d55',
+      },
+      {
+        id: 'energy',
+        label: 'Energy Block',
+        mass: 3,
+        thrust: 0,
+        steering: 0,
+        color: '#4cd964',
+      },
+      {
+        id: 'vital',
+        label: 'Vital Supply',
+        mass: 4,
+        thrust: 0,
+        steering: 0,
+        color: '#ffd60a',
+      },
+      {
+        id: 'cargo',
+        label: 'Cargo Block',
+        mass: 5,
+        thrust: 0,
+        steering: 0,
+        color: '#8e8e93',
+      },
+    ];
+
+    const typeById = Object.fromEntries(BLOCK_TYPES.map(t => [t.id, t]));
+
+    const state = {
+      blocks: [], // { id, typeId, x, y }
+    };
+
+    const paletteEl = document.getElementById('palette');
+    const canvas = document.getElementById('shipCanvas');
+    const clearBtn = document.getElementById('clearBtn');
+
+    const massValueEl = document.getElementById('massValue');
+    const thrustValueEl = document.getElementById('thrustValue');
+    const steeringValueEl = document.getElementById('steeringValue');
+    const blockCountValueEl = document.getElementById('blockCountValue');
+    const blockListEl = document.getElementById('blockList');
+    const readyStatusEl = document.getElementById('readyStatus');
+    const warningTextEl = document.getElementById('warningText');
+
+    const ctx = canvas.getContext('2d');
+
+    const GRID_COLS = 20;
+    const GRID_ROWS = 12;
+    let cellSize = 32;
+
+    let draggingBlockId = null;
+    let dragOffset = { dx: 0, dy: 0 }; // in pixels, within the cell
+
+    function initPalette() {
+      BLOCK_TYPES.forEach(t => {
+        const el = document.createElement('div');
+        el.className = 'palette-item';
+        el.setAttribute('draggable', 'true');
+        el.dataset.typeId = t.id;
+        el.innerHTML = `<span>${t.label}</span><small>m:${t.mass}</small>`;
+        el.addEventListener('dragstart', e => {
+          e.dataTransfer.setData('text/plain', t.id);
+        });
+        paletteEl.appendChild(el);
+      });
+    }
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const width = rect.width;
+      const height = rect.height;
+
+      canvas.width = width;
+      canvas.height = height;
+
+      const cellSizeX = width / GRID_COLS;
+      const cellSizeY = height / GRID_ROWS;
+      cellSize = Math.floor(Math.min(cellSizeX, cellSizeY));
+      drawScene();
+    }
+
+    function addBlock(typeId, gridX, gridY) {
+      const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const clampedX = Math.max(0, Math.min(GRID_COLS - 1, gridX));
+      const clampedY = Math.max(0, Math.min(GRID_ROWS - 1, gridY));
+      state.blocks.push({ id, typeId, x: clampedX, y: clampedY });
+      saveState();
+      drawScene();
+      updateStats();
+    }
+
+    function getBlockAtPixel(px, py) {
+      for (let i = state.blocks.length - 1; i >= 0; i--) {
+        const b = state.blocks[i];
+        const bx = b.x * cellSize;
+        const by = b.y * cellSize;
+        if (
+          px >= bx &&
+          px < bx + cellSize &&
+          py >= by &&
+          py < by + cellSize
+        ) {
+          return b;
+        }
+      }
+      return null;
+    }
+
+    function onCanvasPointerDown(clientX, clientY) {
+      const rect = canvas.getBoundingClientRect();
+      const px = clientX - rect.left;
+      const py = clientY - rect.top;
+      const block = getBlockAtPixel(px, py);
+      if (!block) return;
+      draggingBlockId = block.id;
+      dragOffset.dx = px - block.x * cellSize;
+      dragOffset.dy = py - block.y * cellSize;
+    }
+
+    function onCanvasPointerMove(clientX, clientY) {
+      if (!draggingBlockId) return;
+      const rect = canvas.getBoundingClientRect();
+      const px = clientX - rect.left;
+      const py = clientY - rect.top;
+      const block = state.blocks.find(b => b.id === draggingBlockId);
+      if (!block) return;
+      const gridX = Math.round((px - dragOffset.dx + cellSize / 2) / cellSize);
+      const gridY = Math.round((py - dragOffset.dy + cellSize / 2) / cellSize);
+      block.x = Math.max(0, Math.min(GRID_COLS - 1, gridX));
+      block.y = Math.max(0, Math.min(GRID_ROWS - 1, gridY));
+      drawScene();
+    }
+
+    function onCanvasPointerUp() {
+      if (draggingBlockId) {
+        draggingBlockId = null;
+        saveState();
+        updateStats();
+      }
+    }
+
+    function installCanvasDnD() {
+      canvas.addEventListener('dragover', e => {
+        e.preventDefault();
+      });
+
+      canvas.addEventListener('drop', e => {
+        e.preventDefault();
+        const typeId = e.dataTransfer.getData('text/plain');
+        if (!typeId || !typeById[typeId]) return;
+        const rect = canvas.getBoundingClientRect();
+        const px = e.clientX - rect.left;
+        const py = e.clientY - rect.top;
+        const gridX = Math.floor(px / cellSize);
+        const gridY = Math.floor(py / cellSize);
+        addBlock(typeId, gridX, gridY);
+      });
+
+      canvas.addEventListener('mousedown', e => {
+        e.preventDefault();
+        onCanvasPointerDown(e.clientX, e.clientY);
+      });
+
+      canvas.addEventListener('mousemove', e => {
+        e.preventDefault();
+        onCanvasPointerMove(e.clientX, e.clientY);
+      });
+
+      canvas.addEventListener('mouseup', e => {
+        e.preventDefault();
+        onCanvasPointerUp();
+      });
+
+      canvas.addEventListener('mouseleave', () => onCanvasPointerUp());
+
+      canvas.addEventListener('touchstart', e => {
+        e.preventDefault();
+        const t = e.touches[0];
+        onCanvasPointerDown(t.clientX, t.clientY);
+      });
+
+      canvas.addEventListener('touchmove', e => {
+        e.preventDefault();
+        const t = e.touches[0];
+        onCanvasPointerMove(t.clientX, t.clientY);
+      });
+
+      canvas.addEventListener('touchend', e => {
+        e.preventDefault();
+        onCanvasPointerUp();
+      });
+    }
+
+    function drawScene() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.lineWidth = 1;
+      for (let x = 0; x <= GRID_COLS; x++) {
+        const px = x * cellSize + 0.5;
+        ctx.beginPath();
+        ctx.moveTo(px, 0);
+        ctx.lineTo(px, GRID_ROWS * cellSize);
+        ctx.stroke();
+      }
+      for (let y = 0; y <= GRID_ROWS; y++) {
+        const py = y * cellSize + 0.5;
+        ctx.beginPath();
+        ctx.moveTo(0, py);
+        ctx.lineTo(GRID_COLS * cellSize, py);
+        ctx.stroke();
+      }
+
+      state.blocks.forEach(b => {
+        const t = typeById[b.typeId];
+        if (!t) return;
+        const x = b.x * cellSize;
+        const y = b.y * cellSize;
+
+        ctx.fillStyle = t.color;
+        ctx.globalAlpha = 0.9;
+        const radius = 6;
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.lineTo(x + cellSize - radius, y);
+        ctx.quadraticCurveTo(x + cellSize, y, x + cellSize, y + radius);
+        ctx.lineTo(x + cellSize, y + cellSize - radius);
+        ctx.quadraticCurveTo(
+          x + cellSize,
+          y + cellSize,
+          x + cellSize - radius,
+          y + cellSize
+        );
+        ctx.lineTo(x + radius, y + cellSize);
+        ctx.quadraticCurveTo(x, y + cellSize, x, y + cellSize - radius);
+        ctx.lineTo(x, y + radius);
+        ctx.quadraticCurveTo(x, y, x + radius, y);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#000';
+        ctx.font = `${Math.max(10, Math.floor(cellSize * 0.35))}px system-ui`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const label =
+          b.typeId === 'cockpit'
+            ? 'C'
+            : b.typeId === 'engine'
+            ? 'E'
+            : b.typeId === 'wings'
+            ? 'W'
+            : b.typeId === 'weapon'
+            ? 'G'
+            : b.typeId === 'turret'
+            ? 'T'
+            : b.typeId === 'energy'
+            ? 'P'
+            : b.typeId === 'vital'
+            ? 'V'
+            : 'C';
+        ctx.fillText(label, x + cellSize / 2, y + cellSize / 2);
+      });
+    }
+
+    function computeStats() {
+      let totalMass = 0;
+      let totalThrust = 0;
+      let totalSteering = 0;
+
+      let hasCockpit = false;
+      let hasEngine = false;
+      let hasVital = false;
+
+      state.blocks.forEach(b => {
+        const t = typeById[b.typeId];
+        if (!t) return;
+        totalMass += t.mass;
+        totalThrust += t.thrust;
+        totalSteering += t.steering;
+        if (b.typeId === 'cockpit') hasCockpit = true;
+        if (b.typeId === 'engine') hasEngine = true;
+        if (b.typeId === 'vital') hasVital = true;
+      });
+
+      let readyConnected = false;
+
+      if (hasCockpit && hasEngine && hasVital && state.blocks.length > 0) {
+        const mapByPos = new Map();
+        state.blocks.forEach((b, idx) => {
+          const key = `${b.x},${b.y}`;
+          if (!mapByPos.has(key)) mapByPos.set(key, []);
+          mapByPos.get(key).push(idx);
+        });
+
+        function neighbors(idx) {
+          const b = state.blocks[idx];
+          const dirs = [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1],
+          ];
+          const result = [];
+          dirs.forEach(([dx, dy]) => {
+            const key = `${b.x + dx},${b.y + dy}`;
+            const arr = mapByPos.get(key);
+            if (arr) arr.forEach(i => result.push(i));
+          });
+          return result;
+        }
+
+        const cockpitIndices = state.blocks
+          .map((b, i) => (b.typeId === 'cockpit' ? i : -1))
+          .filter(i => i >= 0);
+
+        for (const startIdx of cockpitIndices) {
+          const visited = new Set([startIdx]);
+          const queue = [startIdx];
+          let engineFound = false;
+          let vitalFound = false;
+
+          while (queue.length) {
+            const idx = queue.shift();
+            const b = state.blocks[idx];
+            if (b.typeId === 'engine') engineFound = true;
+            if (b.typeId === 'vital') vitalFound = true;
+
+            if (engineFound && vitalFound) {
+              readyConnected = true;
+              break;
+            }
+
+            neighbors(idx).forEach(nIdx => {
+              if (!visited.has(nIdx)) {
+                visited.add(nIdx);
+                queue.push(nIdx);
+              }
+            });
+          }
+
+          if (readyConnected) break;
+        }
+      }
+
+      const isReady = hasCockpit && hasEngine && hasVital && readyConnected;
+
+      let warnings = [];
+      if (!hasCockpit) warnings.push('add a cockpit');
+      if (!hasVital) warnings.push('add a vital supply');
+      if (!hasEngine) warnings.push('add an engine');
+      if (hasCockpit && hasVital && hasEngine && !readyConnected) {
+        warnings.push('connect cockpit, vital supply and engine blocks');
+      }
+      if (state.blocks.length === 0) {
+        warnings.push('drag blocks on the grid to build your ship');
+      }
+
+      return {
+        totalMass,
+        totalThrust,
+        totalSteering,
+        isReady,
+        warnings,
+      };
+    }
+
+    function updateStats() {
+      const stats = computeStats();
+      massValueEl.textContent = stats.totalMass.toString();
+      thrustValueEl.textContent = stats.totalThrust.toString();
+      steeringValueEl.textContent = stats.totalSteering.toString();
+      blockCountValueEl.textContent = state.blocks.length.toString();
+
+      readyStatusEl.textContent = `Ready To Fly: ${stats.isReady ? 'YES' : 'NO'}`;
+      readyStatusEl.classList.toggle('ready', stats.isReady);
+      readyStatusEl.classList.toggle('not-ready', !stats.isReady);
+
+      if (stats.warnings.length) {
+        warningTextEl.textContent =
+          'Warning: ' + stats.warnings.join(' | ');
+      } else {
+        warningTextEl.textContent = 'No warnings. Ship is ready!';
+      }
+
+      blockListEl.innerHTML = '';
+      state.blocks.forEach((b, index) => {
+        const t = typeById[b.typeId];
+        const row = document.createElement('div');
+        row.textContent = `${index + 1}. ${t ? t.label : b.typeId} @ (${b.x},${b.y})`;
+        blockListEl.appendChild(row);
+      });
+    }
+
+    function saveState() {
+      const data = JSON.stringify(state);
+      localStorage.setItem(STORAGE_KEY, data);
+    }
+
+    function loadState() {
+      try {
+        const data = localStorage.getItem(STORAGE_KEY);
+        if (!data) return;
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed.blocks)) {
+          state.blocks = parsed.blocks.filter(
+            b => b && b.id && typeById[b.typeId] != null
+          );
+        }
+      } catch {
+        // ignore corrupted state
+      }
+    }
+
+    function clearShip() {
+      state.blocks = [];
+      saveState();
+      drawScene();
+      updateStats();
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initPalette();
+      loadState();
+      installCanvasDnD();
+      resizeCanvas();
+      updateStats();
+      clearBtn.addEventListener('click', clearShip);
+    });
+  </script>
+</body>
+</html>
