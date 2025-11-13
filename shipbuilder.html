@@ -101,16 +101,16 @@
       padding: 8px;
       display: flex;
       align-items: stretch;
-      justify-content: center;
+      justify-content: stretch;
     }
 
     #shipCanvas {
       border-radius: 10px;
       background: radial-gradient(circle at top, #1a2340, #05060a 60%);
-      touch-action: none;
-      /* fixed grid size: 20x12 cells at 16px */
-      max-width: 100%;
+      width: 100%;
+      height: 100%;
       max-height: 100%;
+      touch-action: none;
     }
 
     .stat-row {
@@ -189,7 +189,7 @@
     </div>
 
     <div class="canvas-container">
-      <canvas id="shipCanvas" width="320" height="192"></canvas>
+      <canvas id="shipCanvas"></canvas>
     </div>
 
     <div class="stats">
@@ -215,7 +215,7 @@
   <script>
     // Run with: open this file in a browser (e.g. firefox starship-builder.html)
 
-    const STORAGE_KEY = 'starshipBuilderStateV2';
+    const STORAGE_KEY = 'starshipBuilderStateV1';
 
     const BLOCK_TYPES = [
       {
@@ -282,14 +282,6 @@
         steering: 0,
         color: '#8e8e93',
       },
-      {
-        id: 'reinforced',
-        label: 'Reinforced Hull',
-        mass: 9,
-        thrust: 0,
-        steering: 0,
-        color: '#2ecc71',
-      },
     ];
 
     const typeById = Object.fromEntries(BLOCK_TYPES.map(t => [t.id, t]));
@@ -314,10 +306,10 @@
 
     const GRID_COLS = 20;
     const GRID_ROWS = 12;
-    const cellSize = 16; // fixed 16px cells
+    let cellSize = 32;
 
     let draggingBlockId = null;
-    let dragOffset = { dx: 0, dy: 0 }; // not used for grid snap, kept for future
+    let dragOffset = { dx: 0, dy: 0 }; // in pixels, within the cell
 
     function initPalette() {
       BLOCK_TYPES.forEach(t => {
@@ -334,39 +326,27 @@
     }
 
     function resizeCanvas() {
-      // Fixed logical size based on grid and cellSize
-      canvas.width = GRID_COLS * cellSize;
-      canvas.height = GRID_ROWS * cellSize;
-      drawScene();
-    }
+      const rect = canvas.getBoundingClientRect();
+      const width = rect.width;
+      const height = rect.height;
 
-    function isCellOccupied(gridX, gridY, excludeId) {
-      return state.blocks.some(
-        b => b.x === gridX && b.y === gridY && (!excludeId || b.id !== excludeId)
-      );
+      canvas.width = width;
+      canvas.height = height;
+
+      const cellSizeX = width / GRID_COLS;
+      const cellSizeY = height / GRID_ROWS;
+      cellSize = Math.floor(Math.min(cellSizeX, cellSizeY));
+      drawScene();
     }
 
     function addBlock(typeId, gridX, gridY) {
       const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
       const clampedX = Math.max(0, Math.min(GRID_COLS - 1, gridX));
       const clampedY = Math.max(0, Math.min(GRID_ROWS - 1, gridY));
-      if (isCellOccupied(clampedX, clampedY)) {
-        return; // do not allow more than one block per cell
-      }
       state.blocks.push({ id, typeId, x: clampedX, y: clampedY });
       saveState();
       drawScene();
       updateStats();
-    }
-
-    function deleteBlock(id) {
-      const idx = state.blocks.findIndex(b => b.id === id);
-      if (idx !== -1) {
-        state.blocks.splice(idx, 1);
-        saveState();
-        drawScene();
-        updateStats();
-      }
     }
 
     function getBlockAtPixel(px, py) {
@@ -386,21 +366,15 @@
       return null;
     }
 
-    function onCanvasPointerDown(clientX, clientY, shiftKey) {
+    function onCanvasPointerDown(clientX, clientY) {
       const rect = canvas.getBoundingClientRect();
       const px = clientX - rect.left;
       const py = clientY - rect.top;
       const block = getBlockAtPixel(px, py);
       if (!block) return;
-
-      if (shiftKey) {
-        deleteBlock(block.id);
-        return;
-      }
-
       draggingBlockId = block.id;
-      dragOffset.dx = 0;
-      dragOffset.dy = 0;
+      dragOffset.dx = px - block.x * cellSize;
+      dragOffset.dy = py - block.y * cellSize;
     }
 
     function onCanvasPointerMove(clientX, clientY) {
@@ -410,15 +384,10 @@
       const py = clientY - rect.top;
       const block = state.blocks.find(b => b.id === draggingBlockId);
       if (!block) return;
-      const gridX = Math.floor(px / cellSize);
-      const gridY = Math.floor(py / cellSize);
-      const clampedX = Math.max(0, Math.min(GRID_COLS - 1, gridX));
-      const clampedY = Math.max(0, Math.min(GRID_ROWS - 1, gridY));
-      if (isCellOccupied(clampedX, clampedY, block.id)) {
-        return; // cannot move onto occupied cell
-      }
-      block.x = clampedX;
-      block.y = clampedY;
+      const gridX = Math.round((px - dragOffset.dx + cellSize / 2) / cellSize);
+      const gridY = Math.round((py - dragOffset.dy + cellSize / 2) / cellSize);
+      block.x = Math.max(0, Math.min(GRID_COLS - 1, gridX));
+      block.y = Math.max(0, Math.min(GRID_ROWS - 1, gridY));
       drawScene();
     }
 
@@ -449,7 +418,7 @@
 
       canvas.addEventListener('mousedown', e => {
         e.preventDefault();
-        onCanvasPointerDown(e.clientX, e.clientY, e.shiftKey);
+        onCanvasPointerDown(e.clientX, e.clientY);
       });
 
       canvas.addEventListener('mousemove', e => {
@@ -467,7 +436,7 @@
       canvas.addEventListener('touchstart', e => {
         e.preventDefault();
         const t = e.touches[0];
-        onCanvasPointerDown(t.clientX, t.clientY, false);
+        onCanvasPointerDown(t.clientX, t.clientY);
       });
 
       canvas.addEventListener('touchmove', e => {
@@ -482,7 +451,9 @@
       });
     }
 
-    function drawGrid() {
+    function drawScene() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
       ctx.strokeStyle = 'rgba(255,255,255,0.08)';
       ctx.lineWidth = 1;
       for (let x = 0; x <= GRID_COLS; x++) {
@@ -499,9 +470,7 @@
         ctx.lineTo(GRID_COLS * cellSize, py);
         ctx.stroke();
       }
-    }
 
-    function drawBlocks() {
       state.blocks.forEach(b => {
         const t = typeById[b.typeId];
         if (!t) return;
@@ -510,7 +479,7 @@
 
         ctx.fillStyle = t.color;
         ctx.globalAlpha = 0.9;
-        const radius = 4;
+        const radius = 6;
         ctx.beginPath();
         ctx.moveTo(x + radius, y);
         ctx.lineTo(x + cellSize - radius, y);
@@ -531,7 +500,7 @@
 
         ctx.globalAlpha = 1;
         ctx.fillStyle = '#000';
-        ctx.font = `${Math.max(8, Math.floor(cellSize * 0.5))}px system-ui`;
+        ctx.font = `${Math.max(10, Math.floor(cellSize * 0.35))}px system-ui`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         const label =
@@ -549,144 +518,9 @@
             ? 'P'
             : b.typeId === 'vital'
             ? 'V'
-            : b.typeId === 'cargo'
-            ? 'C'
-            : 'R';
+            : 'C';
         ctx.fillText(label, x + cellSize / 2, y + cellSize / 2);
       });
-    }
-
-    // Simple convex hull (Monotone chain)
-    function convexHull(points) {
-      if (points.length <= 3) return points.slice();
-      const pts = points
-        .slice()
-        .sort((a, b) => (a.x === b.x ? a.y - b.y : a.x - b.x));
-
-      const cross = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
-
-      const lower = [];
-      for (const p of pts) {
-        while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) {
-          lower.pop();
-        }
-        lower.push(p);
-      }
-
-      const upper = [];
-      for (let i = pts.length - 1; i >= 0; i--) {
-        const p = pts[i];
-        while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) {
-          upper.pop();
-        }
-        upper.push(p);
-      }
-
-      upper.pop();
-      lower.pop();
-      return lower.concat(upper);
-    }
-
-    function drawPreview() {
-      const margin = 6;
-      const width = 120;
-      const height = 90;
-      const originX = margin;
-      const originY = canvas.height - height - margin;
-
-      // Background panel
-      ctx.save();
-      ctx.globalAlpha = 0.8;
-      ctx.fillStyle = '#05060a';
-      ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-      const r = 8;
-      ctx.beginPath();
-      ctx.moveTo(originX + r, originY);
-      ctx.lineTo(originX + width - r, originY);
-      ctx.quadraticCurveTo(originX + width, originY, originX + width, originY + r);
-      ctx.lineTo(originX + width, originY + height - r);
-      ctx.quadraticCurveTo(
-        originX + width,
-        originY + height,
-        originX + width - r,
-        originY + height
-      );
-      ctx.lineTo(originX + r, originY + height);
-      ctx.quadraticCurveTo(originX, originY + height, originX, originY + height - r);
-      ctx.lineTo(originX, originY + r);
-      ctx.quadraticCurveTo(originX, originY, originX + r, originY);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-      ctx.restore();
-
-      if (!state.blocks.length) return;
-
-      // Compute bounding box of all block centers
-      const centers = state.blocks.map(b => ({
-        x: b.x * cellSize + cellSize / 2,
-        y: b.y * cellSize + cellSize / 2,
-      }));
-      let minX = centers[0].x;
-      let maxX = centers[0].x;
-      let minY = centers[0].y;
-      let maxY = centers[0].y;
-      for (const p of centers) {
-        if (p.x < minX) minX = p.x;
-        if (p.x > maxX) maxX = p.x;
-        if (p.y < minY) minY = p.y;
-        if (p.y > maxY) maxY = p.y;
-      }
-      const spanX = Math.max(1, maxX - minX);
-      const spanY = Math.max(1, maxY - minY);
-
-      const innerMargin = 10;
-      const availW = width - innerMargin * 2;
-      const availH = height - innerMargin * 2;
-
-      const typesSeen = new Set(state.blocks.map(b => b.typeId));
-
-      typesSeen.forEach(typeId => {
-        const t = typeById[typeId];
-        if (!t) return;
-        const pts = state.blocks
-          .filter(b => b.typeId === typeId)
-          .map(b => ({
-            x:
-              originX +
-              innerMargin +
-              ((b.x * cellSize + cellSize / 2 - minX) / spanX) * availW,
-            y:
-              originY +
-              innerMargin +
-              ((b.y * cellSize + cellSize / 2 - minY) / spanY) * availH,
-          }));
-        if (!pts.length) return;
-
-        let hull = pts;
-        if (pts.length > 2) {
-          hull = convexHull(pts);
-        }
-
-        ctx.save();
-        ctx.globalAlpha = 0.7;
-        ctx.fillStyle = t.color;
-        ctx.beginPath();
-        ctx.moveTo(hull[0].x, hull[0].y);
-        for (let i = 1; i < hull.length; i++) {
-          ctx.lineTo(hull[i].x, hull[i].y);
-        }
-        ctx.closePath();
-        ctx.fill();
-        ctx.restore();
-      });
-    }
-
-    function drawScene() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawGrid();
-      drawBlocks();
-      drawPreview();
     }
 
     function computeStats() {
