@@ -1,0 +1,482 @@
+<!-- Run with: python3 -m http.server 8000 -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Catapult Castle Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #111;
+      color: #eee;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .top-bar {
+      padding: 8px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      background: #181818;
+      border-bottom: 1px solid #333;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: none;
+      background: #444;
+      color: #fff;
+      font-size: 14px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .btn.active {
+      background: #0a84ff;
+    }
+    .btn:active {
+      transform: scale(0.97);
+    }
+    .controls-group {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .scoreboard {
+      display: flex;
+      flex-direction: column;
+      font-size: 12px;
+      text-align: right;
+    }
+    canvas {
+      flex: 1;
+      display: block;
+      background: linear-gradient(to top, #1a1a1a 0, #222 40%, #1b263b 100%);
+      touch-action: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <div class="controls-group">
+      <button id="singleShot" class="btn active">Big Shot</button>
+      <button id="tripleShot" class="btn">Triple Shot ×3</button>
+      <button id="resetCastle" class="btn">Reset Castle</button>
+    </div>
+    <div class="scoreboard">
+      <span>Score: <span id="scoreVal">0</span></span>
+      <span>Best: <span id="bestScoreVal">0</span></span>
+    </div>
+  </div>
+  <canvas id="game"></canvas>
+
+  <script>
+    // Run with: python3 -m http.server 8000
+
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    const scoreEl = document.getElementById("scoreVal");
+    const bestScoreEl = document.getElementById("bestScoreVal");
+    const btnSingle = document.getElementById("singleShot");
+    const btnTriple = document.getElementById("tripleShot");
+    const btnReset = document.getElementById("resetCastle");
+
+    let W = 0, H = 0;
+    let groundY = 0;
+
+    const GRAVITY = 0.5;
+    const FRICTION_GROUND = 0.8;
+    const FRICTION_AIR = 0.999;
+    const BLOCK_RESTITUTION = 0.5;
+    const PROJECTILE_RESTITUTION = 0.4;
+
+    const CATAPULT = {
+      x: 120,
+      y: 0, // set after resize
+      armLength: 70
+    };
+
+    let blocks = [];
+    let projectiles = [];
+    let score = 0;
+    let bestScore = 0;
+    let shotMode = "single"; // "single" or "triple"
+
+    let isDragging = false;
+    let dragStart = { x: 0, y: 0 };
+    let dragCurrent = { x: 0, y: 0 };
+
+    // LocalStorage helpers
+    const LS_KEY_BEST = "catapultCastleBestScore";
+    function loadBestScore() {
+      const v = localStorage.getItem(LS_KEY_BEST);
+      bestScore = v ? Number(v) || 0 : 0;
+      bestScoreEl.textContent = bestScore;
+    }
+    function maybeUpdateBestScore() {
+      if (score > bestScore) {
+        bestScore = score;
+        localStorage.setItem(LS_KEY_BEST, String(bestScore));
+        bestScoreEl.textContent = bestScore;
+      }
+    }
+
+    function resize() {
+      const dpr = window.devicePixelRatio || 1;
+      W = window.innerWidth;
+      H = window.innerHeight - document.querySelector(".top-bar").offsetHeight;
+      canvas.width = W * dpr;
+      canvas.height = H * dpr;
+      canvas.style.width = W + "px";
+      canvas.style.height = H + "px";
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      groundY = H - 40;
+      CATAPULT.y = groundY - 30;
+
+      resetGame(false);
+    }
+
+    function resetGame(hard = true) {
+      blocks = [];
+      projectiles = [];
+      if (hard) {
+        score = 0;
+        scoreEl.textContent = score;
+      }
+      buildCastle();
+    }
+
+    function buildCastle() {
+      const cols = 4;
+      const rows = 5;
+      const bw = 40;
+      const bh = 25;
+      const baseX = W - (cols * bw) - 40;
+      const baseY = groundY;
+
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          blocks.push({
+            x: baseX + c * bw,
+            y: baseY - (r + 1) * bh,
+            w: bw - 2,
+            h: bh - 2,
+            vx: 0,
+            vy: 0,
+            health: 100,
+            alive: true
+          });
+        }
+      }
+    }
+
+    function fireShot(baseVx, baseVy) {
+      if (shotMode === "single") {
+        projectiles.push({
+          x: CATAPULT.x,
+          y: CATAPULT.y,
+          r: 10,
+          vx: baseVx,
+          vy: baseVy,
+          active: true,
+          big: true
+        });
+      } else {
+        const spread = 0.18;
+        const speed = Math.hypot(baseVx, baseVy) || 1;
+        const angle = Math.atan2(baseVy, baseVx);
+        const angles = [angle - spread, angle, angle + spread];
+        for (const a of angles) {
+          const vx = Math.cos(a) * speed;
+          const vy = Math.sin(a) * speed;
+          projectiles.push({
+            x: CATAPULT.x,
+            y: CATAPULT.y,
+            r: 7,
+            vx,
+            vy,
+            active: true,
+            big: false
+          });
+        }
+      }
+    }
+
+    function pointerToCanvas(evt) {
+      const rect = canvas.getBoundingClientRect();
+      if (evt.touches && evt.touches.length > 0) {
+        const t = evt.touches[0];
+        return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+      } else if (evt.changedTouches && evt.changedTouches.length > 0) {
+        const t = evt.changedTouches[0];
+        return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+      } else {
+        return { x: evt.clientX - rect.left, y: evt.clientY - rect.top };
+      }
+    }
+
+    function onPointerDown(evt) {
+      evt.preventDefault();
+      const p = pointerToCanvas(evt);
+      const dx = p.x - CATAPULT.x;
+      const dy = p.y - CATAPULT.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist < 60) {
+        isDragging = true;
+        dragStart = { x: p.x, y: p.y };
+        dragCurrent = { x: p.x, y: p.y };
+      }
+    }
+
+    function onPointerMove(evt) {
+      if (!isDragging) return;
+      evt.preventDefault();
+      const p = pointerToCanvas(evt);
+      dragCurrent = { x: p.x, y: p.y };
+    }
+
+    function onPointerUp(evt) {
+      if (!isDragging) return;
+      evt.preventDefault();
+      const p = pointerToCanvas(evt);
+      dragCurrent = { x: p.x, y: p.y };
+
+      const dx = dragStart.x - dragCurrent.x;
+      const dy = dragStart.y - dragCurrent.y;
+      const powerScale = 0.15;
+      let vx = dx * powerScale;
+      let vy = dy * powerScale;
+
+      const maxSpeed = 40;
+      const speed = Math.hypot(vx, vy);
+      if (speed > maxSpeed) {
+        vx *= maxSpeed / speed;
+        vy *= maxSpeed / speed;
+      }
+
+      if (speed > 3) {
+        fireShot(vx, vy);
+      }
+
+      isDragging = false;
+    }
+
+    canvas.addEventListener("mousedown", onPointerDown);
+    canvas.addEventListener("mousemove", onPointerMove);
+    window.addEventListener("mouseup", onPointerUp);
+
+    canvas.addEventListener("touchstart", onPointerDown, { passive: false });
+    canvas.addEventListener("touchmove", onPointerMove, { passive: false });
+    canvas.addEventListener("touchend", onPointerUp, { passive: false });
+    canvas.addEventListener("touchcancel", onPointerUp, { passive: false });
+
+    btnSingle.addEventListener("click", () => {
+      shotMode = "single";
+      btnSingle.classList.add("active");
+      btnTriple.classList.remove("active");
+    });
+    btnTriple.addEventListener("click", () => {
+      shotMode = "triple";
+      btnTriple.classList.add("active");
+      btnSingle.classList.remove("active");
+    });
+    btnReset.addEventListener("click", () => {
+      resetGame(true);
+    });
+
+    function updatePhysics() {
+      // projectiles
+      for (const p of projectiles) {
+        if (!p.active) continue;
+        p.vy += GRAVITY;
+        p.vx *= FRICTION_AIR;
+        p.vy *= FRICTION_AIR;
+        p.x += p.vx;
+        p.y += p.vy;
+
+        // ground
+        if (p.y + p.r > groundY) {
+          p.y = groundY - p.r;
+          p.vy *= -PROJECTILE_RESTITUTION;
+          p.vx *= FRICTION_GROUND;
+          if (Math.abs(p.vy) < 1) {
+            p.vy = 0;
+          }
+        }
+        // off-screen cleanup
+        if (p.x < -50 || p.x > W + 50 || p.y > H + 200) {
+          p.active = false;
+        }
+      }
+
+      // blocks
+      for (const b of blocks) {
+        if (!b.alive) continue;
+        b.vy += GRAVITY;
+        b.vx *= 0.995;
+        b.vy *= 0.995;
+        b.x += b.vx;
+        b.y += b.vy;
+
+        // ground
+        if (b.y + b.h > groundY) {
+          b.y = groundY - b.h;
+          b.vy *= -BLOCK_RESTITUTION;
+          b.vx *= FRICTION_GROUND;
+          if (Math.abs(b.vy) < 0.2) b.vy = 0;
+        }
+
+        // off-screen (fallen)
+        if (b.y > H + 200 || b.x < -200 || b.x > W + 200) {
+          if (b.alive) {
+            b.alive = false;
+            score += 5;
+            scoreEl.textContent = score;
+            maybeUpdateBestScore();
+          }
+        }
+      }
+
+      // projectile-block collisions
+      for (const p of projectiles) {
+        if (!p.active) continue;
+        for (const b of blocks) {
+          if (!b.alive) continue;
+          const closestX = Math.max(b.x, Math.min(p.x, b.x + b.w));
+          const closestY = Math.max(b.y, Math.min(p.y, b.y + b.h));
+          const dx = p.x - closestX;
+          const dy = p.y - closestY;
+          const distSq = dx * dx + dy * dy;
+          const r = p.r;
+          if (distSq < r * r) {
+            const dist = Math.sqrt(distSq) || 0.001;
+            const nx = dx / dist;
+            const ny = dy / dist;
+
+            // simple separation
+            p.x = closestX + nx * r;
+            p.y = closestY + ny * r;
+
+            const relVx = p.vx - b.vx;
+            const relVy = p.vy - b.vy;
+            const impact = Math.abs(relVx * nx + relVy * ny);
+
+            const impulse = p.big ? 8 : 4;
+            b.vx += nx * impulse;
+            b.vy += ny * impulse;
+
+            b.health -= impact * (p.big ? 2 : 1);
+            if (b.health <= 0) {
+              b.alive = false;
+              score += p.big ? 10 : 6;
+              scoreEl.textContent = score;
+              maybeUpdateBestScore();
+            }
+
+            // dampen projectile
+            p.vx *= 0.7;
+            p.vy *= 0.7;
+          }
+        }
+      }
+    }
+
+    function drawCatapult() {
+      // base
+      ctx.fillStyle = "#4b3a26";
+      ctx.fillRect(CATAPULT.x - 30, groundY - 10, 60, 10);
+
+      // arm & bowl
+      let angle = -Math.PI / 4;
+      if (isDragging) {
+        const dx = dragCurrent.x - CATAPULT.x;
+        const dy = dragCurrent.y - CATAPULT.y;
+        angle = Math.atan2(dy, dx);
+      }
+
+      const endX = CATAPULT.x + Math.cos(angle) * CATAPULT.armLength;
+      const endY = CATAPULT.y + Math.sin(angle) * CATAPULT.armLength;
+
+      ctx.strokeStyle = "#d2b48c";
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(CATAPULT.x, CATAPULT.y);
+      ctx.lineTo(endX, endY);
+      ctx.stroke();
+
+      // bowl
+      ctx.beginPath();
+      ctx.arc(endX, endY, 8, 0, Math.PI * 2);
+      ctx.fillStyle = "#b08d57";
+      ctx.fill();
+
+      // drag line
+      if (isDragging) {
+        ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = "#ffcc00";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(dragStart.x, dragStart.y);
+        ctx.lineTo(dragCurrent.x, dragCurrent.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
+    function drawBlocks() {
+      for (const b of blocks) {
+        if (!b.alive) continue;
+        const ratio = b.health / 100;
+        const col = Math.max(0.3, ratio);
+        ctx.fillStyle = `rgba(${200 * col},${200 * col},${200 * col},1)`;
+        ctx.fillRect(b.x, b.y, b.w, b.h);
+        ctx.strokeStyle = "#333";
+        ctx.strokeRect(b.x, b.y, b.w, b.h);
+      }
+    }
+
+    function drawProjectiles() {
+      for (const p of projectiles) {
+        if (!p.active) continue;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = p.big ? "#c0c0c0" : "#aaaaaa";
+        ctx.fill();
+      }
+    }
+
+    function drawGround() {
+      ctx.fillStyle = "#2d3a2d";
+      ctx.fillRect(0, groundY, W, H - groundY);
+      ctx.strokeStyle = "#4a5a3a";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, groundY);
+      ctx.lineTo(W, groundY);
+      ctx.stroke();
+    }
+
+    function loop() {
+      ctx.clearRect(0, 0, W, H);
+      updatePhysics();
+      drawGround();
+      drawCatapult();
+      drawBlocks();
+      drawProjectiles();
+      requestAnimationFrame(loop);
+    }
+
+    loadBestScore();
+    window.addEventListener("resize", resize);
+    resize();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
