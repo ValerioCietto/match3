@@ -1,0 +1,348 @@
+<!-- terminal: apri questo file con un browser, es. xdg-open bouquet-game.html -->
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Lancio del Bouquet</title>
+<style>
+  html, body {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+    font-family: system-ui, sans-serif;
+    background: #ead7c1;
+    touch-action: none;
+  }
+
+  #ui {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    display: flex;
+    justify-content: space-between;
+    z-index: 2;
+    color: white;
+    font-weight: bold;
+    text-shadow: 0 2px 4px #0008;
+  }
+
+  button {
+    border: 0;
+    border-radius: 14px;
+    padding: 10px 14px;
+    font-weight: bold;
+    background: #c85b8c;
+    color: white;
+  }
+
+  canvas {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+  }
+
+  #hint {
+    position: fixed;
+    bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #0008;
+    color: white;
+    padding: 12px 18px;
+    border-radius: 18px;
+    text-align: center;
+    font-weight: bold;
+    z-index: 2;
+  }
+</style>
+</head>
+<body>
+
+<div id="ui">
+  <div>Punti: <span id="score">0</span></div>
+  <button onclick="resetGame()">Reset</button>
+  <div>Record: <span id="best">0</span></div>
+</div>
+
+<canvas id="game"></canvas>
+<div id="hint">Trascina dal bouquet e rilascia per lanciare</div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const scoreEl = document.getElementById("score");
+const bestEl = document.getElementById("best");
+
+let W, H;
+let score = Number(localStorage.getItem("bouquetScore") || 0);
+let best = Number(localStorage.getItem("bouquetBest") || 0);
+
+let bride;
+let bouquet;
+let dragStart = null;
+let dragPos = null;
+let flying = false;
+let velocity = { x: 0, y: 0 };
+
+const bridesmaids = [];
+
+function resize() {
+  W = canvas.width = innerWidth * devicePixelRatio;
+  H = canvas.height = innerHeight * devicePixelRatio;
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+
+  bride = {
+    x: innerWidth / 2,
+    y: innerHeight - 110,
+    r: 44
+  };
+
+  resetBouquet();
+  createBridesmaids();
+}
+
+function resetBouquet() {
+  bouquet = {
+    x: bride.x,
+    y: bride.y - 55,
+    r: 18
+  };
+  flying = false;
+  velocity.x = 0;
+  velocity.y = 0;
+}
+
+function createBridesmaids() {
+  bridesmaids.length = 0;
+
+  const colors = ["#4caf50", "#2196f3", "#9c27b0", "#ff9800", "#e91e63", "#00acc1"];
+  const rows = [
+    innerHeight * 0.18,
+    innerHeight * 0.34,
+    innerHeight * 0.48
+  ];
+
+  for (let i = 0; i < 7; i++) {
+    bridesmaids.push({
+      x: 45 + Math.random() * (innerWidth - 90),
+      y: rows[i % rows.length] + Math.random() * 25,
+      r: 28,
+      color: colors[i % colors.length],
+      happy: 0
+    });
+  }
+}
+
+function saveScore() {
+  localStorage.setItem("bouquetScore", score);
+  if (score > best) {
+    best = score;
+    localStorage.setItem("bouquetBest", best);
+  }
+}
+
+function resetGame() {
+  score = 0;
+  saveScore();
+  createBridesmaids();
+  resetBouquet();
+}
+
+function drawBackground() {
+  ctx.fillStyle = "#ead7c1";
+  ctx.fillRect(0, 0, innerWidth, innerHeight);
+
+  ctx.strokeStyle = "#d3bfa8";
+  ctx.lineWidth = 1;
+
+  for (let x = 0; x < innerWidth; x += 42) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, innerHeight);
+    ctx.stroke();
+  }
+
+  for (let y = 0; y < innerHeight; y += 42) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(innerWidth, y);
+    ctx.stroke();
+  }
+}
+
+function drawBride() {
+  ctx.fillStyle = "#fff";
+  ctx.beginPath();
+  ctx.arc(bride.x, bride.y + 25, 60, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#8b4a2b";
+  ctx.beginPath();
+  ctx.arc(bride.x, bride.y - 15, 24, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#f2b48c";
+  ctx.beginPath();
+  ctx.arc(bride.x, bride.y, 20, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#fff";
+  ctx.font = "bold 20px sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("SPOSA", bride.x, bride.y + 90);
+}
+
+function drawBridesmaid(m) {
+  ctx.fillStyle = m.color;
+  ctx.beginPath();
+  ctx.arc(m.x, m.y + 12, m.r + 10, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#f2b48c";
+  ctx.beginPath();
+  ctx.arc(m.x, m.y - 10, m.r, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#5b3826";
+  ctx.beginPath();
+  ctx.arc(m.x, m.y - 23, m.r * 0.85, Math.PI, 0);
+  ctx.fill();
+
+  ctx.fillStyle = "#111";
+  ctx.beginPath();
+  ctx.arc(m.x - 8, m.y - 12, 2, 0, Math.PI * 2);
+  ctx.arc(m.x + 8, m.y - 12, 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = "#111";
+  ctx.beginPath();
+  ctx.arc(m.x, m.y - 5, 8 + m.happy, 0, Math.PI);
+  ctx.stroke();
+
+  if (m.happy > 0) m.happy -= 0.2;
+}
+
+function drawBouquet() {
+  ctx.fillStyle = "#3b8c3b";
+  ctx.beginPath();
+  ctx.arc(bouquet.x, bouquet.y, bouquet.r, 0, Math.PI * 2);
+  ctx.fill();
+
+  ["#fff", "#ffd1dc", "#f8b400"].forEach((c, i) => {
+    ctx.fillStyle = c;
+    ctx.beginPath();
+    ctx.arc(
+      bouquet.x + Math.cos(i * 2.1) * 10,
+      bouquet.y + Math.sin(i * 2.1) * 10,
+      8,
+      0,
+      Math.PI * 2
+    );
+    ctx.fill();
+  });
+}
+
+function drawAim() {
+  if (!dragStart || !dragPos || flying) return;
+
+  ctx.strokeStyle = "#fff";
+  ctx.lineWidth = 4;
+  ctx.setLineDash([8, 8]);
+  ctx.beginPath();
+  ctx.moveTo(bouquet.x, bouquet.y);
+  ctx.lineTo(
+    bouquet.x + (dragStart.x - dragPos.x),
+    bouquet.y + (dragStart.y - dragPos.y)
+  );
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function update() {
+  if (flying) {
+    bouquet.x += velocity.x;
+    bouquet.y += velocity.y;
+    velocity.x *= 0.985;
+    velocity.y *= 0.985;
+
+    for (const m of bridesmaids) {
+      const dx = bouquet.x - m.x;
+      const dy = bouquet.y - m.y;
+      const dist = Math.hypot(dx, dy);
+
+      if (dist < bouquet.r + m.r) {
+        score += 10;
+        m.happy = 8;
+        saveScore();
+        resetBouquet();
+        createBridesmaids();
+        break;
+      }
+    }
+
+    if (
+      bouquet.x < -50 ||
+      bouquet.x > innerWidth + 50 ||
+      bouquet.y < -50 ||
+      bouquet.y > innerHeight + 50 ||
+      Math.hypot(velocity.x, velocity.y) < 0.4
+    ) {
+      resetBouquet();
+    }
+  }
+
+  scoreEl.textContent = score;
+  bestEl.textContent = best;
+}
+
+function loop() {
+  drawBackground();
+  bridesmaids.forEach(drawBridesmaid);
+  drawBride();
+  drawAim();
+  drawBouquet();
+  update();
+  requestAnimationFrame(loop);
+}
+
+function pointerPos(e) {
+  const p = e.touches ? e.touches[0] : e;
+  return { x: p.clientX, y: p.clientY };
+}
+
+canvas.addEventListener("pointerdown", e => {
+  const p = pointerPos(e);
+  const d = Math.hypot(p.x - bouquet.x, p.y - bouquet.y);
+
+  if (d < 60 && !flying) {
+    dragStart = p;
+    dragPos = p;
+  }
+});
+
+canvas.addEventListener("pointermove", e => {
+  if (!dragStart || flying) return;
+  dragPos = pointerPos(e);
+});
+
+canvas.addEventListener("pointerup", () => {
+  if (!dragStart || !dragPos || flying) return;
+
+  velocity.x = (dragStart.x - dragPos.x) * 0.12;
+  velocity.y = (dragStart.y - dragPos.y) * 0.12;
+
+  flying = true;
+  dragStart = null;
+  dragPos = null;
+});
+
+resize();
+addEventListener("resize", resize);
+loop();
+</script>
+
+</body>
+</html>
