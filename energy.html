@@ -1,0 +1,352 @@
+<!-- Launch: open this file in browser, e.g. xdg-open energy-idle.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Energy Idle Generator</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+    background: #101820;
+    color: #f5f5f5;
+  }
+  header {
+    padding: 12px;
+    background: #172635;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  h1 { font-size: 20px; margin: 0 0 8px; }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+    font-size: 13px;
+  }
+  .stat {
+    background: #22384d;
+    padding: 8px;
+    border-radius: 8px;
+  }
+  main {
+    padding: 10px;
+    display: grid;
+    gap: 12px;
+  }
+  canvas {
+    width: 100%;
+    height: 160px;
+    background: #07111c;
+    border-radius: 10px;
+  }
+  section {
+    background: #172635;
+    border-radius: 12px;
+    padding: 10px;
+  }
+  h2 {
+    font-size: 16px;
+    margin: 0 0 8px;
+  }
+  .grid {
+    display: grid;
+    gap: 8px;
+  }
+  .card {
+    background: #22384d;
+    border-radius: 10px;
+    padding: 8px;
+    font-size: 13px;
+  }
+  .row {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    align-items: center;
+  }
+  button {
+    border: 0;
+    border-radius: 8px;
+    padding: 8px 10px;
+    background: #ffd166;
+    color: #111;
+    font-weight: 700;
+  }
+  button:disabled {
+    opacity: .4;
+  }
+  .small {
+    font-size: 12px;
+    opacity: .8;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚡ Energy Idle Generator</h1>
+  <div class="stats">
+    <div class="stat">Money: <b id="money"></b></div>
+    <div class="stat">Hour: <b id="hour"></b></div>
+    <div class="stat">Supply: <b id="supply"></b></div>
+    <div class="stat">Demand: <b id="demand"></b></div>
+    <div class="stat">Sold: <b id="sold"></b></div>
+    <div class="stat">Wind: <b id="wind"></b></div>
+  </div>
+</header>
+
+<main>
+  <canvas id="chart" width="800" height="260"></canvas>
+
+  <section>
+    <h2>Generators</h2>
+    <div id="generators" class="grid"></div>
+  </section>
+
+  <section>
+    <h2>Loads</h2>
+    <div id="loads" class="grid"></div>
+  </section>
+
+  <section>
+    <button onclick="resetGame()">Reset</button>
+  </section>
+</main>
+
+<script>
+const SAVE_KEY = "energy_idle_proto_v1";
+const SELL_PRICE = 0.10;
+
+const generators = [
+  { id:"wood", name:"Wood", cost:300, kw:1, variable:0.04 },
+  { id:"coal", name:"Coal", cost:2000, kw:8, variable:0.05 },
+  { id:"methane", name:"Methane", cost:6000, kw:25, variable:0.06 },
+  { id:"gpl", name:"GPL", cost:4500, kw:15, variable:0.075 },
+  { id:"diesel", name:"Diesel", cost:1500, kw:10, variable:0.12 },
+  { id:"wind", name:"Wind Turbine", cost:12000, kw:30, variable:0.01, wind:true },
+  { id:"solar", name:"Solar Panels", cost:800, kw:2, variable:0.005, solar:true },
+  { id:"thermalSolar", name:"Thermal Solar Plant", cost:80000, kw:120, variable:0.008, solar:true },
+  { id:"geothermal", name:"Geothermal", cost:150000, kw:200, variable:0.015 },
+  { id:"nuclear", name:"Nuclear", cost:5000000, kw:8000, variable:0.025 },
+  { id:"hydro", name:"Hydro", cost:400000, kw:700, variable:0.01 },
+  { id:"battery", name:"Accumulator Battery", cost:10000, kw:0, variable:0, storage:100 }
+];
+
+const loads = [
+  { id:"house", name:"House", cost:200, kw:1 },
+  { id:"electricCar", name:"Electric Car", cost:2500, kw:7 },
+  { id:"commercial", name:"Commercial Activity", cost:2000, kw:5 },
+  { id:"farm", name:"Farm", cost:7000, kw:15 },
+  { id:"factory", name:"Factory", cost:50000, kw:80 },
+  { id:"dataCenter", name:"Data Center", cost:1000000, kw:2000 }
+];
+
+let state = loadGame() || {
+  money: 1000,
+  hour: 8,
+  wind: 0.5,
+  ownedGenerators: {},
+  ownedLoads: { house: 1 },
+  history: []
+};
+
+function fmt(n) {
+  return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
+
+function solarMultiplier(hour) {
+  if (hour < 7 || hour >= 19) return 0;
+  const distance = Math.abs(hour - 13);
+  return Math.max(0, 1 - distance / 6);
+}
+
+function loadMultiplier(id, hour) {
+  if (id === "house") {
+    if (hour >= 0 && hour < 6) return 0.2;
+    if (hour >= 7 && hour < 9) return 1.4;
+    if (hour >= 20 && hour < 24) return 2.0;
+    return 0.8;
+  }
+  if (id === "electricCar") {
+    if (hour >= 0 && hour < 6) return 1.0;
+    return 0.1;
+  }
+  if (id === "commercial") {
+    if (hour >= 8 && hour < 19) return 1.0;
+    return 0.15;
+  }
+  if (id === "factory") {
+    if (hour >= 8 && hour < 18) return 1.0;
+    return 0.35;
+  }
+  return 1.0;
+}
+
+function generatorOutput(g) {
+  if (g.solar) return g.kw * solarMultiplier(state.hour);
+  if (g.wind) {
+    if (state.wind > 1.0) return 0;
+    return g.kw * state.wind;
+  }
+  return g.kw;
+}
+
+function getTotals() {
+  let supply = 0;
+  let variableCost = 0;
+  let demand = 0;
+
+  for (const g of generators) {
+    const count = state.ownedGenerators[g.id] || 0;
+    const output = generatorOutput(g) * count;
+    supply += output;
+    variableCost += output * g.variable;
+  }
+
+  for (const l of loads) {
+    const count = state.ownedLoads[l.id] || 0;
+    demand += l.kw * loadMultiplier(l.id, state.hour) * count;
+  }
+
+  const sold = Math.min(supply, demand);
+  const revenue = sold * SELL_PRICE;
+  const profit = revenue - variableCost;
+
+  return { supply, demand, sold, revenue, variableCost, profit };
+}
+
+function tickHour() {
+  const t = getTotals();
+  state.money += t.profit;
+  state.hour = (state.hour + 1) % 24;
+
+  const windChange = Math.random() < 0.5 ? -0.1 : 0.1;
+  state.wind = Math.max(0, Math.min(1.2, +(state.wind + windChange).toFixed(1)));
+
+  state.history.push({ hour: state.hour, supply: t.supply, demand: t.demand, sold: t.sold });
+  if (state.history.length > 48) state.history.shift();
+
+  saveGame();
+  render();
+}
+
+function buyGenerator(id) {
+  const g = generators.find(x => x.id === id);
+  if (state.money < g.cost) return;
+  state.money -= g.cost;
+  state.ownedGenerators[id] = (state.ownedGenerators[id] || 0) + 1;
+  saveGame();
+  render();
+}
+
+function buyLoad(id) {
+  const l = loads.find(x => x.id === id);
+  if (state.money < l.cost) return;
+  state.money -= l.cost;
+  state.ownedLoads[id] = (state.ownedLoads[id] || 0) + 1;
+  saveGame();
+  render();
+}
+
+function render() {
+  const t = getTotals();
+
+  document.getElementById("money").textContent = "€" + fmt(state.money);
+  document.getElementById("hour").textContent = state.hour + ":00";
+  document.getElementById("supply").textContent = fmt(t.supply) + " kW";
+  document.getElementById("demand").textContent = fmt(t.demand) + " kW";
+  document.getElementById("sold").textContent = fmt(t.sold) + " kWh/h";
+  document.getElementById("wind").textContent = state.wind.toFixed(1) + (state.wind > 1 ? " stopped" : "");
+
+  document.getElementById("generators").innerHTML = generators.map(g => {
+    const count = state.ownedGenerators[g.id] || 0;
+    const actual = generatorOutput(g);
+    return `
+      <div class="card">
+        <div class="row">
+          <b>${g.name} x${count}</b>
+          <button onclick="buyGenerator('${g.id}')" ${state.money < g.cost ? "disabled" : ""}>Buy €${fmt(g.cost)}</button>
+        </div>
+        <div class="small">Output: ${fmt(actual)} kW each | Cost: €${g.variable}/kWh</div>
+      </div>
+    `;
+  }).join("");
+
+  document.getElementById("loads").innerHTML = loads.map(l => {
+    const count = state.ownedLoads[l.id] || 0;
+    const current = l.kw * loadMultiplier(l.id, state.hour);
+    return `
+      <div class="card">
+        <div class="row">
+          <b>${l.name} x${count}</b>
+          <button onclick="buyLoad('${l.id}')" ${state.money < l.cost ? "disabled" : ""}>Buy €${fmt(l.cost)}</button>
+        </div>
+        <div class="small">Demand now: ${fmt(current)} kW each</div>
+      </div>
+    `;
+  }).join("");
+
+  drawChart();
+}
+
+function drawChart() {
+  const canvas = document.getElementById("chart");
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = "#07111c";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const data = state.history;
+  if (data.length < 2) return;
+
+  const max = Math.max(...data.map(x => Math.max(x.supply, x.demand)), 1);
+  const step = canvas.width / (data.length - 1);
+
+  function line(key, color) {
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 4;
+    data.forEach((p, i) => {
+      const x = i * step;
+      const y = canvas.height - (p[key] / max) * (canvas.height - 20) - 10;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  }
+
+  line("supply", "#6ee7b7");
+  line("demand", "#f87171");
+
+  ctx.fillStyle = "#fff";
+  ctx.font = "22px system-ui";
+  ctx.fillText("Green: supply | Red: demand", 16, 28);
+}
+
+function saveGame() {
+  localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+}
+
+function loadGame() {
+  try {
+    return JSON.parse(localStorage.getItem(SAVE_KEY));
+  } catch {
+    return null;
+  }
+}
+
+function resetGame() {
+  localStorage.removeItem(SAVE_KEY);
+  location.reload();
+}
+
+setInterval(tickHour, 1000);
+render();
+</script>
+</body>
+</html>
