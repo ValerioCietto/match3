@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <!-- Avvio: apri questo file direttamente nel browser, oppure usa: python3 -m http.server 8000 -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>40 Settimane</title>
+  <style>
+    :root {
+      --bg: #fff8f5;
+      --panel: #ffffff;
+      --text: #302a2a;
+      --muted: #756b6b;
+      --accent: #d96c89;
+      --accent-dark: #ad4565;
+      --good: #4f9d69;
+      --warn: #d9943d;
+      --bad: #c94b50;
+      --border: #eadbd7;
+      --shadow: 0 10px 30px rgba(83, 54, 54, 0.10);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, #ffe7ee 0, transparent 32%),
+        linear-gradient(180deg, #fffaf7, var(--bg));
+      min-height: 100vh;
+    }
+
+    button {
+      font: inherit;
+      touch-action: manipulation;
+    }
+
+    .app {
+      width: min(100%, 980px);
+      margin: 0 auto;
+      padding: 14px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.55rem, 6vw, 2.3rem);
+      line-height: 1;
+    }
+
+    .subtitle {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: .92rem;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .icon-button, .primary-button, .choice-button {
+      border: 0;
+      border-radius: 14px;
+      cursor: pointer;
+    }
+
+    .icon-button {
+      padding: 10px 12px;
+      background: var(--panel);
+      color: var(--text);
+      box-shadow: var(--shadow);
+    }
+
+    .grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .panel {
+      background: rgba(255,255,255,.94);
+      border: 1px solid rgba(234,219,215,.9);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+
+    .week-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 120px;
+      gap: 14px;
+      align-items: center;
+    }
+
+    .week-label {
+      color: var(--accent-dark);
+      font-weight: 800;
+      letter-spacing: .03em;
+      text-transform: uppercase;
+      font-size: .78rem;
+    }
+
+    .fruit {
+      font-size: clamp(2.8rem, 12vw, 5rem);
+      text-align: center;
+      filter: drop-shadow(0 6px 10px rgba(0,0,0,.08));
+    }
+
+    .week-title {
+      margin: 4px 0;
+      font-size: 1.3rem;
+    }
+
+    .week-description {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 10px;
+    }
+
+    .stat {
+      padding: 11px;
+      background: #fffaf8;
+      border: 1px solid var(--border);
+      border-radius: 15px;
+    }
+
+    .stat-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: .86rem;
+      margin-bottom: 7px;
+    }
+
+    .bar {
+      height: 9px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: #eee3df;
+    }
+
+    .fill {
+      height: 100%;
+      width: 50%;
+      border-radius: inherit;
+      transition: width .35s ease;
+      background: linear-gradient(90deg, var(--accent), #f0a4b9);
+    }
+
+    .symptoms {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      min-height: 36px;
+    }
+
+    .symptom {
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: #fff3df;
+      border: 1px solid #efd0a0;
+      font-size: .84rem;
+    }
+
+    .empty {
+      color: var(--muted);
+      font-size: .9rem;
+    }
+
+    canvas {
+      width: 100%;
+      height: 165px;
+      display: block;
+      border-radius: 16px;
+      background: linear-gradient(180deg, #fff9f7, #fff1ed);
+      border: 1px solid var(--border);
+    }
+
+    .event-title {
+      margin: 0 0 6px;
+      font-size: 1.2rem;
+    }
+
+    .event-text {
+      margin: 0 0 12px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .choices {
+      display: grid;
+      gap: 10px;
+    }
+
+    .choice-button {
+      text-align: left;
+      padding: 13px;
+      background: #fff7f8;
+      border: 1px solid #efcbd5;
+      color: var(--text);
+      transition: transform .12s ease, background .12s ease;
+    }
+
+    .choice-button:active {
+      transform: scale(.985);
+    }
+
+    .choice-button strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .choice-effects {
+      color: var(--muted);
+      font-size: .82rem;
+    }
+
+    .log {
+      max-height: 170px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .log-entry {
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: .88rem;
+      line-height: 1.4;
+    }
+
+    .log-entry:last-child { border-bottom: 0; }
+
+    .primary-button {
+      width: 100%;
+      padding: 13px 16px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      color: white;
+      font-weight: 800;
+      box-shadow: 0 8px 20px rgba(173,69,101,.25);
+    }
+
+    .primary-button:disabled {
+      opacity: .48;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .hidden { display: none !important; }
+
+    .end-screen {
+      text-align: center;
+      padding: 20px 10px 8px;
+    }
+
+    .end-emoji {
+      font-size: 4rem;
+    }
+
+    .score {
+      font-size: 2rem;
+      font-weight: 900;
+      color: var(--accent-dark);
+      margin: 8px 0;
+    }
+
+    @media (min-width: 760px) {
+      .grid {
+        grid-template-columns: 1.1fr .9fr;
+      }
+
+      .main-column, .side-column {
+        display: grid;
+        gap: 12px;
+        align-content: start;
+      }
+
+      .stats {
+        grid-template-columns: repeat(4, minmax(0,1fr));
+      }
+
+      .week-card {
+        grid-template-columns: minmax(0, 1fr) 150px;
+      }
+
+      canvas {
+        height: 220px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <div>
+        <h1>40 Settimane</h1>
+        <div class="subtitle">Un viaggio tra scelte, sintomi e preparativi</div>
+      </div>
+      <div class="header-actions">
+        <button id="resetButton" class="icon-button" aria-label="Nuova partita">↻</button>
+      </div>
+    </header>
+
+    <section id="game" class="grid">
+      <div class="main-column">
+        <article class="panel week-card">
+          <div>
+            <div id="weekLabel" class="week-label"></div>
+            <h2 id="weekTitle" class="week-title"></h2>
+            <p id="weekDescription" class="week-description"></p>
+          </div>
+          <div id="fruit" class="fruit"></div>
+        </article>
+
+        <article class="panel">
+          <div class="stats">
+            <div class="stat">
+              <div class="stat-top"><span>❤️ Fisica</span><strong id="physicalValue"></strong></div>
+              <div class="bar"><div id="physicalBar" class="fill"></div></div>
+            </div>
+            <div class="stat">
+              <div class="stat-top"><span>🧠 Mentale</span><strong id="mentalValue"></strong></div>
+              <div class="bar"><div id="mentalBar" class="fill"></div></div>
+            </div>
+            <div class="stat">
+              <div class="stat-top"><span>👶 Preparazione</span><strong id="prepValue"></strong></div>
+              <div class="bar"><div id="prepBar" class="fill"></div></div>
+            </div>
+            <div class="stat">
+              <div class="stat-top"><span>💰 Budget</span><strong id="budgetValue"></strong></div>
+              <div class="bar"><div id="budgetBar" class="fill"></div></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <canvas id="board" width="900" height="220" aria-label="Percorso delle settimane"></canvas>
+        </article>
+
+        <article id="eventPanel" class="panel">
+          <h3 id="eventTitle" class="event-title"></h3>
+          <p id="eventText" class="event-text"></p>
+          <div id="choices" class="choices"></div>
+        </article>
+
+        <article id="endPanel" class="panel hidden">
+          <div class="end-screen">
+            <div class="end-emoji">👶</div>
+            <h2>Il bambino è nato!</h2>
+            <p id="endText"></p>
+            <div id="score" class="score"></div>
+            <button id="newGameButton" class="primary-button">Nuova partita</button>
+          </div>
+        </article>
+      </div>
+
+      <aside class="side-column">
+        <article class="panel">
+          <h3>Sintomi attivi</h3>
+          <div id="symptoms" class="symptoms"></div>
+        </article>
+
+        <article class="panel">
+          <h3>Diario</h3>
+          <div id="log" class="log"></div>
+        </article>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    // Avvio: apri index.html nel browser oppure esegui "python3 -m http.server 8000"
+    const STORAGE_KEY = "pregnancy-board-game-v1";
+
+    const weekData = [
+      ["🌱","seme di papavero"], ["🌱","seme di sesamo"], ["🫐","mirtillo"], ["🫐","lampone"],
+      ["🍒","ciliegia"], ["🍓","fragola"], ["🍋","lime"], ["🍋","limone"],
+      ["🍑","pesca"], ["🍎","mela"], ["🥑","avocado"], ["🥭","mango"],
+      ["🍐","pera"], ["🍊","arancia"], ["🥔","patata"], ["🥕","carota"],
+      ["🌽","pannocchia"], ["🥒","cetriolo"], ["🍆","melanzana"], ["🥭","papaya"],
+      ["🍌","banana"], ["🌽","pannocchia grande"], ["🥬","lattuga"], ["🥥","cocco"],
+      ["🍍","ananas"], ["🥦","broccolo"], ["🥬","cavolo"], ["🎃","piccola zucca"],
+      ["🍈","melone"], ["🥥","cocco grande"], ["🍍","ananas grande"], ["🎃","zucca"],
+      ["🍉","anguria piccola"], ["🍉","anguria"], ["🍉","anguria grande"], ["👶","neonato prematuro"],
+      ["👶","quasi pronto"], ["👶","a termine"], ["👶","pronto a nascere"], ["👶","settimana prevista"],
+      ["👶","oltre il termine"], ["👶","ultima settimana"]
+    ];
+
+    const symptomsCatalog = [
+      { id:"nausea", name:"🤢 Nausea", weeks:[4,16], mental:-1, physical:-2, duration:[2,5] },
+      { id:"fatigue", name:"😴 Stanchezza", weeks:[3,38], mental:-1, physical:-2, duration:[2,4] },
+      { id:"back", name:"🪑 Mal di schiena", weeks:[20,42], mental:-1, physical:-2, duration:[2,5] },
+      { id:"reflux", name:"🔥 Reflusso", weeks:[18,42], mental:-1, physical:-1, duration:[2,4] },
+      { id:"cramps", name:"🦵 Crampi", weeks:[22,42], mental:0, physical:-2, duration:[1,3] },
+      { id:"insomnia", name:"🌙 Insonnia", weeks:[24,42], mental:-2, physical:-1, duration:[2,4] }
+    ];
+
+    const events = [
+      {
+        title:"Mattina difficile",
+        text:"La nausea è più forte del solito e la giornata è piena di impegni.",
+        choices:[
+          { label:"Riposare e alleggerire la giornata", effects:{physical:7, mental:4, budget:-3} },
+          { label:"Continuare come previsto", effects:{physical:-6, mental:-3, budget:8} }
+        ]
+      },
+      {
+        title:"Corso preparto",
+        text:"Si libera un posto in un corso molto apprezzato.",
+        choices:[
+          { label:"Iscriversi", effects:{prep:10, mental:4, budget:-12} },
+          { label:"Studiare con materiali gratuiti", effects:{prep:5, mental:-1, budget:0} }
+        ]
+      },
+      {
+        title:"Offerta su articoli per bambini",
+        text:"Un modello valido è in promozione solo per questa settimana.",
+        choices:[
+          { label:"Comprarlo ora", effects:{prep:12, budget:-18} },
+          { label:"Aspettare", effects:{mental:-2, budget:3} }
+        ]
+      },
+      {
+        title:"Weekend dai nonni",
+        text:"La famiglia propone un fine settimana insieme.",
+        choices:[
+          { label:"Accettare l'invito", effects:{mental:8, physical:3, prep:3} },
+          { label:"Restare a casa e riposare", effects:{physical:8, mental:2} }
+        ]
+      },
+      {
+        title:"Straordinari al lavoro",
+        text:"Un progetto urgente promette un compenso extra.",
+        choices:[
+          { label:"Accettare", effects:{budget:16, physical:-7, mental:-5} },
+          { label:"Rifiutare", effects:{mental:6, budget:-2} }
+        ]
+      },
+      {
+        title:"Preparare la cameretta",
+        text:"È il momento giusto per iniziare a sistemare lo spazio del bambino.",
+        choices:[
+          { label:"Fare tutto personalmente", effects:{prep:11, physical:-6, mental:3} },
+          { label:"Chiedere aiuto", effects:{prep:8, physical:2, budget:-8} }
+        ]
+      },
+      {
+        title:"Controllo rassicurante",
+        text:"La visita procede bene. Il medico suggerisce comunque di continuare a prendersi cura di sé.",
+        choices:[
+          { label:"Festeggiare con una serata tranquilla", effects:{mental:8, budget:-4} },
+          { label:"Usare l'energia per organizzarsi", effects:{prep:8, physical:4} }
+        ]
+      },
+      {
+        title:"Yoga in gravidanza",
+        text:"Un corso vicino casa propone una lezione di prova.",
+        choices:[
+          { label:"Partecipare", effects:{physical:6, mental:7, budget:-6} },
+          { label:"Fare una passeggiata gratuita", effects:{physical:4, mental:3} }
+        ]
+      },
+      {
+        title:"Regalo inatteso",
+        text:"Degli amici offrono giocattoli e vestiti usati in ottime condizioni.",
+        choices:[
+          { label:"Accettarla", effects:{prep:10, budget:8} },
+          { label:"Comprare un modello nuovo", effects:{prep:12, mental:3, budget:-15} }
+        ]
+      },
+      {
+        title:"Notte insonne",
+        text:"Dopo una notte agitata, la giornata comincia con poca energia.",
+        choices:[
+          { label:"Prendersi una giornata lenta", effects:{physical:6, mental:5, budget:-4} },
+          { label:"Bere un caffè e andare avanti", effects:{physical:-5, mental:-3, budget:6} }
+        ]
+      },
+      {
+        title:"Valigia per l'ospedale",
+        text:"Ti sei accorta che manca ancora qualche oggetto.",
+        minWeek:30,
+        choices:[
+          { label:"Prepararla subito", effects:{prep:14, mental:5, budget:-8} },
+          { label:"Rimandare di una settimana", effects:{mental:-4, budget:2} }
+        ]
+      },
+      {
+        title:"Falso allarme",
+        text:"Compaiono contrazioni irregolari. Potrebbe non essere ancora il momento.",
+        minWeek:34,
+        choices:[
+          { label:"Andare a farsi controllare", effects:{mental:6, budget:-1, physical:5} },
+          { label:"Aspettare e monitorare", effects:{mental:-5, physical:1} }
+        ]
+      }
+    ];
+
+    function randomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function freshState() {
+      return {
+        week: 1,
+        physical: 80,
+        mental: 80,
+        prep: 10,
+        budget: 70,
+        activeSymptoms: [],
+        birthWeek: randomInt(36, 42),
+        eventIndex: 0,
+        awaitingChoice: true,
+        gameOver: false,
+        log: ["La gravidanza è iniziata. Il percorso può cominciare."]
+      };
+    }
+
+    let state = loadState() || freshState();
+
+    const els = {
+      weekLabel: document.getElementById("weekLabel"),
+      weekTitle: document.getElementById("weekTitle"),
+      weekDescription: document.getElementById("weekDescription"),
+      fruit: document.getElementById("fruit"),
+      physicalValue: document.getElementById("physicalValue"),
+      mentalValue: document.getElementById("mentalValue"),
+      prepValue: document.getElementById("prepValue"),
+      budgetValue: document.getElementById("budgetValue"),
+      physicalBar: document.getElementById("physicalBar"),
+      mentalBar: document.getElementById("mentalBar"),
+      prepBar: document.getElementById("prepBar"),
+      budgetBar: document.getElementById("budgetBar"),
+      symptoms: document.getElementById("symptoms"),
+      eventPanel: document.getElementById("eventPanel"),
+      eventTitle: document.getElementById("eventTitle"),
+      eventText: document.getElementById("eventText"),
+      choices: document.getElementById("choices"),
+      endPanel: document.getElementById("endPanel"),
+      endText: document.getElementById("endText"),
+      score: document.getElementById("score"),
+      log: document.getElementById("log"),
+      board: document.getElementById("board")
+    };
+
+    function clamp(value, min = 0, max = 100) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch {
+        return null;
+      }
+    }
+
+    function addLog(text) {
+      state.log.unshift(`Settimana ${state.week}: ${text}`);
+      state.log = state.log.slice(0, 30);
+    }
+
+    function formatEffects(effects) {
+      const labels = { physical:"fisica", mental:"mentale", prep:"preparazione", budget:"budget" };
+      return Object.entries(effects)
+        .map(([key,value]) => `${value >= 0 ? "+" : ""}${value} ${labels[key]}`)
+        .join(" · ");
+    }
+
+    function chooseEvent() {
+      const available = events.filter(event => !event.minWeek || state.week >= event.minWeek);
+      const chosen = available[Math.floor(Math.random() * available.length)];
+      state.eventIndex = events.indexOf(chosen);
+    }
+
+    function applyEffects(effects) {
+      for (const [key, value] of Object.entries(effects)) {
+        state[key] = clamp(state[key] + value);
+      }
+    }
+
+    function updateSymptoms() {
+      const remaining = [];
+      for (const symptom of state.activeSymptoms) {
+        applyEffects({ physical: symptom.physical, mental: symptom.mental });
+        symptom.remaining -= 1;
+        if (symptom.remaining > 0) remaining.push(symptom);
+        else addLog(`${symptom.name} è passato.`);
+      }
+      state.activeSymptoms = remaining;
+
+      const candidates = symptomsCatalog.filter(s =>
+        state.week >= s.weeks[0] &&
+        state.week <= s.weeks[1] &&
+        !state.activeSymptoms.some(active => active.id === s.id)
+      );
+
+      if (candidates.length && Math.random() < 0.34) {
+        const symptom = candidates[Math.floor(Math.random() * candidates.length)];
+        const active = {
+          ...symptom,
+          remaining: randomInt(symptom.duration[0], symptom.duration[1])
+        };
+        state.activeSymptoms.push(active);
+        addLog(`Compare il sintomo ${active.name}.`);
+      }
+    }
+
+    function advanceWeek() {
+      if (state.gameOver) return;
+
+      state.week += 1;
+      updateSymptoms();
+
+      state.physical = clamp(state.physical - 1);
+      state.mental = clamp(state.mental - 1);
+
+      if (state.physical <= 0 || state.mental <= 0) {
+        finishGame("La gravidanza è diventata troppo difficile da gestire.");
+        return;
+      }
+
+      if (state.week >= state.birthWeek) {
+        finishGame(`Il parto è iniziato alla settimana ${state.week}.`);
+        return;
+      }
+
+      chooseEvent();
+      state.awaitingChoice = true;
+      saveState();
+      render();
+    }
+
+    function finishGame(message) {
+      state.gameOver = true;
+      state.awaitingChoice = false;
+      addLog(message);
+      saveState();
+      render();
+    }
+
+    function handleChoice(choice) {
+      if (!state.awaitingChoice || state.gameOver) return;
+      applyEffects(choice.effects);
+      addLog(`${choice.label}. ${formatEffects(choice.effects)}.`);
+      state.awaitingChoice = false;
+      saveState();
+      setTimeout(advanceWeek, 250);
+    }
+
+    function renderStats() {
+      const data = [
+        ["physical", els.physicalValue, els.physicalBar],
+        ["mental", els.mentalValue, els.mentalBar],
+        ["prep", els.prepValue, els.prepBar],
+        ["budget", els.budgetValue, els.budgetBar]
+      ];
+
+      for (const [key, valueEl, barEl] of data) {
+        valueEl.textContent = state[key];
+        barEl.style.width = `${clamp(state[key])}%`;
+      }
+    }
+
+    function renderSymptoms() {
+      els.symptoms.innerHTML = "";
+      if (!state.activeSymptoms.length) {
+        els.symptoms.innerHTML = '<span class="empty">Nessun sintomo attivo.</span>';
+        return;
+      }
+
+      state.activeSymptoms.forEach(symptom => {
+        const chip = document.createElement("span");
+        chip.className = "symptom";
+        chip.textContent = `${symptom.name} · ${symptom.remaining} sett.`;
+        els.symptoms.appendChild(chip);
+      });
+    }
+
+    function renderEvent() {
+      if (state.gameOver) {
+        els.eventPanel.classList.add("hidden");
+        els.endPanel.classList.remove("hidden");
+
+        const finalScore = Math.round(
+          state.physical * .3 +
+          state.mental * .3 +
+          state.prep * .3 +
+          state.budget * .1
+        );
+
+        els.endText.textContent =
+          `Parto alla settimana ${state.week}. Salute fisica ${state.physical}, salute mentale ${state.mental}, preparazione ${state.prep}, budget ${state.budget}.`;
+        els.score.textContent = `${finalScore}/100`;
+        return;
+      }
+
+      els.eventPanel.classList.remove("hidden");
+      els.endPanel.classList.add("hidden");
+
+      const event = events[state.eventIndex] || events[0];
+      els.eventTitle.textContent = event.title;
+      els.eventText.textContent = event.text;
+      els.choices.innerHTML = "";
+
+      event.choices.forEach(choice => {
+        const button = document.createElement("button");
+        button.className = "choice-button";
+        button.innerHTML = `<strong>${choice.label}</strong><span class="choice-effects">${formatEffects(choice.effects)}</span>`;
+        button.addEventListener("click", () => handleChoice(choice));
+        els.choices.appendChild(button);
+      });
+    }
+
+    function renderLog() {
+      els.log.innerHTML = state.log
+        .map(entry => `<div class="log-entry">${entry}</div>`)
+        .join("");
+    }
+
+    function renderWeek() {
+      const info = weekData[Math.min(state.week - 1, weekData.length - 1)];
+      els.weekLabel.textContent = `Settimana ${state.week}`;
+      els.weekTitle.textContent = `Grande come ${info[1]}`;
+      els.weekDescription.textContent =
+        state.week < 13 ? "Primo trimestre: adattamento, esami e primi cambiamenti." :
+        state.week < 28 ? "Secondo trimestre: crescita, energia e preparazione." :
+        "Terzo trimestre: il parto si avvicina e ogni scelta conta.";
+      els.fruit.textContent = info[0];
+    }
+
+    function drawBoard() {
+      const canvas = els.board;
+      const ctx = canvas.getContext("2d");
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.round(rect.width * dpr);
+      canvas.height = Math.round(rect.height * dpr);
+      ctx.scale(dpr, dpr);
+
+      const w = rect.width;
+      const h = rect.height;
+      const padding = 22;
+      const cols = 10;
+      const rows = 5;
+      const cellW = (w - padding * 2) / (cols - 1);
+      const cellH = (h - padding * 2) / (rows - 1);
+      const points = [];
+
+      for (let row = 0; row < rows; row++) {
+        const order = row % 2 === 0
+          ? [...Array(cols).keys()]
+          : [...Array(cols).keys()].reverse();
+
+        order.forEach(col => {
+          points.push({
+            x: padding + col * cellW,
+            y: padding + row * cellH
+          });
+        });
+      }
+
+      ctx.lineWidth = 5;
+      ctx.lineCap = "round";
+      ctx.strokeStyle = "#e7c7cf";
+      ctx.beginPath();
+      points.slice(0,42).forEach((p, i) => {
+        if (i === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      });
+      ctx.stroke();
+
+      points.slice(0,42).forEach((p, i) => {
+        const week = i + 1;
+        const reached = week <= state.week;
+        const current = week === state.week;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, current ? 10 : 6, 0, Math.PI * 2);
+        ctx.fillStyle = current ? "#ad4565" : reached ? "#d96c89" : "#fff";
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = "#d9aeb8";
+        ctx.stroke();
+
+        if ([1,10,20,30,36,40,42].includes(week)) {
+          ctx.fillStyle = "#6f5f63";
+          ctx.font = "11px system-ui";
+          ctx.textAlign = "center";
+          ctx.fillText(String(week), p.x, p.y - 13);
+        }
+      });
+    }
+
+    function render() {
+      renderWeek();
+      renderStats();
+      renderSymptoms();
+      renderEvent();
+      renderLog();
+      drawBoard();
+    }
+
+    function resetGame() {
+      if (!confirm("Vuoi iniziare una nuova partita?")) return;
+      state = freshState();
+      chooseEvent();
+      saveState();
+      render();
+    }
+
+    document.getElementById("resetButton").addEventListener("click", resetGame);
+    document.getElementById("newGameButton").addEventListener("click", resetGame);
+    window.addEventListener("resize", drawBoard);
+
+    if (!state.eventIndex && state.week === 1 && state.log.length === 1) {
+      chooseEvent();
+      saveState();
+    }
+
+    render();
+  </script>
+</body>
+</html>
