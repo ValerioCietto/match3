@@ -1,0 +1,230 @@
+{
+  "weapon": {
+    "sword": {
+      "name": "Sword",
+      "price": 0,
+      "damage": 12,
+      "rate": 1,
+      "range": 30,
+      "description": "A standard melee weapon.",
+      "internalNote": "Free baseline: 12 DPS, balanced against the reach and utility of paid weapons."
+    },
+    "mace": {
+      "name": "Mace",
+      "price": 30,
+      "damage": 16,
+      "rate": 0.7,
+      "range": 30,
+      "description": "A slow melee weapon that splashes nearby enemies for 10% damage.",
+      "internalNote": "11.2 primary DPS; clustered enemies improve value. Slow attacks risk overkill."
+    },
+    "bow": {
+      "name": "Bow",
+      "price": 30,
+      "damage": 8,
+      "rate": 1,
+      "range": 350,
+      "description": "A ranged weapon that fires small traveling arrows.",
+      "internalNote": "8 DPS trades raw damage for early attacks at 350 range; no active kiting."
+    },
+    "ballista": {
+      "name": "Ballista",
+      "price": 100,
+      "damage": 50,
+      "rate": 0.2,
+      "range": 500,
+      "movement": 0.8,
+      "description": "Fires a large bolt for 50 damage every five seconds at 500 range. Reduces movement by 20%.",
+      "internalNote": "10 sustained DPS with high opening burst and reach. The 100 GP price, slow reload and movement penalty limit flexibility."
+    },
+    "shield": {
+      "name": "Shield",
+      "price": 30,
+      "damage": 5,
+      "rate": 1,
+      "range": 30,
+      "hp": 50,
+      "description": "A tank weapon granting 50 bonus HP and dealing 5 melee damage per second.",
+      "internalNote": "Trades damage for durability; weapon HP stacks with armor, enabling durable frontline builds. Default price is 30 GP."
+    },
+    "fastBow": {
+      "name": "Fast Bow",
+      "price": 80,
+      "damage": 5,
+      "rate": 2,
+      "range": 250,
+      "description": "Fires two arrows per second for 5 damage each at 250 range.",
+      "internalNote": "10 DPS with frequent small hits reduces overkill, but the 80 GP price limits spending on armor and mobility."
+    },
+    "spear": {
+      "name": "Spear",
+      "price": 10,
+      "damage": 15,
+      "rate": 0.8,
+      "range": 80,
+      "description": "A long-reach melee weapon dealing 15 damage at 0.8 attacks per second.",
+      "internalNote": "12 DPS matches the sword while greater reach improves frontline access; slower attacks make missed finishing opportunities more costly."
+    },
+    "catapult": {
+      "name": "Catapult",
+      "price": 100,
+      "damage": 60,
+      "rate": 0.2,
+      "range": 500,
+      "movement": 0.7,
+      "aoeRadius": 150,
+      "flightTime": 1.0,
+      "description": "Hurls a stone at a fixed landing point, dealing 60 damage to enemies within 150 units after 1.0 seconds.",
+      "internalNote": "Initial balance: 100 GP, one shot every five seconds, 30% movement penalty. Strong against clusters; moving enemies can dodge the fixed impact area."
+    },
+    "stone throw": {
+      "name": "Stone Throw",
+      "price": 5,
+      "damage": 10,
+      "rate": 0.5,
+      "range": 50,
+      "aoeRadius": 15,
+      "flightTime": 0.5,
+      "description": "Throws a stone for 10 damage at 50 range.",
+      "internalNote": "Low-cost, low-damage option for early skirmishes or cheap ranged harassment."
+    },
+    "healer": {
+      "name": "Healer Staff",
+      "price": 20,
+      "damage": 0,
+      "rate": 1,
+      "range": 400,
+      "healing": 20,
+      "aoeRadius": 50,
+      "description": "Heals living allies within 50 units of an injured friendly target for 20 HP once per second. Cast range 400.",
+      "internalNote": "Affordable area sustain with no damage. Targets the lowest HP percentage ally, including self; cannot overheal or revive."
+    }
+  },
+  "armor": {
+    "none": {
+      "name": "No armor",
+      "price": 0,
+      "hp": 0,
+      "movement": 1,
+      "description": "No additional armor or HP.",
+      "internalNote": "Free baseline with no movement penalty; leaves GP for weapons or mobility."
+    },
+    "light": {
+      "name": "Light armor",
+      "price": 20,
+      "hp": 20,
+      "movement": 1,
+      "description": "Adds 20 HP without slowing movement.",
+      "internalNote": "Low-cost durability that preserves mobility; less HP per GP than heavier armor."
+    },
+    "heavy": {
+      "name": "Heavy armor",
+      "price": 35,
+      "hp": 50,
+      "movement": 0.9,
+      "description": "Adds 50 HP and reduces movement by 10%.",
+      "internalNote": "Efficient frontline durability, offset by slower engagement against ranged enemies."
+    },
+    "plate": {
+      "name": "Plate armor",
+      "price": 50,
+      "hp": 80,
+      "movement": 0.8,
+      "description": "Adds 80 HP and reduces movement by 20%.",
+      "internalNote": "Strongest durability at the highest armor cost; stacks multiplicatively with other movement modifiers."
+    },
+    "carbon fiber plate": {
+      "name": "Carbon Fiber Plate armor",
+      "price": 100,
+      "hp": 200,
+      "movement": 1.2,
+      "description": "Adds 200 HP and increases movement by 20%.",
+      "internalNote": "Exceptional durability with a mobility bonus; stacks multiplicatively with other movement modifiers."
+    },
+    "regenerative": {
+      "name": "Regenerative Armor",
+      "price": 25,
+      "hp": 10,
+      "movement": 1,
+      "regen": 5,
+      "description": "Adds 10 HP and regenerates 5 HP per second without changing movement speed.",
+      "internalNote": "Low initial durability but strong sustain in prolonged fights. Burst damage can overcome regeneration; healing cannot exceed maximum HP or revive dead warriors."
+    },
+    "giant": {
+      "name": "Giant",
+      "price": 200,
+      "hp": 0,
+      "movement": 0.5,
+      "size": 2,
+      "hpMultiplier": 2,
+      "damageMultiplier": 2,
+      "description": "Doubles warrior size, hitbox radius, maximum HP and damage; halves movement speed.",
+      "internalNote": "Expensive frontline power. HP multiplier includes weapon bonuses. Larger bodies crowd the frontline; healing amount is not damage and is not doubled."
+    }
+  },
+  "feet": {
+    "none": {
+      "name": "No mount / boots",
+      "price": 0,
+      "movement": 1,
+      "description": "Standard movement without boots or a mount.",
+      "internalNote": "Free baseline; no speed bonus, preserving GP for damage and durability."
+    },
+    "boots": {
+      "name": "Boots",
+      "price": 15,
+      "movement": 1.1,
+      "description": "Increases movement speed by 10%.",
+      "internalNote": "Affordable mobility with a modest effect on closing ranged gaps."
+    },
+    "fast": {
+      "name": "Fast boots",
+      "price": 25,
+      "movement": 1.25,
+      "description": "Increases movement speed by 25%.",
+      "internalNote": "Mid-cost mobility option with better speed gain per GP than basic boots."
+    },
+    "horse": {
+      "name": "Horse",
+      "price": 40,
+      "movement": 1.6,
+      "description": "Increases movement speed by 60%.",
+      "internalNote": "Largest mobility boost helps melee close distance; costs a third of the initial team budget."
+    }
+  },
+  "training": {
+    "standard": {
+      "name": "Standard",
+      "price": 0,
+      "movement": 1,
+      "targeting": "nearest",
+      "description": "Move toward the nearest enemy and stop in weapon range.",
+      "internalNote": "Free baseline; no targeting or retreat advantage."
+    },
+    "ranged": {
+      "name": "Ranged",
+      "price": 30,
+      "movement": 0.5,
+      "targeting": "lowestHp",
+      "description": "Move at half speed, targeting the enemy with the lowest current HP.",
+      "internalNote": "Finishes wounded enemies, but reduced mobility increases vulnerability and delays engagement."
+    },
+    "sniper": {
+      "name": "Ranged Sniper",
+      "price": 30,
+      "movement": 1,
+      "targeting": "highestHp",
+      "retreatDistance": 120,
+      "description": "Target the highest HP enemy until threatened, then retreat and fire at the incoming enemy while keeping it in weapon range.",
+      "internalNote": "Retreat distance is capped by weapon range. Keep attacking the pursuer until it dies or leaves range; this improves survival but can force timeouts."
+    },
+    "specOps": {
+      "name": "Spec Ops",
+      "price": 30,
+      "movement": 1,
+      "targeting": "rangedFirst",
+      "description": "Pursue the nearest ranged enemy; target the nearest melee enemy if no ranged enemies remain.",
+      "internalNote": "Counters vulnerable ranged backlines but may bypass dangerous melee enemies."
+    }
+  }
+}
