@@ -30,17 +30,49 @@ function refresh() {
   }
   for (const id of ['redShop', 'blueShop', 'start', 'reset']) $(id).disabled = !!battle && !battle.done;
 }
-function renderShop() {
+let shopWarrior = 0, shopSlot = 'weapon', previewItem = null;
+const slotNames = { weapon: 'Weapon', armor: 'Armor', feet: 'Boots & mounts', training: 'Training' };
+const slotIcons = { weapon: '↗', armor: '◇', feet: '➜', training: '◎' };
+const statNames = { hp: 'Max HP', damage: 'Damage', dps: 'DPS', speed: 'Speed', range: 'Range', regen: 'Regen / s', healing: 'Heal / cast' };
+const escapeHTML = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+const statValue = value => Number(value.toFixed(1));
+function renderShop(focusKey) {
+  const team = state[shopTeam], warrior = team.warriors[shopWarrior];
+  const selected = previewItem ?? warrior[shopSlot], item = gear[shopSlot][selected];
+  const current = stats(warrior), next = stats({ ...warrior, [shopSlot]: selected });
+  const equipped = selected === warrior[shopSlot], affordable = item.price <= team.gp;
   $('shop').dataset.team = shopTeam;
-  $('shopTitle').textContent = `${shopTeam === 'red' ? 'Red' : 'Blue'} Team · ${state[shopTeam].gp} GP`;
-  $('shopCards').innerHTML = state[shopTeam].warriors.map((w, i) => { const s = stats(w); return `<article class="warriorCard"><h3>Warrior ${i + 1}</h3><div class="stats">HP <b>${s.hp}</b> · Regen <b>${s.regen}/s</b>${s.healing ? ` · Heal <b>${s.healing}/cast</b>` : ''}<br>Damage <b>${s.damage}</b><br>DPS <b>${s.dps.toFixed(1)}</b> · Speed <b>${s.speed.toFixed(1)}</b><br>Range <b>${s.range}</b> · Armor <b>${s.armor}</b></div>${Object.entries(gear).map(([slot, options]) => `<label>${slot === 'feet' ? 'Feet / Mount' : slot[0].toUpperCase() + slot.slice(1)}<select data-warrior="${i}" data-slot="${slot}">${Object.entries(options).map(([key, item]) => `<option value="${key}" ${w[slot] === key ? 'selected' : ''} ${item.price > state[shopTeam].gp && w[slot] !== key ? 'disabled' : ''}>${item.name} · ${item.price} GP${w[slot] === key ? ' (equipped)' : ''}</option>`).join('')}</select></label>`).join('')}</article>`; }).join('');
+  $('shopTitle').textContent = `${shopTeam === 'red' ? 'Red' : 'Blue'} Team`;
+  $('shopBudget').textContent = `${team.gp} GP available`;
+  $('shopCards').innerHTML = `
+    <nav class="warriorPicker" aria-label="Choose warrior">${team.warriors.map((w, i) => `<button class="warriorChoice ${i === shopWarrior ? 'active' : ''}" data-warrior="${i}" data-focus="warrior-${i}" aria-pressed="${i === shopWarrior}"><span class="warriorNumber">0${i + 1}</span><span><strong>Warrior ${i + 1}</strong><small>${escapeHTML(gear.weapon[w.weapon].name)} · ${stats(w).hp} HP</small></span></button>`).join('')}</nav>
+    <div class="armoryLayout"><aside class="loadout"><p class="eyebrow">WARRIOR 0${shopWarrior + 1} / LOADOUT</p><nav class="slotPicker" aria-label="Equipment slot">${Object.keys(gear).map(slot => `<button class="slotChoice ${slot === shopSlot ? 'active' : ''}" data-slot="${slot}" data-focus="slot-${slot}" aria-pressed="${slot === shopSlot}"><span class="slotIcon" aria-hidden="true">${slotIcons[slot]}</span><span><small>${slotNames[slot]}</small><strong>${escapeHTML(gear[slot][warrior[slot]].name)}</strong></span></button>`).join('')}</nav><p class="loadoutHint">Select a slot to explore its equipment.</p></aside>
+    <section class="equipmentCatalog" aria-label="${slotNames[shopSlot]} options"><div class="catalogHeading"><h3>${slotNames[shopSlot]}</h3><span>${Object.keys(gear[shopSlot]).length} options</span></div><div class="itemGrid">${Object.entries(gear[shopSlot]).map(([key, option]) => `<button class="itemCard ${key === selected ? 'selected' : ''}" data-item="${escapeHTML(key)}" data-focus="item-${escapeHTML(key)}" aria-pressed="${key === selected}"><span class="itemTop"><strong>${escapeHTML(option.name)}</strong><span class="price">${option.price ? `${option.price} GP` : 'Free'}</span></span><span class="itemDescription">${escapeHTML(option.description ?? '')}</span><span class="itemState ${key === warrior[shopSlot] ? 'isEquipped' : ''}">${key === warrior[shopSlot] ? '✓ Equipped' : option.price > team.gp ? `${option.price - team.gp} GP needed` : 'Available'}</span></button>`).join('')}</div></section>
+    <aside class="itemPreview" aria-label="Item preview"><p class="eyebrow">${equipped ? 'CURRENTLY EQUIPPED' : 'PREVIEW / WARRIOR 0' + (shopWarrior + 1)}</p><h3>${escapeHTML(item.name)}</h3><p>${escapeHTML(item.description ?? '')}</p><h4>Warrior stats <span>${equipped ? 'Current' : 'With this item'}</span></h4><dl class="statComparison">${Object.entries(statNames).filter(([key]) => !['regen', 'healing'].includes(key) || current[key] || next[key]).map(([key, label]) => { const delta = statValue(next[key] - current[key]); return `<div><dt>${label}</dt><dd>${statValue(next[key])}<span class="statDelta ${delta > 0 ? 'positive' : delta < 0 ? 'negative' : ''}">${delta ? `${delta > 0 ? '+' : ''}${delta}` : '—'}</span></dd></div>`; }).join('')}</dl>${!equipped ? '<p class="comparisonHint">Changes compared with current equipment.</p>' : ''}<button id="equipItem" class="primary equipButton" data-equip="${escapeHTML(selected)}" data-focus="equip" ${equipped || !affordable ? 'disabled' : ''}>${equipped ? '✓ Equipped' : !affordable ? `Need ${item.price - team.gp} more GP` : item.price ? `Equip for ${item.price} GP` : 'Equip for free'}</button><p class="balanceAfter">${equipped ? 'Choose another item to compare.' : affordable ? `${team.gp - item.price} GP remaining after equipping` : 'Earn 10 GP for each kill in battle.'}</p></aside></div>`;
+  if (focusKey) [...$('shopCards').querySelectorAll('[data-focus]')].find(el => el.dataset.focus === focusKey)?.focus({ preventScroll: true });
 }
-for (const team of ['red', 'blue']) $(team + 'Shop').onclick = () => { shopTeam = team; $('shopMessage').textContent = ''; renderShop(); $('shop').showModal(); };
+for (const team of ['red', 'blue']) $(team + 'Shop').onclick = () => {
+  shopTeam = team; shopWarrior = 0; shopSlot = 'weapon'; previewItem = null;
+  $('shopMessage').textContent = ''; renderShop(); $('shop').showModal();
+};
 $('closeShop').onclick = () => $('shop').close();
-$('shopCards').onchange = e => {
-  const { warrior, slot } = e.target.dataset;
-  if (slot && buy(state, shopTeam, Number(warrior), slot, e.target.value)) { $('shopMessage').textContent = 'Equipment updated.'; battle = null; save(); refresh(); }
-  renderShop();
+$('shopCards').onclick = e => {
+  const button = e.target.closest('button');
+  if (!button || button.disabled) return;
+  const { warrior, slot, item, equip, focus } = button.dataset;
+  if (warrior !== undefined) { shopWarrior = Number(warrior); previewItem = null; }
+  else if (slot) { shopSlot = slot; previewItem = null; }
+  else if (item !== undefined) previewItem = item;
+  else if (equip !== undefined) {
+    if (battle && !battle.done) return;
+    if (buy(state, shopTeam, shopWarrior, shopSlot, equip)) {
+      $('shopMessage').textContent = `${gear[shopSlot][equip].name} equipped on Warrior ${shopWarrior + 1}. ${state[shopTeam].gp} GP available.`;
+      battle = null; save(); refresh();
+    }
+    renderShop(`item-${equip}`); return;
+  }
+  $('shopMessage').textContent = '';
+  renderShop(focus);
 };
 $('reset').onclick = () => { if (confirm('Reset both teams, equipment, and GP?')) { state = fresh(); battle = null; save(); refresh(); $('result').textContent = 'New sandbox ready. Each team starts with 120 GP.'; } };
 $('pause').onclick = () => {
