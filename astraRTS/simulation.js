@@ -2,15 +2,47 @@
   'use strict';
   const TICK_SECONDS = 1 / 50;
   const gear = typeof module !== 'undefined' ? require('./items.json') : root.RTS_ITEMS;
-  const fresh = () => ({ round: 1, red: { gp: 120, warriors: Array.from({ length: 3 }, () => ({ weapon: 'sword', armor: 'none', feet: 'none', training: 'standard' })) }, blue: { gp: 120, warriors: Array.from({ length: 3 }, () => ({ weapon: 'sword', armor: 'none', feet: 'none', training: 'standard' })) } });
+  const ownedSlots = ['weapon', 'feet'];
+  const freshTeam = () => ({ gp: 120, inventory: { weapon: {}, feet: {} }, warriors: Array.from({ length: 3 }, () => ({ weapon: 'sword', armor: 'none', feet: 'none', training: 'standard' })) });
+  const fresh = () => ({ round: 1, red: freshTeam(), blue: freshTeam() });
+  // Counts include equipped copies. Recover existing loadouts when upgrading old saves.
+  function normalizeInventory(state) {
+    for (const team of ['red', 'blue']) {
+      const roster = state[team], inventory = {};
+      for (const slot of ownedSlots) {
+        inventory[slot] = {};
+        for (const [key, item] of Object.entries(gear[slot])) {
+          if (!item.price) continue; // Free defaults are unlimited.
+          const equipped = roster.warriors.filter(w => w[slot] === key).length;
+          const saved = roster.inventory?.[slot]?.[key];
+          const quantity = Math.max(equipped, Number.isSafeInteger(saved) && saved >= 0 ? saved : 0);
+          if (quantity) inventory[slot][key] = quantity;
+        }
+      }
+      roster.inventory = inventory;
+    }
+    return state;
+  }
+  function equipmentOffer(state, team, slot, key) {
+    const item = gear[slot][key], roster = state[team];
+    const persistent = ownedSlots.includes(slot) && item.price > 0;
+    const used = roster.warriors.filter(w => w[slot] === key).length;
+    const owned = persistent ? Math.max(roster.inventory?.[slot]?.[key] ?? 0, used) : 0;
+    const available = owned - used;
+    return { persistent, owned, used, available, cost: persistent && available > 0 ? 0 : item.price };
+  }
   function stats(loadout) {
     const weapon = gear.weapon[loadout.weapon], armor = gear.armor[loadout.armor];
     return { hp: (100 + armor.hp + (weapon.hp ?? 0)) * (armor.hpMultiplier ?? 1), regen: armor.regen ?? 0, damage: weapon.damage * (armor.damageMultiplier ?? 1), healing: weapon.healing ?? 0, rate: weapon.rate, dps: weapon.damage * (armor.damageMultiplier ?? 1) * weapon.rate, speed: 50 * (gear.training[loadout.training ?? 'standard'].movement ?? 1) * (weapon.movement ?? 1) * armor.movement * gear.feet[loadout.feet].movement, range: weapon.range, armor: armor.name, radius: 15 * (armor.size ?? 1) };
   }
   function buy(state, team, index, slot, item) {
     const equipment = gear[slot]?.[item], warrior = state[team]?.warriors[index];
-    if (!equipment || !warrior || warrior[slot] === item || state[team].gp < equipment.price) return false;
-    state[team].gp -= equipment.price; warrior[slot] = item; return true;
+    if (!equipment || !warrior || warrior[slot] === item) return false;
+    normalizeInventory(state);
+    const offer = equipmentOffer(state, team, slot, item);
+    if (state[team].gp < offer.cost) return false;
+    if (offer.persistent && offer.available === 0) state[team].inventory[slot][item] = offer.owned + 1;
+    state[team].gp -= offer.cost; warrior[slot] = item; return true;
   }
   const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
   class Battle {
@@ -138,6 +170,6 @@
       if (this.done) { this.debris = []; this.projectiles = []; }
     }
   }
-  const api = { TICK_SECONDS, gear, fresh, stats, buy, Battle };
+  const api = { TICK_SECONDS, gear, fresh, stats, buy, equipmentOffer, normalizeInventory, Battle };
   if (typeof module !== 'undefined') module.exports = api; else root.RTS = api;
 })(typeof window !== 'undefined' ? window : globalThis);
