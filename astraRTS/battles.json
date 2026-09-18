@@ -1,0 +1,566 @@
+{
+  "startingGP": 120,
+  "victoryReward": 60,
+  "levels": [
+    {
+      "id": 1,
+      "name": "Border Patrol",
+      "description": "Three spear recruits guard the road. Spend your starting 120 GP before engaging.",
+      "equipmentCost": 30,
+      "blue": {
+        "warriors": [
+          {
+            "weapon": "spear",
+            "armor": "none",
+            "feet": "none",
+            "training": "standard"
+          },
+          {
+            "weapon": "spear",
+            "armor": "none",
+            "feet": "none",
+            "training": "standard"
+          },
+          {
+            "weapon": "spear",
+            "armor": "none",
+            "feet": "none",
+            "training": "standard"
+          }
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "name": "Leather Guard",
+      "description": "Light armor makes the patrol harder to break.",
+      "equipmentCost": 90,
+      "blue": {
+        "warriors": [
+          {
+            "weapon": "spear",
+            "armor": "light",
+            "feet": "none",
+            "training": "standard"
+          },
+          {
+            "weapon": "spear",
+            "armor": "light",
+            "feet": "none",
+            "training": "standard"
+          },
+          {
+            "weapon": "spear",
+            "armor": "light",
+            "feet": "none",
+            "training": "standard"
+          }
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "name": "Covering Fire",
+      "description": "A shield bearer protects the line while a bow attacks from range.",
+      "equipmentCost": 130,
+      "blue": {
+        "warriors": [
+          {
+            "weapon": "shield",
+            "armor": "light",
+            "feet": "none",
+            "training": "standard"
+          },
+          {
+            "weapon": "spear",
+            "armor": "light",
+            "feet": "none",
+            "training": "standard"
+          },
+          {
+            "weapon": "bow",
+            "armor": "light",
+            "feet": "none",
+            "training": "standard"
+          }
+        ]
+      }
+    },
+    {
+      "id": 4,
+      "name": "Quick March",
+      "description": "Boots help the enemy close distance and bring their weapons into range.",
+      "equipmentCost": 175,
+      "blue": {
+        "warriors": [
+          {
+            "weapon": "shield",
+            "armor": "light",
+            "feet": "boots",
+            "training": "standard"
+          },
+          {
+            "weapon": "spear",
+            "armor": "light",
+            "feet": "boots",
+            "training": "standard"
+          },
+          {
+            "weapon": "bow",
+            "armor": "light",
+            "feet": "boots",
+            "training": "standard"
+          }
+        ]
+      }
+    },
+    {
+      "id": 5,
+      "name": "The Watchtower",
+      "description": "An armored shield bearer anchors a sniper who retreats from nearby threats.",
+      "equipmentCost": 220,
+      "blue": {
+        "warriors": [
+          {
+            "weapon": "shield",
+            "armor": "heavy",
+            "feet": "boots",
+            "training": "standard"
+          },
+          {
+            "weapon": "spear",
+            "armor": "light",
+            "feet": "boots",
+            "training": "standard"
+          },
+          {
+            "weapon": "bow",
+            "armor": "light",
+            "feet": "boots",
+            "training": "sniper"
+          }
+        ]
+      }
+    },
+    {
+      "id": 6,
+      "name": "Iron Road",
+      "description": "The spear fighter gains heavy armor and the frontline moves faster.",
+      "equipmentCost": 255,
+      "blue": {
+        "warriors": [
+          {
+            "weapon": "shield",
+            "armor": "heavy",
+            "feet": "fast",
+            "training": "standard"
+          },
+          {
+            "weapon": "spear",
+            "armor": "heavy",
+            "feet": "fast",
+            "training": "standard"
+          },
+          {
+            "weapon": "bow",
+            "armor": "light",
+            "feet": "boots",
+            "training": "sniper"
+          }
+        ]
+      }
+    },
+    {
+      "id": 7,
+      "name": "Plate Vanguard",
+      "description": "Both frontline warriors wear plate. Focus damage to break through.",
+      "equipmentCost": 295,
+      "blue": {
+        "warriors": [
+          {
+            "weapon": "shield",
+            "armor": "plate",
+            "feet": "fast",
+            "training": "standard"
+          },
+          {
+            "weapon": "spear",
+            "armor": "plate",
+            "feet": "fast",
+            "training": "standard"
+          },
+          {
+            "weapon": "bow",
+            "armor": "light",
+            "feet": "fast",
+            "training": "sniper"
+          }
+        ]
+      }
+    },
+    {
+      "id": 8,
+      "name": "Mounted Patrol",
+      "description": "The entire squad rides horses. Expect a much faster approach.",
+      "equipmentCost": 340,
+      "blue": {
+        "warriors": [
+          {
+            "weapon": "shield",
+            "armor": "plate",
+            "feet": "horse",
+            "training": "standard"
+          },
+          {
+            "weapon": "spear",
+            "armor": "plate",
+            "feet": "horse",
+            "training": "standard"
+          },
+          {
+            "weapon": "bow",
+            "armor": "light",
+            "feet": "horse",
+            "training": "sniper"
+          }
+        ]
+      }
+    },
+    {
+      "id": 9,
+      "name": "Backline Hunters",
+      "description": "A mace fighter now prioritizes your ranged units.",
+      "equipmentCost": 390,
+      "blue": {
+        "warriors": [
+          {
+            "weapon": "shield",
+            "armor": "plate",
+            "feet": "horse",
+            "training": "standard"
+          },
+          {
+            "weapon": "mace",
+            "armor": "plate",
+            "feet": "horse",
+            "training": "specOps"
+          },
+          {
+            "weapon": "bow",
+            "armor": "light",
+            "feet": "horse",
+            "training": "sniper"
+          }
+        ]
+      }
+    },
+    {
+      "id": 10,
+      "name": "Arrow Storm",
+      "description": "The sniper switches to a fast bow with more frequent attacks.",
+      "equipmentCost": 440,
+      "blue": {
+        "warriors": [
+          {
+            "weapon": "shield",
+            "armor": "plate",
+            "feet": "horse",
+            "training": "standard"
+          },
+          {
+            "weapon": "mace",
+            "armor": "plate",
+            "feet": "horse",
+            "training": "specOps"
+          },
+          {
+            "weapon": "fastBow",
+            "armor": "light",
+            "feet": "horse",
+            "training": "sniper"
+          }
+        ]
+      }
+    },
+    {
+      "id": 11,
+      "name": "Armored Marksman",
+      "description": "Plate armor helps the sniper survive a frontline collapse.",
+      "equipmentCost": 470,
+      "blue": {
+        "warriors": [
+          {
+            "weapon": "shield",
+            "armor": "plate",
+            "feet": "horse",
+            "training": "standard"
+          },
+          {
+            "weapon": "mace",
+            "armor": "plate",
+            "feet": "horse",
+            "training": "specOps"
+          },
+          {
+            "weapon": "fastBow",
+            "armor": "plate",
+            "feet": "horse",
+            "training": "sniper"
+          }
+        ]
+      }
+    },
+    {
+      "id": 12,
+      "name": "Carbon Vanguard",
+      "description": "The shield bearer gains carbon armor for extra health and mobility.",
+      "equipmentCost": 520,
+      "blue": {
+        "warriors": [
+          {
+            "weapon": "shield",
+            "armor": "carbon fiber plate",
+            "feet": "horse",
+            "training": "standard"
+          },
+          {
+            "weapon": "mace",
+            "armor": "plate",
+            "feet": "horse",
+            "training": "specOps"
+          },
+          {
+            "weapon": "fastBow",
+            "armor": "plate",
+            "feet": "horse",
+            "training": "sniper"
+          }
+        ]
+      }
+    },
+    {
+      "id": 13,
+      "name": "Carbon Hunters",
+      "description": "The mace hunter gains the same durable, fast armor.",
+      "equipmentCost": 570,
+      "blue": {
+        "warriors": [
+          {
+            "weapon": "shield",
+            "armor": "carbon fiber plate",
+            "feet": "horse",
+            "training": "standard"
+          },
+          {
+            "weapon": "mace",
+            "armor": "carbon fiber plate",
+            "feet": "horse",
+            "training": "specOps"
+          },
+          {
+            "weapon": "fastBow",
+            "armor": "plate",
+            "feet": "horse",
+            "training": "sniper"
+          }
+        ]
+      }
+    },
+    {
+      "id": 14,
+      "name": "Carbon Watch",
+      "description": "All three enemies now wear carbon armor.",
+      "equipmentCost": 620,
+      "blue": {
+        "warriors": [
+          {
+            "weapon": "shield",
+            "armor": "carbon fiber plate",
+            "feet": "horse",
+            "training": "standard"
+          },
+          {
+            "weapon": "mace",
+            "armor": "carbon fiber plate",
+            "feet": "horse",
+            "training": "specOps"
+          },
+          {
+            "weapon": "fastBow",
+            "armor": "carbon fiber plate",
+            "feet": "horse",
+            "training": "sniper"
+          }
+        ]
+      }
+    },
+    {
+      "id": 15,
+      "name": "Longshot Battery",
+      "description": "A ballista replaces the bow. Its slow bolts hit hard from long range.",
+      "equipmentCost": 640,
+      "blue": {
+        "warriors": [
+          {
+            "weapon": "shield",
+            "armor": "carbon fiber plate",
+            "feet": "horse",
+            "training": "standard"
+          },
+          {
+            "weapon": "mace",
+            "armor": "carbon fiber plate",
+            "feet": "horse",
+            "training": "specOps"
+          },
+          {
+            "weapon": "ballista",
+            "armor": "carbon fiber plate",
+            "feet": "horse",
+            "training": "sniper"
+          }
+        ]
+      }
+    },
+    {
+      "id": 16,
+      "name": "Crossfire",
+      "description": "A second ranged weapon joins the ballista to pressure your backline.",
+      "equipmentCost": 690,
+      "blue": {
+        "warriors": [
+          {
+            "weapon": "shield",
+            "armor": "carbon fiber plate",
+            "feet": "horse",
+            "training": "standard"
+          },
+          {
+            "weapon": "fastBow",
+            "armor": "carbon fiber plate",
+            "feet": "horse",
+            "training": "specOps"
+          },
+          {
+            "weapon": "ballista",
+            "armor": "carbon fiber plate",
+            "feet": "horse",
+            "training": "sniper"
+          }
+        ]
+      }
+    },
+    {
+      "id": 17,
+      "name": "Three-Point Ambush",
+      "description": "The shield bearer takes up a fast bow. All three enemies now attack at range.",
+      "equipmentCost": 740,
+      "blue": {
+        "warriors": [
+          {
+            "weapon": "fastBow",
+            "armor": "carbon fiber plate",
+            "feet": "horse",
+            "training": "standard"
+          },
+          {
+            "weapon": "fastBow",
+            "armor": "carbon fiber plate",
+            "feet": "horse",
+            "training": "specOps"
+          },
+          {
+            "weapon": "ballista",
+            "armor": "carbon fiber plate",
+            "feet": "horse",
+            "training": "sniper"
+          }
+        ]
+      }
+    },
+    {
+      "id": 18,
+      "name": "Siege Line",
+      "description": "Two ballistas deliver heavy opening shots; the middle gunner keeps moving away from threats.",
+      "equipmentCost": 760,
+      "blue": {
+        "warriors": [
+          {
+            "weapon": "ballista",
+            "armor": "carbon fiber plate",
+            "feet": "horse",
+            "training": "standard"
+          },
+          {
+            "weapon": "fastBow",
+            "armor": "carbon fiber plate",
+            "feet": "horse",
+            "training": "sniper"
+          },
+          {
+            "weapon": "ballista",
+            "armor": "carbon fiber plate",
+            "feet": "horse",
+            "training": "sniper"
+          }
+        ]
+      }
+    },
+    {
+      "id": 19,
+      "name": "Falling Stones",
+      "description": "A catapult targets groups while the remaining fast bow upgrades to a ballista.",
+      "equipmentCost": 780,
+      "blue": {
+        "warriors": [
+          {
+            "weapon": "catapult",
+            "armor": "carbon fiber plate",
+            "feet": "horse",
+            "training": "standard"
+          },
+          {
+            "weapon": "ballista",
+            "armor": "carbon fiber plate",
+            "feet": "horse",
+            "training": "sniper"
+          },
+          {
+            "weapon": "ballista",
+            "armor": "carbon fiber plate",
+            "feet": "horse",
+            "training": "sniper"
+          }
+        ]
+      }
+    },
+    {
+      "id": 20,
+      "name": "The Last Citadel",
+      "description": "The final siege crew uses retreat training on every warrior. Close the gap without clustering.",
+      "equipmentCost": 810,
+      "blue": {
+        "warriors": [
+          {
+            "weapon": "catapult",
+            "armor": "carbon fiber plate",
+            "feet": "horse",
+            "training": "sniper"
+          },
+          {
+            "weapon": "ballista",
+            "armor": "carbon fiber plate",
+            "feet": "horse",
+            "training": "sniper"
+          },
+          {
+            "weapon": "ballista",
+            "armor": "carbon fiber plate",
+            "feet": "horse",
+            "training": "sniper"
+          }
+        ]
+      }
+    }
+  ]
+}
