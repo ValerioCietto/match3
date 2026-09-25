@@ -1,0 +1,134 @@
+{
+  "2026-09-06": {
+    "pannolini": [
+      {"ora":"00:30","tipo":"misto"},
+      {"ora":"02:30","tipo":"pipi"},
+      {"ora":"03:05","tipo":"pipi"},
+      {"ora":"07:37","tipo":"misto"},
+      {"ora":"10:30","tipo":"misto"},
+      {"ora":"12:30","tipo":"pipi"},
+      {"ora":"14:21","tipo":"misto"},
+      {"ora":"14:28","tipo":"pipi"},
+      {"ora":"14:28","tipo":"misto"},
+      {"ora":"16:00","tipo":"pipi"},
+      {"ora":"18:59","tipo":"misto"},
+      {"ora":"20:38","tipo":"pipi"},
+      {"ora":"20:40","tipo":"popo"},
+      {"ora":"22:13","tipo":"misto"}
+    ]
+  },
+
+  "2026-09-07": {
+    "pannolini": [
+      {"ora":"00:57","tipo":"misto"},
+      {"ora":"05:15","tipo":"pipi"},
+      {"ora":"09:06","tipo":"pipi"},
+      {"ora":"12:06","tipo":"misto"},
+      {"ora":"14:00","tipo":"misto"},
+      {"ora":"15:08","tipo":"pipi"},
+      {"ora":"19:15","tipo":"popo"},
+      {"ora":"20:27","tipo":"pipi"},
+      {"ora":"22:05","tipo":"misto"},
+      {"ora":"23:35","tipo":"misto"}
+    ]
+  },
+
+  "2026-09-08": {
+    "pannolini": [
+      {"ora":"01:48","tipo":"popo"},
+      {"ora":"03:05","tipo":"pipi"},
+      {"ora":"06:05","tipo":"pipi"},
+      {"ora":"10:02","tipo":"misto"},
+      {"ora":"10:21","tipo":"misto"},
+      {"ora":"14:03","tipo":"pipi"},
+      {"ora":"14:59","tipo":"pipi"},
+      {"ora":"18:21","tipo":"misto"},
+      {"ora":"19:46","tipo":"pipi"},
+      {"ora":"20:52","tipo":"pipi"}
+    ],
+    "poppate": [
+      {"ora":"02:36","seno":"S","durata":"08:57"},
+      {"ora":"05:42","seno":"S","durata":"12:22"},
+      {"ora":"07:50","seno":"D","durata":"05:51"},
+      {"ora":"09:20","seno":"S","durata":"07:00"},
+      {"ora":"10:32","seno":"D","durata":"13:57"},
+      {"ora":"11:30","seno":"D","durata":"05:44"},
+      {"ora":"11:58","seno":"S","durata":"05:58"},
+      {"ora":"12:55","seno":"S","durata":"06:33"},
+      {"ora":"14:36","seno":"D","durata":"07:26"},
+      {"ora":"15:07","seno":"D","durata":"28:07"},
+      {"ora":"16:58","seno":"S","durata":"14:12"},
+      {"ora":"17:46","seno":"S","durata":"06:45"},
+      {"ora":"18:09","seno":"S","durata":"11:31"},
+      {"ora":"18:22","seno":"D","durata":"15:22"},
+      {"ora":"18:54","seno":"D","durata":"07:49"},
+      {"ora":"20:00","seno":"S","durata":"17:37"},
+      {"ora":"20:30","seno":"D","durata":"20:00"},
+      {"ora":"21:20","seno":"D","durata":"07:00"},
+      {"ora":"22:24","seno":"D","durata":"09:02"}
+    ]
+  },
+
+  "2026-09-09": {
+    "pannolini": [
+      {"ora":"02:36","tipo":"popo"},
+      {"ora":"05:42","tipo":"popo"},
+      {"ora":"07:45","tipo":"misto"},
+      {"ora":"10:32","tipo":"pipi"},
+      {"ora":"12:50","tipo":"misto"},
+      {"ora":"13:32","tipo":"pipi"},
+      {"ora":"14:35","tipo":"pipi"},
+      {"ora":"16:58","tipo":"popo"},
+      {"ora":"17:46","tipo":"misto"},
+      {"ora":"18:07","tipo":"popo"},
+      {"ora":"19:12","tipo":"popo"},
+      {"ora":"21:00","tipo":"misto"}
+    ],
+    "poppate": [
+      {"ora":"05:08","seno":"S","durata":"23:45"},
+      {"ora":"05:43","seno":"D","durata":"20:29"},
+      {"ora":"07:17","seno":"S","durata":"20:10"},
+      {"ora":"07:44","seno":"D","durata":"10:00"},
+      {"ora":"09:33","seno":"D","durata":"10:27"},
+      {"ora":"10:05","seno":"S","durata":"06:00"},
+      {"ora":"10:40","seno":"S","durata":"10:00"},
+      {"ora":"11:15","seno":"D","durata":"10:00"},
+      {"ora":"12:00","seno":"S","durata":"10:00"},
+      {"ora":"12:55","seno":"D","durata":"05:00"},
+      {"ora":"13:23","seno":"D","durata":"47:58"},
+      {"ora":"14:46","seno":"S","durata":"09:19"},
+      {"ora":"14:59","seno":"S","durata":"25:27"},
+      {"ora":"15:46","seno":"D","durata":"15:07"},
+      {"ora":"16:10","seno":"D","durata":"11:39"},
+      {"ora":"16:26","seno":"S","durata":"10:47"},
+      {"ora":"17:42","seno":"S","durata":"16:50"},
+      {"ora":"18:21","seno":"D","durata":"33:30"},
+      {"ora":"19:15","seno":"S","durata":"10:01"},
+      {"ora":"20:29","seno":"D","durata":"10:35"},
+      {"ora":"21:00","seno":"D","durata":"27:36"},
+      {"ora":"22:00","seno":"S","durata":"05:00"},
+      {"ora":"22:18","seno":"S","durata":"13:13"},
+      {"ora":"22:52","seno":"D","durata":"09:50"}
+    ]
+  },
+
+  "2026-09-10": {
+    "pannolini": [
+      {"ora":"05:08","tipo":"misto"},
+      {"ora":"07:18","tipo":"pipi"},
+      {"ora":"09:30","tipo":"popo"},
+      {"ora":"09:54","tipo":"pipi"},
+      {"ora":"10:49","tipo":"pipi"},
+      {"ora":"11:40","tipo":"pipi"},
+      {"ora":"12:55","tipo":"misto"},
+      {"ora":"13:14","tipo":"popo"},
+      {"ora":"15:11","tipo":"misto"},
+      {"ora":"17:38","tipo":"misto"},
+      {"ora":"19:06","tipo":"popo"},
+      {"ora":"19:49","tipo":"pipi"},
+      {"ora":"20:58","tipo":"pipi"},
+      {"ora":"22:17","tipo":"misto"},
+      {"ora":"22:53","tipo":"pipi"}
+    ]
+  }
+}

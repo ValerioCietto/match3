@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#f7f2ea"><title>Crying Baby · Una piccola grande settimana</title>
+  <link rel="stylesheet" href="style.css"><script src="engine.js" defer></script><script src="game.js" defer></script>
+</head>
+<body>
+<main class="app">
+  <header><a class="brand" href="index.html">crying baby<span>UNA PICCOLA GRANDE SETTIMANA</span></a><button id="pause" class="icon-button" aria-label="Metti in pausa" disabled>Ⅱ</button></header>
+  <section class="time-card" aria-label="Avanzamento della settimana"><div><span id="day">GIORNO 1 / 7</span><strong id="clock">00:00</strong><span id="remaining">8:00 rimanenti</span></div><div class="week" id="week"></div><progress id="dayProgress" max="480" value="0" aria-label="Avanzamento del giorno"></progress></section>
+  <section class="nursery" aria-label="Stato del bambino">
+    <aside class="irritation"><span class="tiny">IRRITAZIONE</span><div id="levels"><div data-level="3"><b>3</b><span>Pianto<br>disperato</span></div><div data-level="2"><b>2</b><span>Pianto</span></div><div data-level="1"><b>1</b><span>Versetti</span></div></div><small id="escalation">Tutto tranquillo</small></aside>
+    <div class="scene"><span class="star s1">✦</span><span class="star s2">✧</span><span class="moon">☾</span><div class="mobile">☁<span>│<br>✦</span></div><div id="baby" class="baby"><div class="hair"></div><div class="face"><i class="eye left"></i><i class="eye right"></i><i class="cheek c1"></i><i class="cheek c2"></i><i class="mouth"></i><i class="tear"></i></div><div class="blanket"><span>✦</span></div></div><div class="pillow"></div><span id="sceneCue" class="scene-cue">💤</span><span id="mood" class="mood">Un momento di calma</span></div>
+  </section>
+  <div class="section-label"><span id="cluster">IL TUO PICCOLO MONDO</span><span id="pending">0 bisogni attivi</span></div>
+  <section class="quiz"><div class="question-top"><span class="eyebrow">OSSERVA GLI INDIZI</span><span id="quizTime" class="timer">—</span></div><h1 id="question">Di cosa ha bisogno?</h1><p id="clues">Una settimana di piccole attenzioni, una scelta alla volta.</p><div id="answers" class="answers"></div><div id="activity" hidden><span id="activityLabel"></span><progress id="activityProgress" max="1" value="0"></progress></div><p id="feedback" role="status" aria-live="polite">Quando sei pronto, inizia la tua settimana.</p></section>
+  <section class="daily"><span class="eyebrow">PICCOLI RITUALI DI OGGI</span><div><span id="vitamin">☀️ Vitamina D · in programma</span><span id="tummy">🌿 Tummy time · in programma</span></div></section>
+  <details id="diary"><summary>Il diario della settimana <span id="score">0 risolti</span></summary><ol id="log"><li>Il diario si riempirà giocando.</li></ol></details>
+  <footer>7 giorni · 8 minuti al giorno · tante piccole attenzioni</footer>
+</main>
+<dialog id="overlay"><div class="intro-mark">☁</div><span class="eyebrow" id="modalEyebrow">BENVENUTO A CASA</span><h2 id="modalTitle">Piccolo bambino.<br>Grande settimana.</h2><p id="modalText">Osserva gli indizi e scegli come prenderti cura del bambino. L’irritazione sale ogni 10 secondi: versetti, pianto, pianto disperato.</p><div id="summary"></div><p class="modal-note" id="modalNote">Una giornata dura 8 minuti. Puoi mettere in pausa quando vuoi. Le situazioni sono convenzioni di gioco.</p><button id="start" class="primary">Inizia la settimana <span>→</span></button></dialog>
+</body></html>

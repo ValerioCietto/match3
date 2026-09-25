@@ -17,6 +17,17 @@ test('20 valid enemy teams grow by at most one victory reward per level', () => 
   }
 });
 
+test('campaign includes distinct themed squads and an all-giant finale', () => {
+  const teams = adventure.data.levels.map(level => level.blue.warriors);
+  assert.ok(teams.some(team => team.every(w => w.weapon === 'bow')));
+  assert.ok(teams.some(team => team.every(w => w.weapon === 'stone throw' && w.armor !== 'none')));
+  assert.ok(teams.some(team => team.every(w => w.armor === 'regenerative')));
+  assert.ok(teams.some(team => team.some(w => w.weapon === 'healer')));
+  assert.ok(teams.at(-1).every(w => w.armor === 'giant'));
+  const weaponFormations = teams.map(team => team.map(w => w.weapon).sort().join(','));
+  assert.ok(new Set(weaponFormations).size >= 12);
+});
+
 test('losses, draws and unfinished battles never unlock levels or give GP', () => {
   const state = adventure.fresh();
   for (const result of [{ done: false, winner: 'red' }, { done: true, winner: 'blue' }, { done: true, winner: null }]) {
@@ -57,16 +68,23 @@ test('restoring uses authoritative enemies and rejects inconsistent progression'
 test('a legal upgrade path clears all 20 simulated battles using only campaign income', () => {
   const state = adventure.fresh();
   const upgrades = [
-    ...[0, 1, 2].map(i => [i, 'weapon', 'bow']),
-    ...[0, 1, 2].map(i => [i, 'training', 'sniper']),
-    ...[0, 1, 2].map(i => [i, 'armor', 'carbon fiber plate']),
-    ...[0, 1, 2].map(i => [i, 'weapon', 'fastBow']),
-    ...[0, 1, 2].map(i => [i, 'feet', 'horse']),
-    ...[0, 1, 2].map(i => [i, 'weapon', 'catapult'])
+    [1, 0, 'weapon', 'catapult'],
+    [11, 2, 'armor', 'regenerative'],
+    [12, 0, 'armor', 'regenerative'],
+    [12, 1, 'armor', 'regenerative'],
+    [12, 1, 'training', 'sniper'],
+    [12, 2, 'training', 'sniper'],
+    [12, 1, 'weapon', 'bow'],
+    [12, 2, 'weapon', 'bow'],
+    [12, 0, 'feet', 'horse'],
+    [15, 0, 'training', 'sniper'],
+    [18, 2, 'armor', 'carbon fiber plate'],
+    [19, 2, 'weapon', 'catapult']
   ];
-  let next = 0;
   for (let level = 1; level <= 20; level++) {
-    while (next < upgrades.length && RTS.buy(state, 'red', ...upgrades[next])) next++;
+    for (const [atLevel, ...purchase] of upgrades) {
+      if (atLevel === level) assert.equal(RTS.buy(state, 'red', ...purchase), true);
+    }
     assert.ok(state.red.gp >= 0);
     const battle = new RTS.Battle(state);
     for (let tick = 0; tick < 6002 && !battle.done; tick++) battle.step();
