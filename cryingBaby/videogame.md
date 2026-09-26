@@ -25,7 +25,7 @@ Alla fine del settimo giorno la simulazione termina e mostra un riepilogo della 
 
 ## Bisogni e risposte possibili
 
-Fasce orarie e indizi per le situazioni di gioco. Gli indizi nella stessa cella sono separati da `;`. Dove non è prevista una restrizione, il bisogno può comparire a qualsiasi ora; per Tummy time e vitamina D la fascia specifica resta da definire.
+Fasce orarie e indizi per le situazioni di gioco. Gli indizi nella stessa cella sono separati da `;`. Dove non è prevista una restrizione, il bisogno può comparire a qualsiasi ora.
 
 | Bisogno | Fascia oraria / condizione temporale | Indizi | Possibile risposta |
 | --- | --- | --- | --- |
@@ -39,12 +39,23 @@ Fasce orarie e indizi per le situazioni di gioco. Gli indizi nella stessa cella 
 | Naso da pulire | 00:00–24:00; 0–2 eventi casuali al giorno | Muco visibile nell'illustrazione; icona del naso da pulire; segnale sonoro accompagnato da un equivalente visivo | Lavaggio nasale |
 | Tutina da cambiare | 00:00–24:00; dopo 3–4 cambi pannolino completati | Tutina visibilmente sporca; contatore dei cambi pannolino dall'ultima tutina; tutina pulita disponibile nella scena | Cambiare la tutina |
 | Bagnetto | 10:00–18:00, fine esclusa; dopo 2–3 cambi tutina completati | Contatore delle tutine dall'ultimo bagnetto; promemoria del bagnetto disponibile; orologio nella fascia diurna prevista | Fare il bagnetto nella fascia diurna |
-| Tummy time | Una volta al giorno; 08:00-20:00 | Bambino si guarda in giro con curiosità | Svolgere la sessione quotidiana di Tummy time |
-| Vitamina D | Una volta al giorno; 08:00-24:00 | Non siete riusciti ad uscire al sole nelle ultime 24 ore; Promemoria, vitamina D | Completare l'azione quotidiana vitamina D |
 
 Nessun pianto per bagnetto, tummy time e tutine. Gli indizi elencati sono proposte per il quiz; il motore deve mostrarli in modo coerente con lo stato effettivo della simulazione.
 
 Gli indizi sono convenzioni del gioco e devono rendere comprensibile la risposta prevista: il quiz non pretende di insegnare a diagnosticare i bisogni di un bambino reale dal pianto.
+
+## Attività durante la calma
+
+Quando non ci sono bisogni attivi, il quiz lascia spazio a quattro opzioni volontarie. Tummy time e vitamina D si possono completare una volta per giornata; non generano mai eventi, arretrati o penalità per omissione. I pulsanti delle attività già completate restano visibili ma disabilitati fino al giorno successivo.
+
+| Attività | Disponibilità | Durata iniziale simulata | Feedback al completamento |
+| --- | --- | --- | --- |
+| Tummy time | Bambino calmo; una volta al giorno | 15 minuti | Tummy time completato per oggi! |
+| Vitamina D | Bambino calmo; una volta al giorno | 3 minuti | Vitamina D completata per oggi! |
+| Doccia | Bambino calmo; ripetibile | 15 minuti | ti prendi una pausa per lavarti mentre il bimbo è tranquillo, batterie ricaricate! |
+| Spesa | Bambino calmo; dalle 09:00 incluse alle 20:00 escluse; ripetibile | 45 minuti | ottieni importanti provviste per mangiare, pannolini, quadrotti, e salviette! |
+
+Il tempo continua durante le attività. Se compare un bisogno attivo, l'attività si interrompe senza assegnare il completamento e torna il quiz. A mezzanotte Tummy time e vitamina D non ancora completati si interrompono e diventano nuovamente disponibili per la nuova giornata. La fascia della spesa limita l'avvio: una spesa già iniziata può terminare dopo le 20:00. Le durate sono parametri iniziali da bilanciare; i testi di doccia e spesa sono feedback narrativi, senza inventario o indicatore di energia.
 
 ## Elementi a tempo
 
@@ -136,8 +147,6 @@ Lo stato del bambino conserva anche il pannolino corrente, il conteggio dei camb
 | Ruttino | Si attiva alla fine di ogni poppata; l'azione per risolverlo dura da 2 a 15 minuti |
 | Pancino gonfio | Si attiva se un bisogno di cambio resta irrisolto per più di 90 minuti |
 | Lavaggio nasale | Estrarre da 0 a 2 eventi al giorno, a orari casuali distinti |
-| Tummy time | Generare esattamente un bisogno al giorno, per 7 sessioni nella settimana |
-| Vitamina D | Generare esattamente un bisogno al giorno, per 7 eventi nella settimana |
 | Cambio tutina | Dopo 3 o 4 cambi pannolino completati |
 | Bagnetto | Dopo 2 o 3 cambi tutina completati; eseguibile dalle 10:00 incluse alle 18:00 escluse |
 
@@ -157,7 +166,7 @@ Le quote dei sette giorni producono complessivamente 70–140 attaccamenti, 70�
 4. Assegna una durata a ogni poppata, inizialmente campionandola dalle durate del diario fornito. Esclude sovrapposizioni fra poppate e riserva dopo ciascuna lo spazio per un ruttino di 2–15 minuti. Le altre durate delle azioni sono parametri ancora da bilanciare.
 5. Per ogni inizio poppata `f`, costruisce la finestra di cambio `[f + 30, f + 120]`.
 6. Cerca orari di pannolino che coprano tutte le finestre e rispettino i totali giornalieri, contando ogni evento nel giorno in cui compare. Uno stesso evento può coprire più finestre sovrapposte.
-7. Aggiunge i lavaggi nasali, un evento Tummy time e un evento vitamina D per ciascun giorno, poi verifica tutti i vincoli prima di usare il calendario. Orario e durata del Tummy time e orario della vitamina D sono parametri da definire.
+7. Aggiunge i lavaggi nasali e verifica tutti i vincoli prima di usare il calendario. Tummy time e vitamina D non entrano nel calendario degli eventi.
 
 Per costruire la copertura iniziale dei pannolini, ordinare le finestre per fine crescente: se una finestra non contiene già un evento, inserirlo alla sua fine. Questo produce una copertura minima senza quote giornaliere. Successivamente, spostare o aggiungere eventi per soddisfare le quote, verificando nuovamente ogni finestra; le aggiunte possono rappresentare pannolini indipendenti dalle poppate. Se non si trova una soluzione, rigenerare gli orari o usare una ricerca con ritorno sui passi precedenti. La verifica finale, comprese le quote a cavallo della mezzanotte, è obbligatoria.
 
@@ -182,8 +191,6 @@ Se arriva un altro evento di pannolino mentre quello corrente è ancora sporco, 
 - **Tutina:** estrarre una soglia di 3 o 4 cambi. Al raggiungimento, attivare un solo bisogno di tutina. Al cambio tutina completato, azzerare il contatore pannolini ed estrarre la soglia successiva. I cambi aggiuntivi durante l'attesa non creano una coda di tutine arretrate.
 - **Bagnetto:** estrarre una soglia di 2 o 3 tutine. Al raggiungimento, registrare un solo bisogno di bagnetto. Se è fuori fascia, programmarne l'attivazione alla successiva apertura delle 10:00. Alle 18:00 un bisogno irrisolto torna in attesa della finestra successiva. Al bagnetto completato, azzerare il contatore tutine ed estrarre una nuova soglia. Il bagnetto non conta automaticamente come cambio tutina o pannolino.
 - **Lavaggio nasale:** ciascun evento attiva il bisogno; se è già presente, accodare la causa senza duplicare l'azione richiesta.
-- **Tummy time:** attivare una sola sessione per giorno, identificata dalla data di origine. Il completamento risolve quella sessione senza generarne altre nello stesso giorno. Se resta incompleta a mezzanotte, conservarla come bisogno pendente distinto dalla sessione del giorno successivo: non cancellarla e non contare una sola azione come completamento di due sessioni. Nella settimana vengono generate esattamente 7 sessioni.
-- **Vitamina D:** attivare un solo bisogno per giorno, identificato dalla data. Il completamento registra l'azione giornaliera e ne impedisce la ripetizione. Alla fine della giornata, un evento non completato viene registrato come mancato nel riepilogo, senza accumulare azioni da recuperare nei giorni successivi. Nella settimana vengono generati esattamente 7 eventi. La meccanica non specifica dosaggi.
 
 Le soglie si estraggono alla creazione del contatore e dopo il suo azzeramento, mai a ogni aggiornamento.
 
@@ -221,8 +228,6 @@ Quando più risposte corrispondono a bisogni reali, accettarle tutte oppure form
 ### Casi da verificare nell'implementazione
 
 - Ogni giornata generata rispetta 10–20 attaccamenti, 10–14 eventi pannolino e 0–2 eventi nasali.
-- Ogni giornata genera esattamente una sessione di Tummy time: 7 nella settimana, senza duplicazioni né perdita delle sessioni pendenti a mezzanotte.
-- Ogni giornata genera esattamente un evento vitamina D: 7 nella settimana; un evento completato non può essere ripetuto e un evento mancato non si accumula nel giorno successivo.
 - Ogni inizio poppata ha un evento pannolino nella finestra inclusiva di 30–120 minuti, anche dopo mezzanotte.
 - Due poppate vicine possono condividere un pannolino senza contarlo due volte.
 - Un cluster dalle 22:00 alle 02:00 dura 240 minuti e rispetta le quote di entrambe le date.

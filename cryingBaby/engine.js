@@ -12,6 +12,8 @@
     nose: ['Nasino', 'Fare il lavaggio nasale', '💧', 'Il nasino è da pulire; compare del muco nell’illustrazione', 6],
     tummy: ['Tummy time', 'Fare Tummy time', '🌿', 'Il tappetino è pronto; manca l’attività quotidiana nel diario', 15],
     vitamin: ['Vitamina D', 'Completare vitamina D', '☀️', 'Il promemoria quotidiano è aperto; oggi non è ancora stata completata', 3],
+    shower: ['Doccia', 'Fare una doccia', '🚿', '', 15],
+    shopping: ['Spesa', 'Fare la spesa', '🛒', '', 45],
     sleep: ['Sonno', 'Aiutare ad addormentarsi', '🌙', 'Sbadiglia; gli occhi si chiudono', 20],
     cuddle: ['Coccole', 'Prendere in braccio', '💗', 'Tende le braccia; segue il tuo sguardo', 10],
     quiet: ['Troppi stimoli', 'Ridurre luci e rumori', '🔇', 'La luce è intensa; i giocattoli sono rumorosi', 4]
@@ -34,7 +36,6 @@
         times.sort((a,b)=>a-b).forEach(at=>events.push({type:'feed',at,duration:int(6,28),burpDuration:int(2,15)}));
         quotas.push(int(10,14));
         for(let n=int(0,2);n>0;n--) events.push({type:'nose',at:d*DAY+int(60,1380)});
-        events.push({type:'vitamin',at:d*DAY+600},{type:'tummy',at:d*DAY+900});
         for(const type of ['sleep','cuddle','quiet']) events.push({type,at:d*DAY+int(80,1350)});
       }
       if(invalid) continue;
@@ -63,6 +64,31 @@
       this.seed=seed;this.rng=random(seed+1);this.plan=calendar(seed);this.queue=this.plan.events.map(e=>({...e}));
       this.time=0;this.needs=[];this.log=[];this.serial=0;this.job=null;this.episode=null;this.done=false;
       this.stats={resolved:0,errors:0,missed:0,timeouts:0,responses:[]};this.changes=0;this.suits=0;this.suitLimit=this.int(3,4);this.bathLimit=this.int(2,3);
+      this.routines = Array.from({length: 7}, () => ({tummy: false, vitamin: false}));
+      this.activityMessage = '';
+      this.activityVersion = 0;
+    }
+    calmAvailable(action) {
+      if (this.done || this.job || this.active().length) return false;
+      if (action === 'shopping') return this.time % DAY >= 540 && this.time % DAY < 1200;
+      if (action === 'shower') return true;
+      if (action === 'tummy' || action === 'vitamin') {
+        return !this.routines[Math.floor(this.time / DAY)][action];
+      }
+      return false;
+    }
+    startCalmActivity(action) {
+      if (!this.calmAvailable(action)) return false;
+      this.job = {
+        calm: true, action, day: Math.floor(this.time / DAY),
+        start: this.time, end: this.time + definitions[action][4]
+      };
+      return true;
+    }
+    notifyActivity(message) {
+      this.activityMessage = message;
+      this.activityVersion++;
+      this.record(message);
     }
     int(a,b){return a+Math.floor(this.rng()*(b-a+1));}
     available(n){return n.type!=='bath'||this.time%DAY>=600&&this.time%DAY<1080;}
@@ -70,6 +96,7 @@
     level(){return this.episode===null?0:Math.min(3,1+Math.floor((this.time-this.episode+1e-7)/30));}
     record(text){this.log.unshift({time:this.time,text});this.log=this.log.slice(0,80);}
     add(type,data={}) {
+      if (['tummy', 'vitamin', 'shower', 'shopping'].includes(type)) return;
       if(!['feed','burp','tummy','vitamin'].includes(type)&&this.needs.some(n=>n.type===type))return;
       this.needs.push({id:++this.serial,type,since:this.time,...data});this.updateEpisode();
     }
@@ -89,7 +116,21 @@
       return true;
     }
     finish(){
-      const job=this.job;this.job=null;const n=this.needs.find(n=>n.id===job.id);if(!n)return;
+      const job=this.job;this.job=null;
+      if (job.calm) {
+        if (job.action === 'tummy' || job.action === 'vitamin') {
+          this.routines[job.day][job.action] = true;
+        }
+        const messages = {
+          shower: 'ti prendi una pausa per lavarti mentre il bimbo è tranquillo, batterie ricaricate!',
+          shopping: 'ottieni importanti provviste per mangiare, pannolini, quadrotti, e salviette!',
+          tummy: 'Tummy time completato per oggi!',
+          vitamin: 'Vitamina D completata per oggi!'
+        };
+        this.notifyActivity(messages[job.action]);
+        return;
+      }
+      const n=this.needs.find(n=>n.id===job.id);if(!n)return;
       if(n.type==='belly'){n[job.action]=true;if(!n.belly||!n.legs){this.record('Pancino: manca ancora '+(!n.belly?'il massaggio.':'lo sgambettamento.'));return;}}
       this.needs=this.needs.filter(x=>x.id!==n.id);this.stats.resolved++;this.record(definitions[n.type][0]+' completato.');
       if(n.type==='feed')this.add('burp',{duration:n.burpDuration});
@@ -106,14 +147,19 @@
         this.time=Math.min(target,this.time+.25,this.job?.end??Infinity,nextEvent,(previousDay+1)*DAY);
         if(this.job&&this.job.end<=this.time+1e-8)this.finish();
         if(Math.floor(this.time/DAY)>previousDay){
-          const expired=this.needs.filter(n=>n.type==='vitamin');this.stats.missed+=expired.length;
-          this.needs=this.needs.filter(n=>n.type!=='vitamin');
-          if(this.job&&expired.some(n=>n.id===this.job.id))this.job=null;
+          if (this.job?.calm && ['tummy', 'vitamin'].includes(this.job.action)) {
+            this.job = null;
+            this.notifyActivity('È iniziato un nuovo giorno: puoi scegliere di nuovo le attività quotidiane.');
+          }
           this.record('Giorno '+(previousDay+1)+' concluso.');
         }
         while(this.queue.length&&this.queue[0].at<=this.time){const e=this.queue.shift();if(this.time<END)this.add(e.type,{duration:e.duration,burpDuration:e.burpDuration});}
         for(const n of [...this.needs])if(n.type==='diaper'&&!n.triggered&&this.time-n.since>90){n.triggered=true;this.add('belly');}
         this.updateEpisode();
+        if (this.job?.calm && this.active().length) {
+          this.job = null;
+          this.notifyActivity('Attività interrotta: il bambino ha bisogno di te. Potrai riprovare quando sarà calmo.');
+        }
       }
       if(this.time>=END)this.done=true;
     }
