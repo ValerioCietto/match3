@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101c23">
+  <title>Silux — Another Chosen One</title>
+  <style>
+    :root { color-scheme: dark; --ink:#eee5ce; --muted:#a8b4af; --gold:#d8b978; --line:#d8b97840; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:#101c23; color:var(--ink); font-family:Georgia, 'Times New Roman', serif; }
+    button { font:inherit; cursor:pointer; }
+    button:focus-visible, a:focus-visible { outline:2px solid #f3dca2; outline-offset:6px; }
+    .screen { min-height:100svh; position:relative; overflow:hidden; display:flex; flex-direction:column; }
+    #landscape { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+    .shade { position:absolute; inset:0; background:linear-gradient(90deg,#0c1927e8 0%,#0c192799 38%,transparent 75%),linear-gradient(0deg,#0a171dec,transparent 38%); pointer-events:none; }
+    header, main, footer { position:relative; z-index:1; }
+    header { padding:30px 5vw; display:flex; justify-content:space-between; align-items:center; gap:20px; }
+    .brand { display:flex; align-items:center; gap:12px; font:11px/1.5 system-ui,sans-serif; text-transform:uppercase; letter-spacing:3px; }
+    .seal { width:32px; height:32px; border:1px solid var(--gold); transform:rotate(45deg); display:grid; place-items:center; color:var(--gold); }
+    .seal span { transform:rotate(-45deg); font-size:21px; }
+    .edition { color:var(--muted); font:10px system-ui,sans-serif; letter-spacing:2px; text-transform:uppercase; }
+    main { flex:1; display:flex; align-items:center; padding:54px 10vw 90px; }
+    .title-panel { width:min(100%,450px); animation:arrive 1.1s ease-out both; }
+    .eyebrow { color:var(--gold); font:10px/1.6 system-ui,sans-serif; letter-spacing:4px; text-transform:uppercase; display:flex; align-items:center; gap:15px; }
+    .eyebrow::before { content:''; height:1px; width:34px; background:var(--gold); }
+    h1 { font-size:clamp(88px,12vw,154px); font-weight:normal; letter-spacing:.075em; line-height:.95; margin:22px 0 14px; text-shadow:0 6px 35px #0004; }
+    .subtitle { color:var(--gold); text-transform:uppercase; letter-spacing:6px; font-size:12px; margin:0 0 32px; }
+    .description { color:#c0c7bf; font-size:17px; line-height:1.8; max-width:320px; margin-bottom:34px; }
+    .menu { display:grid; gap:12px; max-width:320px; }
+    .menu button { min-height:56px; padding:16px 22px; text-align:left; display:flex; justify-content:space-between; align-items:center; border:1px solid var(--line); color:var(--ink); background:#0e1d28b8; transition:background .2s,transform .2s; }
+    .menu button:hover:not(:disabled) { background:#26373d; transform:translateX(4px); }
+    .menu .primary { color:#182629; background:var(--gold); border-color:var(--gold); }
+    .menu .primary:hover { background:#ead09a; }
+    .menu button:disabled { cursor:default; color:#8d999a; border-color:#ffffff12; background:#0e1d2866; }
+    .button-note { font:9px system-ui,sans-serif; text-transform:uppercase; letter-spacing:1.4px; }
+    .aside { font-size:12px; font-style:italic; color:#94a29f; margin-top:22px; }
+    footer { display:flex; align-items:end; justify-content:space-between; gap:25px; padding:22px 5vw 28px; }
+    .footnote { font:9px/1.8 system-ui,sans-serif; text-transform:uppercase; letter-spacing:2px; color:#95a29f; }
+    .destination { text-align:right; color:#c6cabb; font-size:13px; font-style:italic; }
+    .destination small { display:block; font:9px system-ui,sans-serif; text-transform:uppercase; letter-spacing:3px; color:var(--gold); margin-bottom:8px; }
+    dialog { width:min(480px,calc(100% - 36px)); padding:36px; background:#14252d; color:var(--ink); border:1px solid var(--gold); box-shadow:0 20px 100px #0009; }
+    dialog::backdrop { background:#06101bcc; backdrop-filter:blur(7px); }
+    dialog h2 { font-weight:normal; font-size:32px; margin:14px 0 20px; }
+    dialog p { color:#c0c7bf; line-height:1.8; }
+    dialog .menu { max-width:none; margin-top:24px; }
+    #notice { color:var(--gold); font:12px/1.6 system-ui,sans-serif; max-width:320px; }
+    @keyframes arrive { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+    @media(max-width:600px) {
+      header { padding:24px; } .brand { font-size:9px; letter-spacing:2px; } .edition { font-size:8px; letter-spacing:1px; }
+      main { padding:48px 30px 45px; align-items:flex-start; } h1 { font-size:100px; }
+      .shade { background:linear-gradient(90deg,#0c1927dd,#0c192755),linear-gradient(0deg,#0a171df5,transparent 85%); }
+      .description { font-size:16px; } footer { padding:20px 26px; } .destination { max-width:150px; font-size:11px; }
+      .subtitle { letter-spacing:4px; font-size:11px; } dialog { padding:26px; }
+    }
+    @media(prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none!important; transition:none!important; } }
+  </style>
+</head>
+<body>
+  <div class="screen">
+    <canvas id="landscape" aria-hidden="true"></canvas>
+    <div class="shade"></div>
+    <header>
+      <div class="brand"><div class="seal"><span>✦</span></div> A perfectly ordinary legend</div>
+      <span class="edition">A satirical JRPG</span>
+    </header>
+    <main>
+      <section class="title-panel" aria-label="Main menu">
+        <div class="eyebrow">The world needs a hero. Again.</div>
+        <h1>SILUX</h1>
+        <p class="subtitle">Another chosen one</p>
+        <p class="description">A rusty sword. A questionable prophecy.<br>Absolutely no travel allowance.</p>
+        <nav class="menu" aria-label="Game">
+          <button class="primary" id="new-game">Begin your adventure <span aria-hidden="true">→</span></button>
+          <button id="continue" disabled>Continue <span class="button-note" id="save-label">No saved journey</span></button>
+          <button id="about">The fine print <span aria-hidden="true">+</span></button>
+        </nav>
+        <p class="aside">“Chosen” was a generous interpretation of “available.”</p>
+        <p id="notice" role="status"></p>
+      </section>
+    </main>
+    <footer>
+      <div class="footnote">Turn-based battles. Questionable decisions.<br>One extremely predictable destiny.</div>
+      <div class="destination"><small>Somewhere in the distance</small>The Dark Lord is expecting you.</div>
+    </footer>
+  </div>
+  <dialog id="intro" aria-labelledby="intro-title">
+    <div class="eyebrow">Prologue · Starting Village</div>
+    <h2 id="intro-title">Congratulations. You’ll do.</h2>
+    <p>The Dark Lord threatens the world. The village elders have consulted the prophecy, checked everyone’s availability, and chosen you.</p>
+    <p>You receive a rusty sword, a worn shirt, and the confidence of people who will be staying home.</p>
+    <p><em>“The fate of the world depends on us. Naturally, we begin in the sewers.”</em></p>
+    <p class="footnote">Your journey begins here. The playable adventure is still to come.</p>
+    <div class="menu"><button class="primary" data-close>Return to title <span aria-hidden="true">↩</span></button></div>
+  </dialog>
+  <dialog id="fine-print" aria-labelledby="about-title">
+    <div class="eyebrow">Terms of heroism</div>
+    <h2 id="about-title">Saving the world is unpaid.</h2>
+    <p>Recruit an increasingly skeptical party, fight on a turn-based timeline, and follow a suspiciously convenient trail of regional bosses to the Dark Lord’s castle.</p>
+    <p>Time pauses while you choose. Merchants do not offer hero discounts. Monsters carry gold for reasons nobody can adequately explain.</p>
+    <p>This is the start-screen prototype. Your prologue progress is saved in this browser when local storage is available.</p>
+    <div class="menu"><button class="primary" data-close>I accept my questionable destiny <span aria-hidden="true">↩</span></button></div>
+  </dialog>
+  <dialog id="restart" aria-labelledby="restart-title">
+    <div class="eyebrow">Another beginning</div>
+    <h2 id="restart-title">Rewrite your prophecy?</h2>
+    <p>This replaces your saved prologue with a new beginning.</p>
+    <div class="menu"><button class="primary" id="confirm-new">Start a new journey <span aria-hidden="true">→</span></button><button data-close>Keep my journey</button></div>
+  </dialog>
+  <script>
+    'use strict';
+    const saveKey = 'silux.prologue.v1';
+    const byId = id => document.getElementById(id);
+    let saved = false;
+    try { const data = JSON.parse(localStorage.getItem(saveKey)); saved = data?.version === 1 && data?.chapter === 'prologue'; }
+    catch { byId('notice').textContent = 'Saving is unavailable or the saved prologue could not be read. You can still begin.'; }
+    function refreshSave() { byId('continue').disabled = !saved; byId('save-label').textContent = saved ? 'Starting Village' : 'No saved journey'; }
+    function start() {
+      try { localStorage.setItem(saveKey, JSON.stringify({ version:1, chapter:'prologue', startedAt:new Date().toISOString() })); saved = true; }
+      catch { byId('notice').textContent = 'Your browser could not save this journey. The prologue is still available.'; }
+      refreshSave(); byId('intro').showModal();
+    }
+    byId('new-game').addEventListener('click', () => saved ? byId('restart').showModal() : start());
+    byId('confirm-new').addEventListener('click', () => { byId('restart').close(); start(); });
+    byId('continue').addEventListener('click', () => byId('intro').showModal());
+    byId('about').addEventListener('click', () => byId('fine-print').showModal());
+    document.querySelectorAll('[data-close]').forEach(button => button.addEventListener('click', () => button.closest('dialog').close()));
+    refreshSave();
+
+    // Painted scenery stays self-contained: layered mountains, a distant castle,
+    // and a tiny traveler on the path to an implausibly important destiny.
+    const canvas = byId('landscape');
+    const ctx = canvas.getContext('2d');
+    function paint() {
+      const w = canvas.clientWidth, h = canvas.clientHeight, dpr = Math.min(devicePixelRatio || 1, 2);
+      canvas.width = Math.round(w*dpr); canvas.height = Math.round(h*dpr);
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+      const sky = ctx.createLinearGradient(0,0,0,h); sky.addColorStop(0,'#112b40'); sky.addColorStop(.48,'#68828a'); sky.addColorStop(.72,'#b1a994'); sky.addColorStop(1,'#233e40'); ctx.fillStyle=sky; ctx.fillRect(0,0,w,h);
+      const moonX=w*.77, moonY=h*.23;
+      const glow=ctx.createRadialGradient(moonX,moonY,10,moonX,moonY,w*.24); glow.addColorStop(0,'#e5d9b82c'); glow.addColorStop(1,'#e5d9b800'); ctx.fillStyle=glow; ctx.fillRect(0,0,w,h);
+      ctx.fillStyle='#ded9bf'; ctx.beginPath(); ctx.arc(moonX,moonY,Math.min(w*.038,42),0,Math.PI*2); ctx.fill();
+      for(let i=0;i<65;i++) { const x=((i*193.71)%997)/997*w, y=((i*71.3)%337)/337*h*.42; ctx.fillStyle=`rgba(239,231,205,${.15+(i%4)*.12})`; ctx.fillRect(x,y,i%5===0?2:1,1); }
+      function ridge(points,color) { ctx.fillStyle=color; ctx.beginPath(); ctx.moveTo(0,h); points.forEach(([x,y])=>ctx.lineTo(x*w,y*h)); ctx.lineTo(w,h); ctx.closePath(); ctx.fill(); }
+      ridge([[0,.58],[.1,.39],[.19,.52],[.33,.30],[.45,.53],[.56,.37],[.69,.57],[.85,.39],[1,.51]],'#536e78');
+      ridge([[0,.65],[.17,.53],[.3,.62],[.43,.47],[.52,.61],[.65,.48],[.8,.59],[.94,.46],[1,.57]],'#385965');
+      ridge([[0,.76],[.2,.67],[.38,.74],[.54,.64],[.67,.65],[.76,.52],[.87,.57],[1,.7]],'#254652');
+      const cx=w*.77, base=h*.555, s=Math.min(w/1100,h/760)*1.1;
+      ctx.save(); ctx.translate(cx,base); ctx.scale(s,s); ctx.fillStyle='#203843';
+      ctx.fillRect(-64,-80,130,89); ctx.fillRect(-85,-101,28,113); ctx.fillRect(53,-119,29,131); ctx.fillRect(-18,-154,34,160);
+      function roof(x,y,width) { ctx.beginPath(); ctx.moveTo(x-6,y); ctx.lineTo(x+width/2,y-32); ctx.lineTo(x+width+6,y); ctx.fill(); }
+      roof(-85,-101,28); roof(53,-119,29); roof(-18,-154,34);
+      for(let i=0;i<7;i++) ctx.fillRect(-59+i*18,-89,9,13);
+      ctx.fillRect(-2,-211,2,35); ctx.fillStyle='#957e61'; ctx.beginPath(); ctx.moveTo(0,-211); ctx.lineTo(26,-204); ctx.lineTo(0,-197); ctx.fill();
+      ctx.fillStyle='#d2b575'; [[-74,-78],[64,-93],[-5,-127],[-35,-52],[29,-52]].forEach(([x,y])=>ctx.fillRect(x,y,4,9)); ctx.restore();
+      ridge([[0,.87],[.13,.81],[.29,.91],[.45,.8],[.6,.86],[.72,.72],[.84,.77],[1,.69]],'#173941');
+      ctx.fillStyle='#8e8d76'; ctx.beginPath(); ctx.moveTo(w*.61,h); ctx.bezierCurveTo(w*.96,h*.83,w*.62,h*.83,w*.76,h*.72); ctx.bezierCurveTo(w*.67,h*.85,w*1.05,h*.81,w*.84,h); ctx.fill();
+      function tree(x,y,size) { ctx.fillStyle='#102f36'; ctx.fillRect(x-size*.045,y-size*.6,size*.09,size*.65); for(let j=0;j<3;j++) { ctx.beginPath(); ctx.moveTo(x,y-size+j*size*.2); ctx.lineTo(x-size*(.24+j*.06),y-size*.45+j*size*.2); ctx.lineTo(x+size*(.24+j*.06),y-size*.45+j*size*.2); ctx.fill(); } }
+      for(let i=0;i<16;i++) tree(w*(.87+(i%5)*.035),h*(.83+(i%4)*.058),h*(.11+(i%3)*.04));
+      for(let i=0;i<7;i++) tree(w*(.03+i*.073),h*(.93+(i%3)*.02),h*(.19+(i%2)*.06));
+      const tx=w*.745, ty=h*.915, ts=Math.max(.65,Math.min(w/1000,h/800));
+      ctx.save(); ctx.translate(tx,ty); ctx.scale(ts,ts); ctx.fillStyle='#101f26'; ctx.fillRect(-8,-25,7,28); ctx.fillRect(5,-25,7,28); ctx.fillStyle='#a17a50'; ctx.beginPath(); ctx.moveTo(-8,-55); ctx.lineTo(9,-55); ctx.lineTo(20,-15); ctx.lineTo(-16,-18); ctx.fill(); ctx.fillStyle='#18282e'; ctx.beginPath(); ctx.arc(1,-64,9,0,Math.PI*2); ctx.fill(); ctx.strokeStyle='#c6bca0'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(17,-37); ctx.lineTo(28,-6); ctx.stroke(); ctx.restore();
+    }
+    if (ctx) { new ResizeObserver(paint).observe(canvas); paint(); }
+  </script>
+</body>
+</html>
