@@ -25,6 +25,12 @@
           "name": "Silver Key",
           "chance": 0.01,
           "quantity": 1
+        },
+        {
+          "id": "leather-cap",
+          "name": "Leather Cap",
+          "chance": 0.2,
+          "quantity": 1
         }
       ]
     },
@@ -44,6 +50,12 @@
           "id": "healing-potion",
           "name": "Healing Potion",
           "chance": 0.35,
+          "quantity": 1
+        },
+        {
+          "id": "wooden-buckler",
+          "name": "Wooden Buckler",
+          "chance": 0.2,
           "quantity": 1
         }
       ]
@@ -75,6 +87,18 @@
         {
           "id": "stamina-potion",
           "name": "Stamina Potion",
+          "chance": 1,
+          "quantity": 1
+        },
+        {
+          "id": "wooden-buckler",
+          "name": "Wooden Buckler",
+          "chance": 1,
+          "quantity": 1
+        },
+        {
+          "id": "simple-belt",
+          "name": "Simple Belt",
           "chance": 1,
           "quantity": 1
         }
@@ -117,6 +141,12 @@
           "name": "Fur",
           "chance": 0.6,
           "quantity": 2
+        },
+        {
+          "id": "reinforced-trousers",
+          "name": "Reinforced Trousers",
+          "chance": 0.25,
+          "quantity": 1
         }
       ]
     },
@@ -148,6 +178,18 @@
         {
           "id": "stamina-potion",
           "name": "Stamina Potion",
+          "chance": 1,
+          "quantity": 1
+        },
+        {
+          "id": "travel-cape",
+          "name": "Travel Cape",
+          "chance": 1,
+          "quantity": 1
+        },
+        {
+          "id": "travel-backpack",
+          "name": "Travel Backpack",
           "chance": 1,
           "quantity": 1
         }
@@ -190,6 +232,12 @@
           "name": "Stamina Potion",
           "chance": 0.4,
           "quantity": 1
+        },
+        {
+          "id": "chain-shirt",
+          "name": "Chain Shirt",
+          "chance": 0.3,
+          "quantity": 1
         }
       ]
     },
@@ -223,6 +271,18 @@
           "name": "Stamina Potion",
           "chance": 1,
           "quantity": 2
+        },
+        {
+          "id": "lucky-ring",
+          "name": "Lucky Ring",
+          "chance": 1,
+          "quantity": 1
+        },
+        {
+          "id": "utility-belt",
+          "name": "Utility Belt",
+          "chance": 1,
+          "quantity": 1
         }
       ]
     },
@@ -263,6 +323,12 @@
           "name": "Stamina Potion",
           "chance": 0.5,
           "quantity": 1
+        },
+        {
+          "id": "vigor-ring",
+          "name": "Vigor Ring",
+          "chance": 0.25,
+          "quantity": 1
         }
       ]
     },
@@ -295,6 +361,18 @@
           "name": "Stamina Potion",
           "chance": 1,
           "quantity": 2
+        },
+        {
+          "id": "big-sword",
+          "name": "Big Sword",
+          "chance": 1,
+          "quantity": 2
+        },
+        {
+          "id": "large-backpack",
+          "name": "Large Backpack",
+          "chance": 1,
+          "quantity": 1
         }
       ]
     },
@@ -368,6 +446,18 @@
           "name": "Stamina Potion",
           "chance": 1,
           "quantity": 2
+        },
+        {
+          "id": "utility-belt",
+          "name": "Utility Belt",
+          "chance": 1,
+          "quantity": 1
+        },
+        {
+          "id": "large-backpack",
+          "name": "Large Backpack",
+          "chance": 1,
+          "quantity": 1
         }
       ]
     },
@@ -467,6 +557,12 @@
           "name": "Stamina Potion",
           "chance": 1,
           "quantity": 3
+        },
+        {
+          "id": "healing-staff",
+          "name": "Healing Staff",
+          "chance": 1,
+          "quantity": 2
         }
       ]
     },
@@ -540,6 +636,12 @@
           "name": "Stamina Potion",
           "chance": 1,
           "quantity": 3
+        },
+        {
+          "id": "borrowed-courage",
+          "name": "Borrowed Courage",
+          "chance": 1,
+          "quantity": 1
         }
       ]
     },

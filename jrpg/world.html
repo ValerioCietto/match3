@@ -19,7 +19,7 @@
 </style>
 </head>
 <body>
-<header><a class="logo" href="index.html" aria-label="Silux title screen">SILUX</a><span class="label header-caption">Department of inevitable adventures</span><a class="back" href="index.html">← Title screen</a></header>
+<header><a class="logo" href="index.html" aria-label="Silux title screen">SILUX</a><a class="back" href="hero-manager.html">Manage heroes & equipment →</a><a class="back" href="index.html">← Title screen</a></header>
 <main>
   <div class="heading"><div><div class="label">World map · Your very important itinerary</div><h1>A long way from home.</h1><p class="muted">One battle at a time. The prophecy dislikes shortcuts.</p></div><div class="progress"><span id="progress-label"></span><progress id="progress" max="19" value="0" aria-label="Battles completed"></progress></div></div>
   <div class="layout">
@@ -31,6 +31,7 @@
   <p id="notice" role="status"></p>
 </main>
 <footer>Complete battles in order to unlock the next. Defeat a regional boss to open the next area and fully rest your party. Either the Desert or the Swamp opens the Mountain; the other route stays available.</footer>
+<script src="equipment.js"></script>
 <script src="game.js"></script>
 <script>
 'use strict';
@@ -74,8 +75,7 @@ function render(){
   const quotes={Silux:r.quote,Lyra:r.id==='castle'?'Three transformations if the game sells well.':'I have seen this place before. Explaining when would spoil my character arc.',Grond:r.id==='castle'?'So we’re almost finished?':'Can we solve this one by hitting it?', 'Father Patch':r.id==='castle'?'At least two boss transformations remain.':'The gods recommend a full rest. Their rates are surprisingly reasonable.'};
   $('comments').replaceChildren();$('party').replaceChildren();party().forEach(name=>{const p=document.createElement('p');p.className='quote';const speaker=document.createElement('strong');speaker.textContent=name;p.append(speaker,document.createTextNode(`“${quotes[name]}”`));$('comments').append(p);});
   state.heroes.forEach(hero=>{const stats=SiluxGame.stats(hero),member=document.createElement('div');member.className='member';member.textContent=`${stats.name} · Lv ${stats.level}`;const info=document.createElement('small');info.textContent=`HP ${Math.ceil(hero.hp)}/${stats.maxHp} · Stamina ${hero.stamina.toFixed(1)}/${stats.maxStamina}`;member.append(info);
-    const weapons=[SiluxGame.roster[hero.id].weapon];if(done('desert-2')&&['silux','grond'].includes(hero.id))weapons.push('Big Sword');if(done('mountain-4')&&['lyra','patch'].includes(hero.id))weapons.push('Healing Staff');
-    if(weapons.length>1){const label=document.createElement('label');label.textContent='Weapon';const select=document.createElement('select');for(const weapon of weapons){const option=document.createElement('option');option.value=weapon;option.textContent=weapon;option.selected=hero.equipment.weapon===weapon;select.append(option);}select.onchange=()=>{const previous=hero.equipment.weapon;hero.equipment.weapon=select.value;if(!persist()){hero.equipment.weapon=previous;select.value=previous;}};label.append(select);member.append(label);}$('party').append(member);
+    const manage=document.createElement('a');manage.href=`hero-manager.html?hero=${hero.id}`;manage.textContent='Manage equipment →';manage.style.cssText='display:block;margin-top:12px;color:var(--gold)';member.append(manage);$('party').append(member);
   });
   $('supplies').textContent=`${state.gold} Gold · Inventory ${state.inventory.length}/${SiluxGame.capacity(state)} slots · ${state.inventory.filter(i=>i.id==='healing-potion').reduce((n,i)=>n+i.quantity,0)} healing potions`;
   $('rest').disabled=state.gold<10||!canSave;

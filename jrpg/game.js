@@ -1,6 +1,7 @@
 /* Shared save and character rules. No combat changes are saved until victory. */
 (function (root) {
   'use strict';
+  const Equipment=root.SiluxEquipment||(typeof require!=='undefined'?require('./equipment.js'):null);
   const KEY = 'silux.journey.v1';
   const regions = {
     sewers: {count:3,requires:[]}, countryside:{count:2,requires:['sewers-3']},
@@ -19,11 +20,12 @@
   const finite = (v,fallback,min=0,max=1e9) => Number.isFinite(v)?Math.min(max,Math.max(min,v)):fallback;
   function stats(hero) {
     const b=roster[hero.id],l=level(hero.xp)-1;
-    const weapon=hero.equipment?.weapon,bonus=weapon==='Big Sword'?6:weapon==='Healing Staff'?2:weapon==='Rusty Sword'?2:0;
-    return {name:b.name,level:l+1,maxHp:b.hp+b.hpGrowth*l,attack:b.attack+b.attackGrowth*l+bonus,defense:b.defense+(hero.id==='silux'?2:0),accuracy:b.accuracy,crit:b.crit,critDamage:b.critDamage,cooldown:b.cooldown-(hero.id==='silux'?1:0)+(weapon==='Big Sword'?2:0),maxStamina:b.stamina+b.staminaGrowth*l};
+    const result={name:b.name,level:l+1,maxHp:b.hp+b.hpGrowth*l,attack:b.attack+b.attackGrowth*l,defense:b.defense,accuracy:b.accuracy,crit:b.crit,critDamage:b.critDamage,cooldown:b.cooldown,maxStamina:b.stamina+b.staminaGrowth*l};
+    for(const [stat,value] of Object.entries(Equipment.bonuses(hero)))result[stat]+=value;
+    result.cooldown=Math.max(1,result.cooldown);result.defense=Math.min(90,result.defense);result.accuracy=Math.min(100,result.accuracy);result.crit=Math.min(100,result.crit);return result;
   }
   function newHero(id,xp=0) {
-    const hero={id,xp,equipment:{weapon:roster[id].weapon,backpack:4,belt:0}};
+    const hero={id,xp,equipment:Equipment.starting(id,roster[id].weapon)};
     const s=stats(hero);return {...hero,hp:s.maxHp,stamina:s.maxStamina};
   }
   function defaults(){return {version:1,completed:[],selected:'sewers',gold:0,inventory:[{id:'healing-potion',name:'Healing Potion',quantity:3},{id:'stamina-potion',name:'Stamina Potion',quantity:1}],heroes:[newHero('silux')]};}
@@ -63,6 +65,21 @@
       if(remaining)dropped.push({...item,quantity:remaining});
     }return dropped;
   }
-  const api={KEY,regions,roster,clone,level,stats,newHero,defaults,normalize,validBattle,available,recruit,load,save,rest,capacity,addLoot};
+  function equip(state,heroId,slot,itemId){
+    const next=clone(state),hero=next.heroes.find(h=>h.id===heroId);
+    if(!hero)throw Error('This hero has not joined your team.');
+    const item=itemId?Equipment.byId[itemId]:null;
+    if(itemId&&!item)throw Error('Unknown equipment.');
+    const reason=Equipment.reason(next,hero,slot,item);if(reason)throw Error(reason);
+    const current=Equipment.itemInSlot(hero,slot);if(current?.id===itemId||(!current&&!item))return next;
+    if(item){const stack=next.inventory.find(i=>i.id===item.id&&i.quantity>0);if(!stack)throw Error('This item is not in the shared inventory.');stack.quantity--;next.inventory=next.inventory.filter(i=>i.quantity>0);}
+    const returned=[];if(current)returned.push({id:current.id,name:current.name,quantity:1});
+    if(item?.hands===2){const offhand=Equipment.itemInSlot(hero,'offhand');if(offhand)returned.push({id:offhand.id,name:offhand.name,quantity:1});hero.equipment.offhand=null;}
+    hero.equipment[slot]=item?(item.value??item.name):(['backpack','belt'].includes(slot)?0:null);
+    if(addLoot(next,returned).length||next.inventory.length>capacity(next))throw Error('Not enough shared inventory space for this change. Equip a larger Backpack or Belt first.');
+    const updated=stats(hero);hero.hp=Math.min(hero.hp,updated.maxHp);hero.stamina=Math.min(hero.stamina,updated.maxStamina);
+    return next;
+  }
+  const api={KEY,regions,roster,clone,level,stats,newHero,defaults,normalize,validBattle,available,recruit,load,save,rest,capacity,addLoot,equip};
   root.SiluxGame=api;if(typeof module!=='undefined')module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);

@@ -16,7 +16,15 @@ Visit `http://localhost:8080`. No application backend or build step is required.
 - Attack, Dodge, skills, and shared healing/Stamina potions are available. Allies are selected directly for healing and support. Enemy bosses use a special attack every third action.
 - Enemies grant XP and Gold immediately on death. Loot is rolled independently on death and collected on victory. All changes remain local to the attempt until victory is saved.
 - SAVE SCUM, defeat, reloading, or leaving an unfinished battle discard the attempt. Normal victories revive KOed heroes at half HP; boss wins fully rest the party, including replays.
-- World-map resting costs 10 Gold. Defeating regional bosses recruits companions and unlocks equipment choices. Big swords and Healing Staff can be equipped from the world-map party cards after their respective boss unlocks.
+- World-map resting costs 10 Gold. Defeating regional bosses recruits companions and unlocks equipment choices. The world-map party cards link to `hero-manager.html` for equipping items.
+
+## Hero manager
+
+Select a recruited hero, then one of the 12 equipment slots. The manager lists suitable items in the shared inventory, previews stat and capacity changes, and saves equip/unequip actions immediately. Equipped items leave the inventory; removed or replaced items return to it. Copies cannot be shared simultaneously by different heroes or ring slots.
+
+Gear bonuses are defined in `equipment.js` and used by both the manager and combat. Existing saves retain their weapons, bags, and resource values while gaining explicit starter armor slots. Big swords automatically return offhand equipment to inventory. Changes that cannot fit all returned items, or would shrink capacity below the occupied slot count, are rejected without changing the save. Changing equipment never restores HP or Stamina.
+
+Equipment is obtained through `battles.json` loot tables: early enemies can drop caps and shields; bosses award additional gear, including two Big Swords at the Desert boss and two Healing Staffs at the Mountain boss. Previously completed battles can be replayed to collect these drops. Cape and Heart slots, specialist weapons, hero restrictions, and equipment level requirements are enforced.
 
 ## First balance pass
 
@@ -24,12 +32,12 @@ Enemy stats, encounters, and rewards are initial tuning values. Full enemy XP go
 
 The starting shared inventory includes three Healing Potions and one Stamina Potion. Healing Potions restore 50% maximum HP; Stamina Potions restore all Stamina. Characters use the growth proposals from `characters.md`. Big Sword gives +6 Attack and +2 Action Cooldown; Healing Staff gives +2 Attack. Other companion starting weapons currently have no stat bonuses. Level-20 skills require the specified equipped weapon, and their explicit resurrection effects override ordinary KO rules.
 
-The complete standard journey is playable through the Dark King. The subsequent playable Dark King reversal, shop, expanded equipment catalogue, and negative-status catalogue are not implemented yet. Terms and Conditions currently has no enemy-applied negative statuses to remove. The equipment snapshot for the reversal is saved on defeating the Dark King.
+The complete standard journey is playable through the Dark King. The subsequent playable Dark King reversal, shop, and negative-status catalogue are not implemented yet. Terms and Conditions currently has no enemy-applied negative statuses to remove. The equipment snapshot for the reversal is saved on defeating the Dark King.
 
 ## Checks
 
 ```sh
-node --test jrpg/tests/combat.test.js
+node --test jrpg/tests/combat.test.js jrpg/tests/equipment.test.js
 ```
 
 Run the command from the repository root. Tests cover encounter validation, progression, combat timing, rewards, rollback, inventory capacity, KO recovery, recruitment, skills, and a simulated full journey.
