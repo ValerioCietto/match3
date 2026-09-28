@@ -33,3 +33,5 @@ node --test jrpg/tests/combat.test.js
 ```
 
 Run the command from the repository root. Tests cover encounter validation, progression, combat timing, rewards, rollback, inventory capacity, KO recovery, recruitment, skills, and a simulated full journey.
+
+`node jrpg/tests/browser-smoke.js` additionally exercises the page flow with an installed headless Chrome. It uses an isolated temporary browser profile; set `CHROME_PATH` when Chrome is installed elsewhere. This check requires permission to launch a working browser renderer.

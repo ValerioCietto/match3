@@ -86,7 +86,7 @@
       let raw=options.flat??attacker.attack*(options.power??1)*(attacker.berserk?2:1)*(critical?(options.critDamage??attacker.critDamage)/100:1);
       if(options.flat===undefined)raw*=1-victim.defense*(1-(options.pierce||0))/100;
       if(victim.blessUntil>this.time)raw*=.75;
-      const amount=Math.max(1,Math.round(raw));victim.hp=Math.max(0,victim.hp-amount);
+      const amount=options.flat===0?0:Math.max(1,Math.round(raw));victim.hp=Math.max(0,victim.hp-amount);
       this.log(`${attacker.name} → ${victim.name}: ${amount} damage${critical?' · CRITICAL':''}.`);
       if(victim.hp===0){this.log(`${victim.name} is ${victim.side==='ally'?'KOed':'defeated'}.`);if(victim.side==='enemy')this.reward(victim);}
     }

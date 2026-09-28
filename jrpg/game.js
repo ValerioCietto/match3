@@ -27,7 +27,7 @@
     const s=stats(hero);return {...hero,hp:s.maxHp,stamina:s.maxStamina};
   }
   function defaults(){return {version:1,completed:[],selected:'sewers',gold:0,inventory:[{id:'healing-potion',name:'Healing Potion',quantity:3},{id:'stamina-potion',name:'Stamina Potion',quantity:1}],heroes:[newHero('silux')]};}
-  function validBattle(id){if(typeof id!=='string')return false;const [region,n,...extra]=id.split('-');return !extra.length&&regions[region]&&Number.isInteger(Number(n))&&Number(n)>=1&&Number(n)<=regions[region].count;}
+  function validBattle(id){if(typeof id!=='string')return false;const [region,n,...extra]=id.split('-');return !extra.length&&regions[region]&&String(Number(n))===n&&Number.isInteger(Number(n))&&Number(n)>=1&&Number(n)<=regions[region].count;}
   function available(state,id){
     if(!validBattle(id))return false;
     const [region,n]=id.split('-'),r=regions[region],has=key=>state.completed.includes(key);
