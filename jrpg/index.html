@@ -90,21 +90,21 @@
     <p>The Dark Lord threatens the world. The village elders have consulted the prophecy, checked everyone’s availability, and chosen you.</p>
     <p>You receive a rusty sword, a worn shirt, and the confidence of people who will be staying home.</p>
     <p><em>“The fate of the world depends on us. Naturally, we begin in the sewers.”</em></p>
-    <p class="footnote">Your journey begins here. The playable adventure is still to come.</p>
-    <div class="menu"><button class="primary" data-close>Return to title <span aria-hidden="true">↩</span></button></div>
+    <p class="footnote">Your first destination awaits. Try not to think about the smell.</p>
+    <div class="menu"><button class="primary" id="enter-world">Begin the journey <span aria-hidden="true">→</span></button></div>
   </dialog>
   <dialog id="fine-print" aria-labelledby="about-title">
     <div class="eyebrow">Terms of heroism</div>
     <h2 id="about-title">Saving the world is unpaid.</h2>
     <p>Recruit an increasingly skeptical party, fight on a turn-based timeline, and follow a suspiciously convenient trail of regional bosses to the Dark Lord’s castle.</p>
     <p>Time pauses while you choose. Merchants do not offer hero discounts. Monsters carry gold for reasons nobody can adequately explain.</p>
-    <p>This is the start-screen prototype. Your prologue progress is saved in this browser when local storage is available.</p>
+    <p>Explore the journey map and inspect its encounters. Combat is still to come. Your journey is saved in this browser when local storage is available.</p>
     <div class="menu"><button class="primary" data-close>I accept my questionable destiny <span aria-hidden="true">↩</span></button></div>
   </dialog>
   <dialog id="restart" aria-labelledby="restart-title">
     <div class="eyebrow">Another beginning</div>
     <h2 id="restart-title">Rewrite your prophecy?</h2>
-    <p>This replaces your saved prologue with a new beginning.</p>
+    <p>This replaces your saved journey with a new beginning, clearing completed battles and returning you to the sewers.</p>
     <div class="menu"><button class="primary" id="confirm-new">Start a new journey <span aria-hidden="true">→</span></button><button data-close>Keep my journey</button></div>
   </dialog>
   <script>
@@ -114,15 +114,16 @@
     let saved = false;
     try { const data = JSON.parse(localStorage.getItem(saveKey)); saved = data?.version === 1 && data?.chapter === 'prologue'; }
     catch { byId('notice').textContent = 'Saving is unavailable or the saved prologue could not be read. You can still begin.'; }
-    function refreshSave() { byId('continue').disabled = !saved; byId('save-label').textContent = saved ? 'Starting Village' : 'No saved journey'; }
+    function refreshSave() { byId('continue').disabled = !saved; byId('save-label').textContent = saved ? 'Journey map' : 'No saved journey'; }
     function start() {
-      try { localStorage.setItem(saveKey, JSON.stringify({ version:1, chapter:'prologue', startedAt:new Date().toISOString() })); saved = true; }
+      try { localStorage.removeItem('silux.journey.v1'); localStorage.setItem(saveKey, JSON.stringify({ version:1, chapter:'prologue', startedAt:new Date().toISOString() })); saved = true; }
       catch { byId('notice').textContent = 'Your browser could not save this journey. The prologue is still available.'; }
       refreshSave(); byId('intro').showModal();
     }
     byId('new-game').addEventListener('click', () => saved ? byId('restart').showModal() : start());
     byId('confirm-new').addEventListener('click', () => { byId('restart').close(); start(); });
-    byId('continue').addEventListener('click', () => byId('intro').showModal());
+    byId('continue').addEventListener('click', () => { window.location.href = 'world.html'; });
+    byId('enter-world').addEventListener('click', () => { window.location.href = 'world.html'; });
     byId('about').addEventListener('click', () => byId('fine-print').showModal());
     document.querySelectorAll('[data-close]').forEach(button => button.addEventListener('click', () => button.closest('dialog').close()));
     refreshSave();
