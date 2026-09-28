@@ -14,6 +14,7 @@
   .region-nav{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.region-nav button{padding:10px 13px;background:transparent;color:var(--muted);border:1px solid var(--line);font:12px system-ui,sans-serif;min-height:40px}.region-nav button[aria-pressed=true]{background:var(--gold);color:var(--bg);border-color:var(--gold)}
   .detail{padding:26px;background:var(--panel);border:1px solid var(--line)}h2{font-weight:normal;font-size:34px;margin:8px 0 12px}.region-description{font-size:15px;line-height:1.7;color:var(--muted);margin:0 0 20px}.requirement{padding:12px 14px;border-left:2px solid var(--gold);background:#d8b97809;font:12px/1.6 system-ui,sans-serif;color:#d3c6a9;margin-bottom:22px}.battles{display:grid;gap:10px}.battle{width:100%;display:grid;grid-template-columns:32px 1fr auto;align-items:center;gap:12px;text-align:left;padding:17px 14px;border:1px solid var(--line);background:#102129;color:var(--text);min-height:72px}.battle:hover:not(:disabled){background:#253940;border-color:var(--gold)}.battle:disabled{cursor:default;color:#a0aeab;background:#13232a;border-color:#ffffff0d}.number{font-size:18px;color:var(--gold)}.battle:disabled .number{color:#819494}.battle-title{display:block;font-size:16px}.battle small{display:block;font:10px/1.6 system-ui,sans-serif;color:var(--muted);margin-top:4px}.badge{font:9px system-ui,sans-serif;letter-spacing:1px;text-transform:uppercase;color:var(--gold)}.battle:disabled .badge{color:var(--muted)}.reward{font:12px/1.7 system-ui,sans-serif;color:var(--gold);margin:18px 0 0}.comments{border-top:1px solid var(--line);margin-top:24px;padding-top:18px}.quote{font-size:14px;line-height:1.7;color:#c7cfc6;margin:10px 0}.quote strong{font:10px system-ui,sans-serif;text-transform:uppercase;letter-spacing:1px;color:var(--gold);display:block;margin-bottom:4px}
   .party{margin-top:26px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}.member{padding:10px 15px;border:1px solid var(--line);font:12px system-ui,sans-serif;color:var(--text)}footer{padding:10px 5vw 30px;font:11px/1.7 system-ui,sans-serif;color:var(--muted);max-width:1400px;margin:auto}#notice{color:var(--gold)}dialog{background:var(--panel);color:var(--text);border:1px solid var(--gold);width:min(460px,calc(100% - 32px));padding:30px}dialog::backdrop{background:#06101bcc;backdrop-filter:blur(6px)}dialog h2{font-size:28px}dialog p{line-height:1.8;color:var(--muted)}.primary{width:100%;padding:16px;margin-top:15px;border:1px solid var(--gold);background:var(--gold);color:var(--bg);min-height:48px}
+  .supplies{margin-top:22px;display:flex;align-items:center;flex-wrap:wrap;gap:16px;font:12px/1.8 system-ui,sans-serif;color:var(--muted)}.supplies button{padding:12px 16px;border:1px solid var(--line);background:var(--panel);color:var(--gold);min-height:44px}.supplies button:disabled{opacity:.45;cursor:default}.member small{display:block;color:var(--muted);margin-top:6px}.member select{display:block;margin-top:8px;background:var(--bg);color:var(--text);border:1px solid var(--line);padding:8px;max-width:200px}.member label{display:block;margin-top:8px;font-size:10px;color:var(--muted)}
   @media(max-width:800px){.layout{grid-template-columns:1fr}.heading{align-items:start}.progress{min-width:110px;font-size:10px}main{padding:26px 20px}canvas{height:470px}.detail{padding:22px}header{padding:20px}.heading .muted{font-size:14px}.heading{gap:12px}.logo{font-size:22px}.header-caption{display:none}}
 </style>
 </head>
@@ -26,10 +27,11 @@
     <section class="detail" aria-labelledby="region-name"><div class="label" id="chapter"></div><h2 id="region-name"></h2><p class="region-description" id="description"></p><div class="requirement" id="requirement"></div><div class="battles" id="battles"></div><p class="reward" id="reward"></p><div class="comments" id="comments" aria-label="Party comments"></div></section>
   </div>
   <section class="party" aria-label="Your party"><span class="label">Your unlikely heroes</span><div id="party" class="party" style="margin:0"></div></section>
+  <section class="supplies" aria-label="Travel supplies"><span id="supplies"></span><button id="rest">Spend the night · 10 Gold</button></section>
   <p id="notice" role="status"></p>
 </main>
 <footer>Complete battles in order to unlock the next. Defeat a regional boss to open the next area and fully rest your party. Either the Desert or the Swamp opens the Mountain; the other route stays available.</footer>
-<dialog id="encounter" aria-labelledby="encounter-name"><div class="label">Encounter briefing</div><h2 id="encounter-name"></h2><p id="encounter-copy"></p><p>Combat is not available yet. Your journey progress is unchanged.</p><button class="primary" id="close-encounter">Return to the world map</button></dialog>
+<script src="game.js"></script>
 <script>
 'use strict';
 const regions = [
@@ -44,13 +46,13 @@ const regions = [
 ];
 const key='silux.journey.v1', $=id=>document.getElementById(id);
 const battleIds=new Set(regions.flatMap(r=>Array.from({length:r.count},(_,i)=>`${r.id}-${i+1}`)));
-let state={version:1,completed:[],selected:'sewers'};
-try { const saved=JSON.parse(localStorage.getItem(key)); if(saved?.version===1 && Array.isArray(saved.completed)) state={version:1,completed:[...new Set(saved.completed.filter(id=>battleIds.has(id)))],selected:regions.some(r=>r.id===saved.selected)?saved.selected:'sewers'}; }
-catch { $('notice').textContent='The saved journey could not be read. This map is available without saving.'; }
+let state=SiluxGame.defaults(),canSave=true;
+try { state=SiluxGame.load(); }
+catch { canSave=false;$('notice').textContent='The saved journey could not be read. Return to the title screen to start a new journey.'; }
 const done=id=>state.completed.includes(id);
 function available(region){return !region.requires.length || (region.any?region.requires.some(done):region.requires.every(done));}
 function battleAvailable(region,index){return available(region) && (index===1 || done(`${region.id}-${index-1}`));}
-function persist(){try {localStorage.setItem(key,JSON.stringify(state));localStorage.setItem('silux.prologue.v1',JSON.stringify({version:1,chapter:'prologue'}));}catch{$('notice').textContent='Your browser could not save the journey. Changes will last only while this page is open.';}}
+function persist(){if(!canSave)return false;try {SiluxGame.save(state);localStorage.setItem('silux.prologue.v1',JSON.stringify({version:1,chapter:'prologue'}));return true;}catch{$('notice').textContent='Your browser could not save the journey. Free browser storage before starting a battle.';return false;}}
 function party(){return ['Silux',...(done('sewers-3')?['Lyra']:[]),...(done('city-3')?['Grond']:[]),...(done('swamp-2')?['Father Patch']:[])];}
 function selectRegion(id){state.selected=id;persist();render();}
 function render(){
@@ -66,14 +68,20 @@ function render(){
     const number=document.createElement('span');number.className='number';number.textContent=done(id)?'✓':String(i).padStart(2,'0');
     const text=document.createElement('span'),title=document.createElement('span'),sub=document.createElement('small');title.className='battle-title';title.textContent=r.id==='final'?'The Dark King':`${r.name} ${i}`;sub.textContent=boss?r.boss:'Regular encounter';text.append(title,sub);
     const badge=document.createElement('span');badge.className='badge';badge.textContent=done(id)?'Revisit':button.disabled?'Locked':boss?'Boss →':'Battle →';button.append(number,text,badge);
-    button.onclick=()=>{$('encounter-name').textContent=title.textContent;$('encounter-copy').textContent=boss?`Face ${r.boss}. Victory: ${r.unlock.toLowerCase()}. A boss victory also grants a full rest.`:'Win this encounter to unlock the next battle in this area.';$('encounter').showModal();};$('battles').append(button);
+    button.onclick=()=>{if(persist())location.href=`combat.html?battle=${encodeURIComponent(id)}`;};$('battles').append(button);
   }
   $('reward').textContent=`Boss reward · ${r.unlock}`;
   const quotes={Silux:r.quote,Lyra:r.id==='castle'?'Three transformations if the game sells well.':'I have seen this place before. Explaining when would spoil my character arc.',Grond:r.id==='castle'?'So we’re almost finished?':'Can we solve this one by hitting it?', 'Father Patch':r.id==='castle'?'At least two boss transformations remain.':'The gods recommend a full rest. Their rates are surprisingly reasonable.'};
-  $('comments').replaceChildren();$('party').replaceChildren();party().forEach(name=>{const p=document.createElement('p');p.className='quote';const speaker=document.createElement('strong');speaker.textContent=name;p.append(speaker,document.createTextNode(`“${quotes[name]}”`));$('comments').append(p);const member=document.createElement('span');member.className='member';member.textContent=name;$('party').append(member);});
+  $('comments').replaceChildren();$('party').replaceChildren();party().forEach(name=>{const p=document.createElement('p');p.className='quote';const speaker=document.createElement('strong');speaker.textContent=name;p.append(speaker,document.createTextNode(`“${quotes[name]}”`));$('comments').append(p);});
+  state.heroes.forEach(hero=>{const stats=SiluxGame.stats(hero),member=document.createElement('div');member.className='member';member.textContent=`${stats.name} · Lv ${stats.level}`;const info=document.createElement('small');info.textContent=`HP ${Math.ceil(hero.hp)}/${stats.maxHp} · Stamina ${hero.stamina.toFixed(1)}/${stats.maxStamina}`;member.append(info);
+    const weapons=[SiluxGame.roster[hero.id].weapon];if(done('desert-2')&&['silux','grond'].includes(hero.id))weapons.push('Big Sword');if(done('mountain-4')&&['lyra','patch'].includes(hero.id))weapons.push('Healing Staff');
+    if(weapons.length>1){const label=document.createElement('label');label.textContent='Weapon';const select=document.createElement('select');for(const weapon of weapons){const option=document.createElement('option');option.value=weapon;option.textContent=weapon;option.selected=hero.equipment.weapon===weapon;select.append(option);}select.onchange=()=>{const previous=hero.equipment.weapon;hero.equipment.weapon=select.value;if(!persist()){hero.equipment.weapon=previous;select.value=previous;}};label.append(select);member.append(label);}$('party').append(member);
+  });
+  $('supplies').textContent=`${state.gold} Gold · Inventory ${state.inventory.length}/${SiluxGame.capacity(state)} slots · ${state.inventory.filter(i=>i.id==='healing-potion').reduce((n,i)=>n+i.quantity,0)} healing potions`;
+  $('rest').disabled=state.gold<10||!canSave;
   $('progress').value=state.completed.length;$('progress-label').textContent=`${state.completed.length} / 19 battles completed`;draw();
 }
-$('close-encounter').onclick=()=>$('encounter').close();
+$('rest').onclick=()=>{if(state.gold<10)return;const previous=SiluxGame.clone(state);state.gold-=10;SiluxGame.rest(state);if(!persist())state=previous;else $('notice').textContent='A full night’s rest. All HP and Stamina restored. The world politely waited.';render();};
 const canvas=$('map'),ctx=canvas.getContext('2d');
 function draw(){
   if(!ctx)return;
@@ -89,6 +97,7 @@ function draw(){
 }
 canvas.onclick=event=>{const rect=canvas.getBoundingClientRect(),x=event.clientX-rect.left,y=event.clientY-rect.top;const r=regions.find(r=>Math.hypot(x-(32+r.x*(rect.width-64)),y-(65+r.y*(rect.height-125)))<30);if(r)selectRegion(r.id);};
 new ResizeObserver(draw).observe(canvas);render();persist();
+window.addEventListener('pageshow',event=>{if(event.persisted)location.reload();});
 </script>
 </body>
 </html>

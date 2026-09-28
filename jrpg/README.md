@@ -1,0 +1,35 @@
+# Silux prototype
+
+Open `index.html` to begin, then choose a battle on `world.html`. `combat.html?battle=sewers-1` is the first encounter. All 19 journey battles and eight bosses are defined in `battles.json`; enemy definitions are shared by encounter lineups.
+
+For automatic JSON loading, serve this directory with any static web server. For example, from the repository root, if Python is installed:
+
+```sh
+python -m http.server 8080 --directory jrpg
+```
+
+Visit `http://localhost:8080`. No application backend or build step is required. If opening the HTML files directly, the battle screen offers a file picker for `battles.json` when the browser blocks automatic loading. Browser storage must be available to move between pages and retain progress.
+
+## Combat
+
+- The timeline pauses on every player-controlled turn, including target selection. Tap the enemy artwork or its card to target it; a single valid target is selected automatically.
+- Attack, Dodge, skills, and shared healing/Stamina potions are available. Allies are selected directly for healing and support. Enemy bosses use a special attack every third action.
+- Enemies grant XP and Gold immediately on death. Loot is rolled independently on death and collected on victory. All changes remain local to the attempt until victory is saved.
+- SAVE SCUM, defeat, reloading, or leaving an unfinished battle discard the attempt. Normal victories revive KOed heroes at half HP; boss wins fully rest the party, including replays.
+- World-map resting costs 10 Gold. Defeating regional bosses recruits companions and unlocks equipment choices. Big swords and Healing Staff can be equipped from the world-map party cards after their respective boss unlocks.
+
+## First balance pass
+
+Enemy stats, encounters, and rewards are initial tuning values. Full enemy XP goes to each recruited hero, including KOed heroes. Recruits join at Silux's cumulative XP. Damage rounds to the nearest integer with a minimum of 1; half-HP recovery and healing round up. Same-time actions use party order, then enemy order. All actions use the actor's Action Cooldown.
+
+The starting shared inventory includes three Healing Potions and one Stamina Potion. Healing Potions restore 50% maximum HP; Stamina Potions restore all Stamina. Characters use the growth proposals from `characters.md`. Big Sword gives +6 Attack and +2 Action Cooldown; Healing Staff gives +2 Attack. Other companion starting weapons currently have no stat bonuses. Level-20 skills require the specified equipped weapon, and their explicit resurrection effects override ordinary KO rules.
+
+The complete standard journey is playable through the Dark King. The subsequent playable Dark King reversal, shop, expanded equipment catalogue, and negative-status catalogue are not implemented yet. Terms and Conditions currently has no enemy-applied negative statuses to remove. The equipment snapshot for the reversal is saved on defeating the Dark King.
+
+## Checks
+
+```sh
+node --test jrpg/tests/combat.test.js
+```
+
+Run the command from the repository root. Tests cover encounter validation, progression, combat timing, rewards, rollback, inventory capacity, KO recovery, recruitment, skills, and a simulated full journey.
