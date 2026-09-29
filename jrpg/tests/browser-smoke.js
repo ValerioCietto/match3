@@ -47,6 +47,14 @@ async function evaluate(expression){const r=await command('Runtime.evaluate',{ex
   await evaluate(`document.querySelector('.battle').click()`);await until(()=>evaluate(`location.pathname.endsWith('/combat.html')&&typeof battle!=='undefined'&&battle!==null`),'map to battle');
   assert.equal(await evaluate(`battle.actor().id`),'silux');assert.equal(await evaluate(`document.querySelectorAll('#enemies .unit').length`),2);
   const before=await evaluate(`localStorage.getItem('silux.journey.v1')`);
+  await evaluate(`document.querySelector('[data-command="attack"]').click()`);
+  assert.equal(await evaluate(`document.querySelectorAll('#enemies .damage-preview').length`),2);
+  assert.match(await evaluate(`document.querySelector('#enemies .damage-preview').textContent`),/damage.*90% hit chance/);
+  await evaluate(`document.getElementById('cancel').click()`);
+  assert.equal(await evaluate(`document.querySelectorAll('.damage-preview').length`),0);
+  await evaluate(`document.querySelector('[data-command="skill"]').click();[...document.querySelectorAll('#choices button')].find(b=>b.textContent.includes('Heart-piercer')).click()`);
+  assert.match(await evaluate(`document.querySelector('#enemies .target').textContent`),/80% of hits/);
+  await evaluate(`document.getElementById('cancel').click()`);
   await evaluate(`document.querySelector('[data-command="dodge"]').click()`);
   await until(()=>evaluate(`battle.actor()?.side==='ally'`),'next ally action');
   await evaluate(`document.querySelector('[data-command="item"]').click();document.querySelector('#choices button').click()`);

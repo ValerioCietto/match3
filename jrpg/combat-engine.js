@@ -93,16 +93,29 @@
       const targets=this.living('ally'),special=enemy.special&&(enemy.turns+1)%enemy.special.every===0?enemy.special:null;
       enemy.intent={target:targets[Math.floor(this.random()*targets.length)]?.id,name:special?.name||'Attack',special};return enemy.intent;
     }
+    damageAmount(attacker,victim,options={},critical=false){
+      let raw=options.flat??attacker.attack*(options.power??1)*(attacker.berserk?2:1)*(critical?(options.critDamage??attacker.critDamage)/100:1);
+      if(options.flat===undefined)raw*=1-victim.defense*(1-(options.pierce||0))/100;
+      if(victim.blessUntil>this.time)raw*=.75;
+      return options.flat===0?0:Math.max(1,Math.round(raw));
+    }
+    attackPreview(action,attacker,target){
+      const skill=skills[action];
+      if(!attacker||target?.side!=='enemy'||target.hp<=0||!this.targets(action,attacker).includes(target))return null;
+      if(action!=='attack'&&skill?.kind!=='hit')return null;
+      const options=action==='attack'?{power:attacker.training>0?1.5:1}:skill;
+      const clamp=value=>Math.max(0,Math.min(100,value));
+      return {damage:this.damageAmount(attacker,target,options),criticalDamage:this.damageAmount(attacker,target,options,true),
+        accuracy:options.sure?100:clamp(options.accuracy??attacker.accuracy)*(target.dodgeUntil>this.time?.1:1),
+        criticalChance:clamp(options.crit??attacker.crit??0),hits:options.hits??1};
+    }
     damage(attacker,target,options={}){
       if(target.hp<=0)return 0;
       let victim=target;
       if(target.side==='ally'&&!options.all){const guard=this.allies.find(a=>a.hp>0&&a.guardTarget===target.id&&a.guardUntil>this.time);if(guard){victim=guard;this.log(`${guard.name} intercepts the attack on ${target.name}.`);}}
       if(!options.sure&&(this.random()*100>=(options.accuracy??attacker.accuracy)||(victim.dodgeUntil>this.time&&this.random()<.9))){this.log(`${attacker.name} misses ${victim.name}.`);return 0;}
       const critical=!options.flat&&this.random()*100<(options.crit??attacker.crit??0);
-      let raw=options.flat??attacker.attack*(options.power??1)*(attacker.berserk?2:1)*(critical?(options.critDamage??attacker.critDamage)/100:1);
-      if(options.flat===undefined)raw*=1-victim.defense*(1-(options.pierce||0))/100;
-      if(victim.blessUntil>this.time)raw*=.75;
-      const amount=options.flat===0?0:Math.max(1,Math.round(raw)),dealt=Math.min(victim.hp,amount);victim.hp=Math.max(0,victim.hp-amount);
+      const amount=this.damageAmount(attacker,victim,options,critical),dealt=Math.min(victim.hp,amount);victim.hp=Math.max(0,victim.hp-amount);
       this.log(`${attacker.name} → ${victim.name}: ${amount} damage${critical?' · CRITICAL':''}.`);
       if(victim.hp===0){this.log(`${victim.name} is ${victim.side==='ally'?'KOed':'defeated'}.`);if(victim.side==='enemy')this.reward(victim);}
       if(victim.hp===0)victim.poison=null;

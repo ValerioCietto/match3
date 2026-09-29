@@ -28,7 +28,7 @@ document.querySelectorAll('[data-command]').forEach(button=>button.onclick=()=>{
 function choose(action){
   const actor=battle.actor();if(!actor||actor.side!=='ally')return;
   const targets=battle.targets(action,actor),s=C.skills[action];
-  if(targets.length===1){perform(action,targets[0].id);return;}
+  if(targets.length===1&&!battle.attackPreview(action,actor,targets[0])){perform(action,targets[0].id);return;}
   if(!targets.length&&(s?.all||s?.random||s?.kind==='flurry')){perform(action);return;}
   if(!targets.length){$('notice').textContent='There is no valid target for that action.';return;}
   pending=action;render();
@@ -50,12 +50,20 @@ function unitCard(unit){
   const name=document.createElement('span');name.className='name';name.textContent=unit.name+(unit.hp<=0?' · KO':'');card.append(name);
   const hp=document.createElement('small');hp.textContent=`HP ${Math.ceil(unit.hp)} / ${unit.maxHp}${unit.side==='ally'?` · Lv ${unit.level}`:''}`;card.append(hp);
   const meter=document.createElement('div');meter.className='meter';const fill=document.createElement('span');fill.style.width=`${unit.hp/unit.maxHp*100}%`;meter.append(fill);card.append(meter);
+  const preview=valid?battle.attackPreview(pending,actor,unit):null;
+  let previewText='';
+  if(preview){
+    const percentage=value=>`${Number(value.toFixed(1))}%`;
+    previewText=`${preview.damage} damage${preview.hits>1?` × ${preview.hits} hits`:''} · ${percentage(preview.accuracy)} hit chance`;
+    const estimate=document.createElement('small');estimate.className='damage-preview';estimate.textContent=previewText;card.append(estimate);
+    if(preview.criticalChance>0){const critical=document.createElement('small');critical.textContent=`Critical: ${preview.criticalDamage} damage · ${percentage(preview.criticalChance)} of hits`;card.append(critical);previewText+=`. ${critical.textContent}`;}
+  }
   if(unit.side==='ally'){const stamina=document.createElement('small');stamina.textContent=`Stamina ${unit.stamina.toFixed(1)} / ${unit.maxStamina}`;card.append(stamina);const bar=document.createElement('div');bar.className='meter stamina';const f=document.createElement('span');f.style.width=`${unit.stamina/unit.maxStamina*100}%`;bar.append(f);card.append(bar);}
   const statuses=[];if(unit.dodgeUntil>battle.time)statuses.push(`Dodge ${unit.dodgeUntil-battle.time}t`);if(unit.blessUntil>battle.time)statuses.push(`Blessed ${unit.blessUntil-battle.time}t`);if(unit.guardUntil>battle.time)statuses.push('Protecting ally');if(unit.berserk)statuses.push('BERSERK');if(unit.training)statuses.push(`${unit.training} boosted attacks`);
   if(unit.poison)statuses.push(`Poison ${unit.poison.damage} HP/t · ${Math.max(0,unit.poison.until-battle.time)}t`);
   if(unit.revealed){const intent=battle.plan(unit),kind=intent.special?.kind;statuses.push(`${intent.name} → ${kind==='heal'||kind==='wait'?unit.name:kind==='steal'?'Party Gold':intent.special?.all?'all allies':battle.allies.find(h=>h.id===intent.target)?.name}`);}
   if(statuses.length){const status=document.createElement('small');status.textContent=statuses.join(' · ');card.append(status);}
-  card.setAttribute('aria-label',`${unit.name}, ${Math.ceil(unit.hp)} of ${unit.maxHp} HP${valid?', select target':''}`);return card;
+  card.setAttribute('aria-label',`${unit.name}, ${Math.ceil(unit.hp)} of ${unit.maxHp} HP${previewText?`, ${previewText}`:''}${valid?', select target':''}`);return card;
 }
 function render(){
   if(!battle)return;const actor=battle.actor(),player=actor?.side==='ally'&&!finished;
