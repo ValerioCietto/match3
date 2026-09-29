@@ -86,6 +86,24 @@ async function evaluate(expression){const r=await command('Runtime.evaluate',{ex
   await evaluate(`[...document.querySelectorAll('#commands button')].find(b=>b.textContent.startsWith('Attack')).click()`);
   assert.equal(await evaluate(`document.querySelectorAll('#heroes .target').length`),4);
   assert.equal(await evaluate(`localStorage.getItem('silux.journey.v1')`),endSave);
+  assert.equal(await evaluate(`localStorage.getItem('true ending unlocked')`),null);
+  await evaluate(`document.querySelector('#heroes .target').click();document.querySelector('a[href="world.html"]').click()`);
+  assert(await evaluate(`document.getElementById('return-world').open`));
+  assert.equal(await evaluate(`localStorage.getItem('true ending unlocked')`),null,'opening the return prompt does not unlock the ending');
+  await evaluate(`window.originalSetItem=Storage.prototype.setItem;Storage.prototype.setItem=function(){throw Error('Storage full')};document.getElementById('return-confirm').click()`);
+  assert.match(await evaluate(`document.getElementById('return-error').textContent`),/Could not save/);
+  assert(await evaluate(`location.pathname.endsWith('/end-game.html')`));
+  await evaluate(`Storage.prototype.setItem=window.originalSetItem;document.getElementById('return-confirm').click()`);
+  await until(()=>evaluate(`location.pathname.endsWith('/world.html')&&document.getElementById('end-game')!==null`),'return unlock');
+  assert.equal(await evaluate(`localStorage.getItem('true ending unlocked')`),'true');
+  assert.equal(await evaluate(`localStorage.getItem('silux.journey.v1')`),endSave);
+  await evaluate(`document.getElementById('end-game').click()`);await until(()=>evaluate(`document.getElementById('story')?.open`),'return to ending');
+  assert.deepEqual(await evaluate(`[...document.querySelectorAll('#story-choices button')].map(b=>b.textContent)`),['DO AS THE HEART SAYS','No thank you']);
+  await evaluate(`document.querySelectorAll('#story-choices button')[1].click()`);
+  assert.equal(await evaluate(`document.getElementById('story-title').textContent`),'Congratulations!');
+  assert.match(await evaluate(`document.getElementById('story-copy').textContent`),/The Light King/);
+  assert.match(await evaluate(`document.getElementById('story-copy').textContent`),/barbarianettes/);
+  assert(await evaluate(`document.getElementById('battle').hidden`));
   assert.deepEqual(errors,[]);console.log('Browser checks passed: map, combat, Bestiary, end-game unlock and dialogs, reversal targets, mobile layout, save rollback, no runtime errors.');
  }finally{
   if(ws?.readyState===WebSocket.OPEN){try{await command('Browser.close');}catch{}ws.close();}

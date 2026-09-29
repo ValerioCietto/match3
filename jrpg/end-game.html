@@ -24,7 +24,8 @@
   <section id="epilogue" hidden><div class="label">The throne falls silent</div><h2>Somewhere, a new journey begins.</h2><p>The heroes stand over the fallen Dark Lord. For a moment, the world is quiet.</p><p>Then the dark heart begins to speak.</p><p>Somewhere else, an ordinary young person receives a rusty sword.</p><p>The cycle continues.</p><a href="world.html">Return to the world map</a></section>
 </main>
 <dialog id="story" aria-labelledby="story-title"><div class="label">A choice, apparently</div><h2 id="story-title">The dark heart</h2><div id="story-copy"></div><div id="story-choices" class="choices"></div></dialog>
-<dialog id="restart" aria-labelledby="restart-title"><h2 id="restart-title">SAVE SCUMMING IN PROGRESS</h2><p>You defeated the heroes. They reload their save. You remember everything.</p><button id="restart-battle">BATTLE</button></dialog>
+<dialog id="restart" aria-labelledby="restart-title"><h2 id="restart-title">SAVE SCUMMING IN PROGRESS</h2><p>You defeated the heroes. They reload their save. You remember everything.</p><p>Return to the world map, or fight again?</p><button id="restart-return">Return to the world map</button><button id="restart-battle">BATTLE</button></dialog>
+<dialog id="return-world" aria-labelledby="return-title"><h2 id="return-title">Return to the world map?</h2><p>You have experienced the darkness. Perhaps the heart no longer gets to choose for you.</p><div class="choices"><button id="return-confirm">Return to the world map</button><button id="return-stay">Keep fighting</button></div><p id="return-error" role="alert"></p></dialog>
 <script src="equipment.js"></script><script src="game.js"></script><script src="combat-engine.js"></script><script src="enemy-art.js"></script><script src="end-game-engine.js"></script><script src="end-game.js"></script>
 </body>
 </html>
