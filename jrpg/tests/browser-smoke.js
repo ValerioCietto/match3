@@ -71,7 +71,22 @@ async function evaluate(expression){const r=await command('Runtime.evaluate',{ex
   await evaluate(`document.getElementById('result-action').click()`);await until(()=>evaluate(`location.pathname.endsWith('/world.html')&&document.querySelectorAll('.battle').length===3`),'victory to map');
   assert.equal(await evaluate(`document.querySelectorAll('.battle:not(:disabled)').length`),2);
   await navigate('combat.html?battle=final-1');await until(()=>evaluate(`!document.getElementById('error').hidden`),'locked route guard');assert.match(await evaluate(`document.getElementById('error-copy').textContent`),/locked/);
-  assert.deepEqual(errors,[]);console.log('Browser checks passed: title → map → combat, mobile layout, SAVE SCUM rollback, victory save, next battle unlock, locked URLs, no runtime errors.');
+  await navigate('end-game.html');assert.match(await evaluate(`document.getElementById('error').textContent`),/Defeat the Dark King/);
+  await evaluate(`const endState=SiluxGame.load();endState.completed.push('final-1');endState.selected='final';endState.darkKingParty=SiluxGame.clone(endState.heroes);SiluxGame.save(endState)`);
+  await navigate('world.html');assert.equal(await evaluate(`document.getElementById('end-game').disabled`),false);
+  await evaluate(`document.getElementById('end-game').click()`);await until(()=>evaluate(`document.getElementById('story')?.open`),'ending dialog');
+  const endSave=await evaluate(`localStorage.getItem('silux.journey.v1')`);
+  assert.equal(await evaluate(`document.querySelectorAll('#story-choices button').length`),2);
+  assert(await evaluate(`[...document.querySelectorAll('#story-choices button')].every(b=>b.textContent==='DO AS THE HEART SAYS')`));
+  await evaluate(`document.querySelector('#story-choices button').click()`);assert.match(await evaluate(`document.getElementById('story-copy').textContent`),/20 years/);
+  await evaluate(`document.querySelector('#story-choices button').click()`);
+  assert.equal(await evaluate(`document.querySelectorAll('#heroes .unit').length`),4);
+  assert.equal(await evaluate(`document.querySelectorAll('#commands button').length`),4);
+  assert(await evaluate(`document.documentElement.scrollWidth<=innerWidth`),'ending mobile overflow');
+  await evaluate(`[...document.querySelectorAll('#commands button')].find(b=>b.textContent.startsWith('Attack')).click()`);
+  assert.equal(await evaluate(`document.querySelectorAll('#heroes .target').length`),4);
+  assert.equal(await evaluate(`localStorage.getItem('silux.journey.v1')`),endSave);
+  assert.deepEqual(errors,[]);console.log('Browser checks passed: map, combat, Bestiary, end-game unlock and dialogs, reversal targets, mobile layout, save rollback, no runtime errors.');
  }finally{
   if(ws?.readyState===WebSocket.OPEN){try{await command('Browser.close');}catch{}ws.close();}
   if(browser&&!browser.killed)browser.kill();if(server)server.close();

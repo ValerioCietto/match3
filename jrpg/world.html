@@ -73,6 +73,11 @@ function render(){
     const badge=document.createElement('span');badge.className='badge';badge.textContent=done(id)?'Revisit':button.disabled?'Locked':boss?'Boss →':'Battle →';button.append(number,text,badge);
     button.onclick=()=>{if(persist())location.href=`combat.html?battle=${encodeURIComponent(id)}`;};$('battles').append(button);
   }
+  if(r.id==='final'){
+    const end=document.createElement('button');end.className='battle';end.id='end-game';end.disabled=!done('final-1');
+    end.innerHTML='<span class="number">?</span><span><span class="battle-title">The End?</span><small>What remains after the Dark King falls.</small></span><span class="badge">'+(end.disabled?'Locked':'Enter →')+'</span>';
+    end.onclick=()=>{if(persist())location.href='end-game.html';};$('battles').append(end);
+  }
   $('reward').textContent=`Boss reward · ${r.unlock}`;
   const quotes={Silux:r.quote,Lyra:r.id==='castle'?'Three transformations if the game sells well.':'I have seen this place before. Explaining when would spoil my character arc.',Grond:r.id==='castle'?'So we’re almost finished?':'Can we solve this one by hitting it?', 'Father Patch':r.id==='castle'?'At least two boss transformations remain.':'The gods recommend a full rest. Their rates are surprisingly reasonable.'};
   $('comments').replaceChildren();$('party').replaceChildren();party().forEach(name=>{const p=document.createElement('p');p.className='quote';const speaker=document.createElement('strong');speaker.textContent=name;p.append(speaker,document.createTextNode(`“${quotes[name]}”`));$('comments').append(p);});

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#171321">
+<title>The End? — Silux</title>
+<style>
+:root{color-scheme:dark;--bg:#171321;--panel:#241e30;--gold:#d8b978;--text:#eee5ce;--muted:#b7afc2;--line:#d8b97835}*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#39253e,var(--bg) 70%);color:var(--text);font-family:Georgia,serif;min-height:100vh}header{display:flex;justify-content:space-between;gap:20px;padding:22px 5vw;border-bottom:1px solid var(--line)}a{color:var(--gold)}.logo{letter-spacing:5px;text-decoration:none;font-size:24px}main{max-width:1200px;padding:32px 20px;margin:auto}.label{font:11px system-ui,sans-serif;letter-spacing:2px;text-transform:uppercase;color:var(--gold)}h1{font-size:clamp(32px,6vw,52px);font-weight:normal;margin:10px 0}h2{font-weight:normal;font-size:28px}p{line-height:1.8;color:var(--muted)}button{font:inherit;cursor:pointer;color:var(--text);background:var(--panel);border:1px solid var(--line);padding:14px;min-height:48px}button:disabled{opacity:.45;cursor:default}button:hover:not(:disabled){border-color:var(--gold)}button:focus-visible,a:focus-visible{outline:2px solid var(--gold);outline-offset:4px}.heroes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.unit{padding:16px;background:var(--panel);border:1px solid var(--line);text-align:left}.unit strong{display:block;font-size:20px;font-weight:normal}.unit small{display:block;font:12px/1.7 system-ui,sans-serif;color:var(--muted)}.unit canvas{display:block;width:100%;height:100px}.unit.target{border-color:var(--gold)}.unit.ko{opacity:.5}.unit.active{box-shadow:inset 0 3px var(--gold)}progress{width:100%;height:8px;accent-color:#bd83a4}.throne{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:24px 0}.panel{padding:22px;border:1px solid var(--line);background:#241e30cc}.commands{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.commands small{display:block;margin-top:7px;font:11px/1.6 system-ui,sans-serif;color:var(--muted)}#log{max-height:240px;overflow:auto;font:12px/1.7 system-ui,sans-serif}#log p{margin:0;padding:7px 0;border-bottom:1px solid var(--line)}#prompt{color:var(--gold)}dialog{width:min(620px,calc(100% - 32px));max-height:90svh;overflow:auto;background:var(--panel);color:var(--text);border:1px solid var(--gold);padding:30px}dialog::backdrop{background:#080510e8;backdrop-filter:blur(5px)}.choices{display:grid;gap:12px}.choices button{background:var(--gold);color:var(--bg)}#epilogue{max-width:660px;margin:60px auto;text-align:center}[hidden]{display:none!important}@media(max-width:650px){.heroes{grid-template-columns:repeat(2,minmax(0,1fr))}.throne{grid-template-columns:1fr}.unit{padding:12px}.panel{padding:16px}dialog{padding:22px}}
+</style>
+</head>
+<body>
+<header><a class="logo" href="index.html">SILUX</a><a href="world.html">← World map</a></header>
+<main>
+  <div class="label">The final chapter · Again</div><h1>The End?</h1>
+  <p id="error" role="alert" hidden></p>
+  <section id="battle" hidden aria-label="Dark Lord battle">
+    <p>The throne is yours. The heroes are not here to listen.</p>
+    <div id="heroes" class="heroes" aria-label="Opposing heroes"></div>
+    <div class="throne"><section class="panel"><div class="label">You · The Dark Lord</div><h2>Silux, twenty years later</h2><div id="lord"></div><p id="skeletons"></p></section>
+    <section class="panel"><div class="label" id="clock"></div><p id="prompt" role="status"></p><div id="commands" class="commands"></div><button id="cancel" hidden>Cancel targeting</button></section></div>
+    <section class="panel" aria-label="Battle log"><div class="label">The same old story</div><div id="log" role="log"></div></section>
+  </section>
+  <section id="epilogue" hidden><div class="label">The throne falls silent</div><h2>Somewhere, a new journey begins.</h2><p>The heroes stand over the fallen Dark Lord. For a moment, the world is quiet.</p><p>Then the dark heart begins to speak.</p><p>Somewhere else, an ordinary young person receives a rusty sword.</p><p>The cycle continues.</p><a href="world.html">Return to the world map</a></section>
+</main>
+<dialog id="story" aria-labelledby="story-title"><div class="label">A choice, apparently</div><h2 id="story-title">The dark heart</h2><div id="story-copy"></div><div id="story-choices" class="choices"></div></dialog>
+<dialog id="restart" aria-labelledby="restart-title"><h2 id="restart-title">SAVE SCUMMING IN PROGRESS</h2><p>You defeated the heroes. They reload their save. You remember everything.</p><button id="restart-battle">BATTLE</button></dialog>
+<script src="equipment.js"></script><script src="game.js"></script><script src="combat-engine.js"></script><script src="enemy-art.js"></script><script src="end-game-engine.js"></script><script src="end-game.js"></script>
+</body>
+</html>
