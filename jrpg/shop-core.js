@@ -20,7 +20,7 @@
       if(!Number.isSafeInteger(item.price)||item.price<1)throw Error(`Invalid price for ${item.name}.`);
       if(item.stock!==null&&(!Number.isSafeInteger(item.stock)||item.stock<0))throw Error(`Invalid stock for ${item.name}.`);
       if(item.type==='equipment')E.validateShopItem(item);
-      else if(item.type!=='consumable'||!['healing-potion','stamina-potion'].includes(item.itemId))throw Error(`Invalid item type: ${item.name}.`);
+      else if(item.type!=='consumable'||!Object.hasOwn(G.consumables,item.itemId))throw Error(`Invalid item type: ${item.name}.`);
     }
     for(const shop of shops.shops)if(!data.items.some(i=>i.shop===shop.id))throw Error(`No stock defined for ${shop.name}.`);
     return data;

@@ -4,8 +4,27 @@ const G=require('../game.js'),E=require('../equipment.js'),S=require('../shop-co
 const shops=require('../shops.json'),catalogue=require('../shop.json'),battles=require('../battles.json');
 function stateFor(shop,gold=5000){const s=G.defaults();s.completed=[shops.shops.find(s=>s.id===shop).unlockBattle];s.gold=gold;return s;}
 function buy(state,shop,id,quantity=1){return S.buy(state,shop,id,quantity,shops,catalogue);}
-test('human-editable JSON defines exactly three shops with 28 valid offers',()=>{
- S.validateShops(shops);S.validateItems(catalogue,shops);assert.equal(shops.shops.length,3);assert.equal(catalogue.items.length,28);
+
+test('regional health and stamina tiers buy distinct stacks and restore fixed capped amounts',()=>{
+ for(const [shop,tier,amount,price] of [['sewers','vial',50,12],['city','potion',150,25],['castle','elixir',500,50]])for(const resource of ['healing','stamina']){
+  const id=`${resource}-${tier}`,state=stateFor(shop),next=G.normalize(buy(state,shop,`shop-${shop}-${resource}`));
+  assert.equal(next.gold,state.gold-price);assert(next.inventory.some(i=>i.id===id));
+  const b=new C.Battle(next,battles.battles[0],battles),a=b.allies[0],stat=resource==='healing'?'hp':'stamina',max=stat==='hp'?'maxHp':'maxStamina';
+  a[max]=1000;a[stat]=1;const count=b.state.inventory.find(i=>i.id===id).quantity;
+  b.act(`item:${id}`,a.id);assert.equal(a[stat],amount+1);assert.equal(b.state.inventory.find(i=>i.id===id)?.quantity||0,count-1);
+  const capped=new C.Battle(next,battles.battles[0],battles),hero=capped.allies[0];hero[stat]=hero[max]-1;capped.act(`item:${id}`,hero.id);assert.equal(hero[stat],hero[max]);
+ }
+});
+test('all three leg tiers retain stats across purchase, reload, equip, and combat',()=>{
+ for(const [shop,id,bonuses] of [['sewers','fig-leaf',{cooldown:-1,defense:-3}],['city','fancy-trousers',{cooldown:-1,defense:3}],['castle','mithril-greaves',{defense:5,attack:3,maxHp:10}]]){
+  let state=stateFor(shop);state=G.equip(state,'silux','legs',null);const before=G.stats(state.heroes[0]);
+  state=G.normalize(buy(state,shop,`shop-${shop}-${id}`));state=G.equip(state,'silux','legs',`shop-${shop}-${id}`);state=G.normalize(state);
+  const actor=new C.Battle(state,battles.battles[0],battles).allies[0];
+  for(const [stat,value] of Object.entries(bonuses))assert.equal(actor[stat],before[stat]+value);
+ }
+});
+test('human-editable JSON defines exactly three shops with 31 valid offers',()=>{
+ S.validateShops(shops);S.validateItems(catalogue,shops);assert.equal(shops.shops.length,3);assert.equal(catalogue.items.length,31);
  assert.deepEqual(shops.shops.map(s=>s.unlockBattle),['sewers-3','city-3','castle-2']);
  const broken=G.clone(catalogue);broken.items[0].price=-1;assert.throws(()=>S.validateItems(broken,shops),/price/);
  const duplicate=G.clone(catalogue);duplicate.items.push(duplicate.items[0]);assert.throws(()=>S.validateItems(duplicate,shops),/Duplicate/);

@@ -16,6 +16,11 @@
     patch:{name:'Father Patch',hp:45,attack:6,defense:4,accuracy:90,crit:5,critDamage:120,cooldown:11,stamina:40,hpGrowth:7,attackGrowth:1,staminaGrowth:2,weapon:'Walking Stick'}
   };
   const clone = value => JSON.parse(JSON.stringify(value));
+  const consumables={};
+  for(const [tier,amount] of [['vial',50],['potion',150],['elixir',500]])for(const resource of ['healing','stamina']){
+    const stat=resource==='healing'?'hp':'stamina';
+    consumables[`${resource}-${tier}`]={name:`${tier==='vial'?'Small ':''}${stat==='hp'?'Health':'Stamina'} ${tier[0].toUpperCase()+tier.slice(1)}`,stat,amount,description:`Restore up to ${amount} ${stat==='hp'?'HP':'Stamina'} to a living ally.`};
+  }
   const level = xp => Math.min(20, Math.floor(Math.sqrt(Math.max(0,xp)/100))+1);
   const finite = (v,fallback,min=0,max=1e9) => Number.isFinite(v)?Math.min(max,Math.max(min,v)):fallback;
   function stats(hero) {
@@ -84,6 +89,6 @@
     const updated=stats(hero);hero.hp=Math.min(hero.hp,updated.maxHp);hero.stamina=Math.min(hero.stamina,updated.maxStamina);
     return next;
   }
-  const api={KEY,regions,roster,clone,level,stats,newHero,defaults,normalize,validBattle,available,recruit,load,save,rest,capacity,addLoot,equip};
+  const api={KEY,regions,roster,consumables,clone,level,stats,newHero,defaults,normalize,validBattle,available,recruit,load,save,rest,capacity,addLoot,equip};
   root.SiluxGame=api;if(typeof module!=='undefined')module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);

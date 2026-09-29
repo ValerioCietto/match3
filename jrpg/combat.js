@@ -79,7 +79,7 @@ function render(){
   }
   if(player&&!pending&&mode==='item'){
     const items=Object.entries(C.itemInfo).map(([id,info])=>({id,...info,quantity:battle.state.inventory.filter(i=>i.id===id).reduce((n,i)=>n+i.quantity,0)}));
-    for(const item of items){const button=document.createElement('button');button.className='choice';button.disabled=!item.quantity;button.textContent=`${item.name} × ${item.quantity}`;const help=document.createElement('small');help.textContent=item.description;button.append(help);button.onclick=()=>choose(`item:${item.id}`);$('choices').append(button);}
+    for(const item of items.filter(item=>item.quantity>0)){const button=document.createElement('button');button.className='choice';button.disabled=!item.quantity;button.textContent=`${item.name} × ${item.quantity}`;const help=document.createElement('small');help.textContent=item.description;button.append(help);button.onclick=()=>choose(`item:${item.id}`);$('choices').append(button);}
   }
   $('ledger').replaceChildren();const gold=document.createElement('strong');gold.textContent=`${battle.state.gold} Gold`;const reward=document.createElement('div');reward.textContent=`This attempt: +${battle.xp} XP each · ${battle.gold>=0?'+':''}${battle.gold} Gold`;$('ledger').append(gold,reward);
   const log=$('log');if(log.childElementCount!==Math.min(battle.logs.length,80)||log.dataset.count!==String(battle.logs.length)){

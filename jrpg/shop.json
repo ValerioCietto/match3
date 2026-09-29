@@ -113,27 +113,27 @@
     },
     {
       "id": "shop-sewers-healing",
-      "itemId": "healing-potion",
+      "itemId": "healing-vial",
       "shop": "sewers",
       "type": "consumable",
-      "name": "Healing Potion",
+      "name": "Small Health Vial",
       "rarity": "Common",
       "condition": "Bottle washed on the outside",
-      "price": 8,
+      "price": 12,
       "stock": null,
-      "description": "Restores 50% of a living ally's maximum HP. The contents are reliable; the packaging is a separate matter."
+      "description": "Restores up to 50 HP to one living ally."
     },
     {
       "id": "shop-sewers-stamina",
-      "itemId": "stamina-potion",
+      "itemId": "stamina-vial",
       "shop": "sewers",
       "type": "consumable",
-      "name": "Stamina Potion",
+      "name": "Small Stamina Vial",
       "rarity": "Common",
       "condition": "Cork replaced with a thumb-sized pebble",
-      "price": 14,
+      "price": 12,
       "stock": null,
-      "description": "Fully restores one living ally's Stamina. Shake gently. The pebble is not included in the effect."
+      "description": "Restores up to 50 Stamina to one living ally."
     },
     {
       "id": "shop-city-sword",
@@ -302,12 +302,12 @@
       "itemId": "healing-potion",
       "shop": "city",
       "type": "consumable",
-      "name": "Healing Potion",
+      "name": "Health Potion",
       "rarity": "Common",
       "condition": "Factory sealed",
-      "price": 8,
+      "price": 25,
       "stock": null,
-      "description": "Restores 50% of a living ally's maximum HP. Includes a legible label."
+      "description": "Restores up to 150 HP to one living ally."
     },
     {
       "id": "shop-city-stamina",
@@ -317,9 +317,9 @@
       "name": "Stamina Potion",
       "rarity": "Common",
       "condition": "Factory sealed",
-      "price": 14,
+      "price": 25,
       "stock": null,
-      "description": "Fully restores one living ally's Stamina. Made without mysterious sediment."
+      "description": "Restores up to 150 Stamina to one living ally."
     },
     {
       "id": "shop-castle-sword",
@@ -496,27 +496,82 @@
     },
     {
       "id": "shop-castle-healing",
-      "itemId": "healing-potion",
+      "itemId": "healing-elixir",
       "shop": "castle",
       "type": "consumable",
-      "name": "Healing Potion",
+      "name": "Health Elixir",
       "rarity": "Common",
       "condition": "Unused; former owner saved it for later",
-      "price": 12,
+      "price": 50,
       "stock": null,
-      "description": "Restores 50% of a living ally's maximum HP. The previous owner was saving this for the final phase. Bottle polished at your expense."
+      "description": "Restores up to 500 HP to one living ally."
     },
     {
       "id": "shop-castle-stamina",
-      "itemId": "stamina-potion",
+      "itemId": "stamina-elixir",
       "shop": "castle",
       "type": "consumable",
-      "name": "Stamina Potion",
+      "name": "Stamina Elixir",
       "rarity": "Common",
       "condition": "Found in a fallen hero's untouched emergency pouch",
-      "price": 20,
+      "price": 50,
       "stock": null,
-      "description": "Fully restores one living ally's Stamina. The surcharge covers removal of a particularly optimistic name tag."
+      "description": "Restores up to 500 Stamina to one living ally."
+    },
+    {
+      "id": "shop-sewers-fig-leaf",
+      "shop": "sewers",
+      "type": "equipment",
+      "name": "Fig Leaf",
+      "rarity": "Dubious",
+      "condition": "Ready to wear",
+      "price": 8,
+      "stock": null,
+      "slots": [
+        "legs"
+      ],
+      "stats": {
+        "cooldown": -1,
+        "defense": -3
+      },
+      "description": "It doesn't cover much, but you feel faster."
+    },
+    {
+      "id": "shop-city-fancy-trousers",
+      "shop": "city",
+      "type": "equipment",
+      "name": "Fancy Trousers",
+      "rarity": "Common",
+      "condition": "Ready to wear",
+      "price": 55,
+      "stock": null,
+      "slots": [
+        "legs"
+      ],
+      "stats": {
+        "cooldown": -1,
+        "defense": 3
+      },
+      "description": "A legit pair of jeans."
+    },
+    {
+      "id": "shop-castle-mithril-greaves",
+      "shop": "castle",
+      "type": "equipment",
+      "name": "Mithril Greaves",
+      "rarity": "Rare",
+      "condition": "Polished armor",
+      "price": 250,
+      "stock": 4,
+      "slots": [
+        "legs"
+      ],
+      "stats": {
+        "defense": 5,
+        "attack": 3,
+        "maxHp": 10
+      },
+      "description": "Light mithril leg armor, fit for the final battle."
     }
   ]
 }

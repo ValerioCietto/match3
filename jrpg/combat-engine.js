@@ -26,7 +26,7 @@
     doubleEdge:{name:'Overpowered Double Edge',cost:30,level:20,weapon:'Healing Staff',kind:'revive',all:true,edge:true,description:'Revive and fully heal allies, then deal total HP restored to every enemy.'}
   };
   const heroSkills={silux:['strong','double','piercer','wind','training','flurry'],lyra:['precision','foreshadow','armor','footnote','overHeal'],grond:['heavy','guard','sweep','structural','berserk'],patch:['miracle','terms','therapy','coverage','doubleEdge']};
-  const itemInfo={'healing-potion':{name:'Healing Potion',description:'Restore 50% of a living ally’s maximum HP.'},'stamina-potion':{name:'Stamina Potion',description:'Restore a living ally’s Stamina completely.'}};
+  const itemInfo=G.consumables;
   function validate(data){
     if(data?.version!==1||!data.enemies||!Array.isArray(data.battles))throw Error('Unsupported encounter data.');
     const ids=new Set();
@@ -152,7 +152,7 @@
       this.log(`${a.name} uses ${s?.name||itemInfo[itemId]?.name||action}.`);
       if(action==='dodge')a.dodgeUntil=this.time+20;
       else if(action==='attack'){this.damage(a,target,{power:a.training>0?1.5:1});if(a.training>0)a.training--;}
-      else if(isItem){if(itemId==='healing-potion')this.heal(target,.5);else{target.stamina=target.maxStamina;this.log(`${target.name} restores all Stamina.`);}stack.quantity--;this.state.inventory=this.state.inventory.filter(i=>i.quantity>0);}
+      else if(isItem){const item=itemInfo[itemId];if(item.stat==='hp')this.restoreHp(target,item.amount);else{const amount=Math.min(target.maxStamina-target.stamina,item.amount);target.stamina+=amount;this.log(`${target.name} restores ${amount} Stamina.`);}stack.quantity--;this.state.inventory=this.state.inventory.filter(i=>i.quantity>0);}
       else if(s.kind==='hit'){const targets=s.all?this.living('enemy'):[target];for(const victim of targets)for(let i=0;i<(s.hits||1);i++)this.damage(a,victim,{...s});}
       else if(s.kind==='entry'){
         const live=this.living('enemy'),big=E.hasWeaponType(a.source,'Big Sword');

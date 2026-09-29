@@ -84,7 +84,7 @@ function render(){
   state.heroes.forEach(hero=>{const stats=SiluxGame.stats(hero),member=document.createElement('div');member.className='member';member.textContent=`${stats.name} · Lv ${stats.level}`;const info=document.createElement('small');info.textContent=`HP ${Math.ceil(hero.hp)}/${stats.maxHp} · Stamina ${hero.stamina.toFixed(1)}/${stats.maxStamina}`;member.append(info);
     const manage=document.createElement('a');manage.href=`hero-manager.html?hero=${hero.id}`;manage.textContent='Manage equipment →';manage.style.cssText='display:block;margin-top:12px;color:var(--gold)';member.append(manage);$('party').append(member);
   });
-  $('supplies').textContent=`${state.gold} Gold · Inventory ${state.inventory.length}/${SiluxGame.capacity(state)} slots · ${state.inventory.filter(i=>i.id==='healing-potion').reduce((n,i)=>n+i.quantity,0)} healing potions`;
+  $('supplies').textContent=`${state.gold} Gold · Inventory ${state.inventory.length}/${SiluxGame.capacity(state)} slots · ${state.inventory.filter(i=>SiluxGame.consumables[i.id]?.stat==='hp').reduce((n,i)=>n+i.quantity,0)} health items`;
   $('rest').disabled=state.gold<10||!canSave;
   $('progress').value=state.completed.length;$('progress-label').textContent=`${state.completed.length} / 19 battles completed`;draw();
   if(window.renderWorldShops)window.renderWorldShops();
