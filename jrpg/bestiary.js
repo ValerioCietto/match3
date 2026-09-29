@@ -15,6 +15,23 @@
     const article = element('article', undefined, `monster${enemy.boss ? ' boss' : ''}`);
     article.dataset.enemy = id;
     article.append(element('div', enemy.boss ? 'Boss' : 'Regular monster', 'label'), element('h2', enemy.name));
+    const portrait = element('canvas', undefined, 'portrait');
+    portrait.width = 440;
+    portrait.height = 208;
+    portrait.setAttribute('role', 'img');
+    portrait.setAttribute('aria-label', enemy.name);
+    const ctx = portrait.getContext('2d');
+    if (ctx) {
+      ctx.translate(220, 174);
+      const scale = enemy.boss ? 1.5 : 1.8;
+      ctx.scale(scale, scale);
+      ctx.fillStyle = '#07131655';
+      ctx.beginPath();
+      ctx.ellipse(0, 10, 40, 9, 0, 0, Math.PI * 2);
+      ctx.fill();
+      SiluxEnemyArt.draw(ctx, enemy);
+    }
+    article.append(portrait);
     const stats = element('dl');
     for (const [label, value] of [['HP', enemy.hp], ['Attack', enemy.attack], ['Defense', `${enemy.defense}%`], ['Accuracy', `${enemy.accuracy}%`], ['Action cooldown', `${enemy.cooldown}t`], ['XP', enemy.xp], ['Gold', enemy.gold]]) {
       const pair = element('div');
