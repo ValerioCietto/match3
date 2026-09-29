@@ -7,11 +7,11 @@
   };
   const items = [
     {id:'rusty-sword',name:'Rusty Sword',slots:['weapon'],classes:['silux','grond'],stats:{attack:2},description:'Chosen by the village budget committee.'},
-    {id:'dagger',name:'Dagger',slots:['weapon'],classes:['lyra','silux'],stats:{},description:'For secrets best delivered at close range.'},
-    {id:'heavy-axe',name:'Heavy Axe',slots:['weapon'],classes:['grond'],stats:{},description:'Grond considers this a conversational aid.'},
+    {id:'dagger',name:'Dagger',slots:['weapon'],classes:['lyra','silux'],stats:{attack:1,cooldown:-2},description:'For quick strikes.'},
+    {id:'heavy-axe',name:'Heavy Axe',slots:['weapon'],classes:['grond'],stats:{attack:4,cooldown:2},description:'Grond considers this a conversational aid.'},
     {id:'walking-stick',name:'Walking Stick',slots:['weapon'],classes:['patch','lyra'],stats:{},description:'The basic plan. Miracles billed separately.'},
-    {id:'big-sword',name:'Big Sword',slots:['weapon'],classes:['silux','grond'],boss:'desert-2',hands:2,stats:{attack:6,cooldown:2},description:'Occupies both hands. Subtlety sold separately.'},
-    {id:'healing-staff',name:'Healing Staff',slots:['weapon'],classes:['lyra','patch'],boss:'mountain-4',stats:{attack:2},description:'Enables staff-dependent healing skills at their required levels.'},
+    {id:'big-sword',name:'Big Sword',slots:['weapon'],classes:['silux','grond'],boss:'desert-2',hands:2,stats:{attack:15,cooldown:3},description:'Occupies both hands. Only for mighty warriors that have something to compensate.'},
+    {id:'healing-staff',name:'Healing Staff',slots:['weapon'],classes:['lyra','patch'],boss:'mountain-4',stats:{attack:2,cooldown:-2,defense:10},description:'Enables staff-dependent healing skills at their required levels. Plus looks cool, all sparkling and stuff.'},
     {id:'wooden-buckler',name:'Wooden Buckler',slots:['offhand'],stats:{defense:3},description:'A small, portable disagreement with incoming damage.'},
     {id:'leather-cap',name:'Leather Cap',slots:['head'],stats:{defense:1},description:'Marginally better than protagonist hair.'},
     {id:'dark-crown',name:'Dark Crown',slots:['head'],level:15,stats:{attack:5,defense:5},description:'Previously owned. Ominous aura included.'},
@@ -34,7 +34,9 @@
     {id:'large-backpack',name:'Large Backpack',slots:['backpack'],value:8,level:8,stats:{},description:'Adds 8 slots. Your companions may now overpack collectively.'},
     {id:'simple-belt',name:'Simple Belt',slots:['belt'],value:1,stats:{},description:'Adds 1 shared inventory slot. Also holds up trousers.'},
     {id:'utility-belt',name:'Utility Belt',slots:['belt'],value:2,level:5,stats:{},description:'Adds 2 shared inventory slots.'},
-    {id:'borrowed-courage',name:'Borrowed Courage',slots:['heart'],level:12,stats:{maxHp:20},description:'A little extra heart, recovered from someone without one.'}
+    {id:'borrowed-courage',name:'Borrowed Courage',slots:['heart'],level:12,stats:{maxHp:20,maxStamina:10},description:'A little extra heart, recovered from someone without one. You feel braver already.'},
+    {id:'dark-heart',name:'Dark Heart',slots:['heart'],level:20,stats:{maxHp:-50,maxStamina:-50,attack:200},description:'What sacrifices are you willing to make for power?'},
+    {id:'epic-cape',name:'Epic Cape',slots:['cape'],stats:{attack:5,defense:5,cooldown:-1,maxHp:10,maxStamina:5,accuracy:5,crit:5},description:'Somehow this cape improves all stats, but by great capes comes great washing responsibility.'}
   ];
   const byId = Object.fromEntries(items.map(item=>[item.id,item]));
   function validateShopItem(item) {
