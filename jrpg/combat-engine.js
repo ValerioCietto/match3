@@ -34,9 +34,14 @@
       if(!G.validBattle(b.id)||ids.has(b.id)||typeof b.name!=='string'||b.region!==b.id.split('-')[0]||!Array.isArray(b.enemies)||b.enemies.length<1||b.enemies.length>8)throw Error('Invalid or duplicate battle.');
       ids.add(b.id);
       for(const id of b.enemies){const e=data.enemies[id];if(!e||typeof e.name!=='string')throw Error(`Unknown enemy: ${id}`);
-        for(const stat of ['hp','attack','defense','accuracy','cooldown','xp','gold'])if(!Number.isFinite(e[stat])||e[stat]<0)throw Error(`Invalid ${stat}: ${id}`);
+        for(const stat of ['hp','attack','defense','accuracy','cooldown','xp','gold'])if(!Number.isFinite(e[stat])||e[stat]<(stat==='defense'?-100:0))throw Error(`Invalid ${stat}: ${id}`);
         if(e.hp<1||e.cooldown<1||e.defense>100||e.accuracy>100)throw Error(`Invalid combat stats: ${id}`);
         if(e.special&&(!Number.isInteger(e.special.every)||e.special.every<1||!Number.isFinite(e.special.multiplier)||e.special.multiplier<0||typeof e.special.name!=='string'))throw Error(`Invalid special: ${id}`);
+        if(e.special){const s=e.special;
+          if(!['hit','drain','heal','steal','wait','poison'].includes(s.kind||'hit'))throw Error(`Invalid special kind: ${id}`);
+          for(const field of ['heal','gold','goldFraction','selfDamage','poisonDamage','duration'])if(s[field]!==undefined&&(!Number.isFinite(s[field])||s[field]<0))throw Error(`Invalid special ${field}: ${id}`);
+          if(s.kind==='heal'&&!(s.heal>0)||s.kind==='steal'&&!(s.gold>0||s.goldFraction>0)||s.goldFraction>1||s.kind==='poison'&&(!(s.poisonDamage>0)||!Number.isInteger(s.duration)||s.duration<1))throw Error(`Invalid special effect: ${id}`);
+        }
         if(!Array.isArray(e.loot)||e.loot.some(l=>typeof l.id!=='string'||typeof l.name!=='string'||!Number.isFinite(l.chance)||l.chance<0||l.chance>1||!Number.isInteger(l.quantity)||l.quantity<1))throw Error(`Invalid loot: ${id}`);
       }
       if(Boolean(b.boss)!==b.enemies.some(id=>data.enemies[id].boss))throw Error(`Boss flag mismatch: ${b.id}`);
@@ -62,6 +67,15 @@
       const next=this.queue()[0];if(!next)return false;
       const dt=Math.min(1,next.next-this.time);this.time+=dt;
       for(const ally of this.allies)ally.stamina=Math.min(ally.maxStamina,ally.stamina+dt*.1);
+      for(const unit of this.units()){
+        const poison=unit.poison;
+        if(!poison||unit.hp<=0)continue;
+        while(poison.next<=this.time&&poison.next<=poison.until&&unit.hp>0){
+          this.loseHp(unit,poison.damage,'Poison');poison.next++;
+        }
+        if(this.time>=poison.until)unit.poison=null;
+      }
+      this.checkOutcome();
       return true;
     }
     skillList(actor){return (heroSkills[actor.id]||[]).map(id=>({id,...skills[id]}));}
@@ -79,17 +93,28 @@
       enemy.intent={target:targets[Math.floor(this.random()*targets.length)]?.id,name:special?.name||'Attack',special};return enemy.intent;
     }
     damage(attacker,target,options={}){
-      if(target.hp<=0)return;
+      if(target.hp<=0)return 0;
       let victim=target;
       if(target.side==='ally'&&!options.all){const guard=this.allies.find(a=>a.hp>0&&a.guardTarget===target.id&&a.guardUntil>this.time);if(guard){victim=guard;this.log(`${guard.name} intercepts the attack on ${target.name}.`);}}
-      if(!options.sure&&(this.random()*100>=(options.accuracy??attacker.accuracy)||(victim.dodgeUntil>this.time&&this.random()<.9))){this.log(`${attacker.name} misses ${victim.name}.`);return;}
+      if(!options.sure&&(this.random()*100>=(options.accuracy??attacker.accuracy)||(victim.dodgeUntil>this.time&&this.random()<.9))){this.log(`${attacker.name} misses ${victim.name}.`);return 0;}
       const critical=!options.flat&&this.random()*100<(options.crit??attacker.crit??0);
       let raw=options.flat??attacker.attack*(options.power??1)*(attacker.berserk?2:1)*(critical?(options.critDamage??attacker.critDamage)/100:1);
       if(options.flat===undefined)raw*=1-victim.defense*(1-(options.pierce||0))/100;
       if(victim.blessUntil>this.time)raw*=.75;
-      const amount=options.flat===0?0:Math.max(1,Math.round(raw));victim.hp=Math.max(0,victim.hp-amount);
+      const amount=options.flat===0?0:Math.max(1,Math.round(raw)),dealt=Math.min(victim.hp,amount);victim.hp=Math.max(0,victim.hp-amount);
       this.log(`${attacker.name} → ${victim.name}: ${amount} damage${critical?' · CRITICAL':''}.`);
       if(victim.hp===0){this.log(`${victim.name} is ${victim.side==='ally'?'KOed':'defeated'}.`);if(victim.side==='enemy')this.reward(victim);}
+      if(victim.hp===0)victim.poison=null;
+      return dealt;
+    }
+    loseHp(unit,amount,label){
+      if(unit.hp<=0)return;
+      unit.hp=Math.max(0,unit.hp-amount);this.log(`${label}: ${unit.name} loses ${amount} HP.`);
+      if(unit.hp===0){unit.poison=null;this.log(`${unit.name} is ${unit.side==='ally'?'KOed':'defeated'}.`);if(unit.side==='enemy')this.reward(unit);}
+    }
+    restoreHp(unit,amount){
+      if(unit.hp<=0)return;
+      const restored=Math.min(unit.maxHp-unit.hp,amount);unit.hp+=restored;this.log(`${unit.name} restores ${restored} HP.`);
     }
     reward(enemy){
       if(enemy.rewarded)return;enemy.rewarded=true;this.xp+=enemy.xp;this.gold+=enemy.gold;this.state.gold+=enemy.gold;
@@ -118,7 +143,7 @@
       else if(s.kind==='training')a.training=2;
       else if(s.kind==='bless')target.blessUntil=this.time+20;
       else if(s.kind==='guard'){a.guardTarget=target.id;a.guardUntil=this.time+20;}
-      else if(s.kind==='cleanse'){target.negativeStatus=null;this.log(`${target.name} is free of removable negative statuses.`);}
+      else if(s.kind==='cleanse'){target.poison=null;target.negativeStatus=null;this.log(`${target.name} is free of removable negative statuses.`);}
       else if(s.kind==='reveal'){const intent=this.plan(target);target.revealed=true;this.log(`${target.name} plans ${intent.name} → ${intent.special?.all?'all allies':this.allies.find(h=>h.id===intent.target)?.name}.`);}
       else if(s.kind==='flurry'){for(let i=0;i<30&&this.living('enemy').length;i++){const live=this.living('enemy');this.damage(a,live[Math.floor(this.random()*live.length)],{power:.8,accuracy:75});}}
       else if(s.kind==='berserk'){for(const victim of this.living('enemy'))this.damage(a,victim,{sure:true,all:true});a.berserk=true;}
@@ -128,7 +153,24 @@
     enemyAct(){
       const a=this.actor();if(!a||a.side!=='enemy')return;
       const intent=this.plan(a),s=intent.special,targets=s?.all?this.living('ally'):[this.allies.find(h=>h.id===intent.target)];
-      this.log(`${a.name} uses ${intent.name}.`);for(const victim of targets)if(victim)this.damage(a,victim,{power:s?.multiplier||1,all:Boolean(s?.all)});
+      this.log(`${a.name} uses ${intent.name}.`);
+      const kind=s?.kind||'hit';
+      if(kind==='heal')this.restoreHp(a,s.heal);
+      else if(kind==='steal'){
+        const lost=Math.min(this.state.gold,s.goldFraction?Math.ceil(this.state.gold*s.goldFraction):s.gold);
+        this.state.gold-=lost;this.gold-=lost;this.log(`The party loses ${lost} Gold.`);
+      }else if(kind==='wait')this.log(`${a.name} does nothing.`);
+      else if(kind==='poison'){
+        for(const victim of targets)if(victim?.hp>0){
+          victim.poison={damage:s.poisonDamage,until:this.time+s.duration,next:victim.poison?.next??this.time+1};
+          this.log(`${victim.name} is poisoned: ${s.poisonDamage} HP per timeline unit for ${s.duration}t.`);
+        }
+      }else{
+        let dealt=0;
+        for(const victim of targets)if(victim)dealt+=this.damage(a,victim,{power:s?.multiplier??1,all:Boolean(s?.all)});
+        if(kind==='drain')this.restoreHp(a,dealt);
+        if(s?.selfDamage)this.loseHp(a,s.selfDamage,s.name);
+      }
       a.turns++;a.next=this.time+a.cooldown;a.intent=null;a.revealed=false;this.checkOutcome();
     }
     checkOutcome(){if(!this.living('enemy').length)this.outcome='victory';else if(!this.living('ally').length)this.outcome='defeat';}

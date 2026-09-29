@@ -58,7 +58,13 @@
           "chance": 0.2,
           "quantity": 1
         }
-      ]
+      ],
+      "special": {
+        "name": "Vampiric Bite",
+        "every": 2,
+        "kind": "drain",
+        "multiplier": 2
+      }
     },
     "rat-king": {
       "name": "Rat King",
@@ -75,7 +81,7 @@
       "special": {
         "name": "Royal Bite",
         "every": 3,
-        "multiplier": 1.5
+        "multiplier": 5
       },
       "loot": [
         {
@@ -122,15 +128,22 @@
           "chance": 0.4,
           "quantity": 1
         }
-      ]
+      ],
+      "special": {
+        "name": "Sunbathing",
+        "every": 2,
+        "kind": "heal",
+        "multiplier": 0,
+        "heal": 20
+      }
     },
     "field-wolf": {
-      "name": "Field Wolf",
+      "name": "Speed Wolf",
       "hp": 38,
       "attack": 9,
       "defense": 5,
       "accuracy": 90,
-      "cooldown": 10,
+      "cooldown": 5,
       "xp": 110,
       "gold": 10,
       "color": "#b4b5a0",
@@ -166,7 +179,8 @@
         "name": "Aggressive Photosynthesis",
         "every": 3,
         "multiplier": 0.7,
-        "all": true
+        "all": true,
+        "kind": "drain"
       },
       "loot": [
         {
@@ -198,10 +212,10 @@
     "tax-collector": {
       "name": "Tax Collector",
       "hp": 60,
-      "attack": 11,
+      "attack": 5,
       "defense": 10,
       "accuracy": 90,
-      "cooldown": 12,
+      "cooldown": 6,
       "xp": 160,
       "gold": 18,
       "color": "#b09191",
@@ -213,15 +227,22 @@
           "chance": 0.35,
           "quantity": 1
         }
-      ]
+      ],
+      "special": {
+        "name": "Collect Taxes",
+        "every": 2,
+        "kind": "steal",
+        "multiplier": 0,
+        "goldFraction": 0.1
+      }
     },
     "city-guard": {
       "name": "Overtime Guard",
       "hp": 72,
-      "attack": 13,
-      "defense": 15,
+      "attack": 25,
+      "defense": 30,
       "accuracy": 85,
-      "cooldown": 13,
+      "cooldown": 15,
       "xp": 180,
       "gold": 20,
       "color": "#8cabb5",
@@ -239,16 +260,22 @@
           "chance": 0.3,
           "quantity": 1
         }
-      ]
+      ],
+      "special": {
+        "name": "Overdue Sleep Nap",
+        "every": 3,
+        "kind": "wait",
+        "multiplier": 0
+      }
     },
     "apache": {
       "name": "Apache Helicopter",
       "boss": true,
-      "hp": 240,
-      "attack": 18,
+      "hp": 300,
+      "attack": 10,
       "defense": 18,
       "accuracy": 90,
-      "cooldown": 13,
+      "cooldown": 7,
       "xp": 850,
       "gold": 80,
       "color": "#90a48b",
@@ -289,7 +316,7 @@
     "sand-scorpion": {
       "name": "Sand Scorpion",
       "hp": 85,
-      "attack": 17,
+      "attack": 12,
       "defense": 18,
       "accuracy": 85,
       "cooldown": 12,
@@ -304,7 +331,15 @@
           "chance": 0.4,
           "quantity": 1
         }
-      ]
+      ],
+      "special": {
+        "name": "Poisoned Sting",
+        "every": 3,
+        "kind": "poison",
+        "multiplier": 0,
+        "poisonDamage": 1,
+        "duration": 50
+      }
     },
     "sand-bandit": {
       "name": "Sand Bandit",
@@ -330,24 +365,35 @@
           "chance": 0.25,
           "quantity": 1
         }
-      ]
+      ],
+      "special": {
+        "name": "Cut Backpack",
+        "every": 2,
+        "kind": "steal",
+        "multiplier": 0,
+        "gold": 10
+      }
     },
     "scorpion-centaur": {
       "name": "Giant Scorpion Centaur",
       "boss": true,
       "hp": 420,
-      "attack": 26,
+      "attack": 30,
       "defense": 20,
       "accuracy": 90,
-      "cooldown": 14,
+      "cooldown": 17,
       "xp": 1500,
       "gold": 120,
       "color": "#cc9a64",
       "shape": "beast",
       "special": {
-        "name": "Too Many Limbs",
+        "name": "Poison Sing",
         "every": 3,
-        "multiplier": 1.7
+        "kind": "poison",
+        "multiplier": 0,
+        "all": true,
+        "poisonDamage": 1,
+        "duration": 50
       },
       "loot": [
         {
@@ -378,9 +424,9 @@
     },
     "slime": {
       "name": "Swamp Slime",
-      "hp": 90,
+      "hp": 180,
       "attack": 15,
-      "defense": 12,
+      "defense": -100,
       "accuracy": 85,
       "cooldown": 14,
       "xp": 300,
@@ -394,10 +440,16 @@
           "chance": 0.5,
           "quantity": 1
         }
-      ]
+      ],
+      "special": {
+        "name": "Blurp",
+        "every": 3,
+        "kind": "wait",
+        "multiplier": 0
+      }
     },
     "bog-wisp": {
-      "name": "Bog Wisp",
+      "name": "Alcohol Spirit",
       "hp": 70,
       "attack": 20,
       "defense": 0,
@@ -414,7 +466,15 @@
           "chance": 0.4,
           "quantity": 1
         }
-      ]
+      ],
+      "special": {
+        "name": "Set Itself on Fire",
+        "every": 2,
+        "kind": "hit",
+        "multiplier": 0.5,
+        "selfDamage": 20,
+        "all": true
+      }
     },
     "giant-slime": {
       "name": "Giant Slime",

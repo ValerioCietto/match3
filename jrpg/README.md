@@ -15,7 +15,7 @@ Visit `http://localhost:8080`. No application backend or build step is required.
 The world map links to `bestiary.html`, which lists every monster and boss from `battles.json`, including combat stats, special attacks, encounter locations, and loot chances. Search by name or encounter and filter by region or boss status. All entries are visible from the start, and browsing does not change saved progress. Direct-file access offers a JSON file picker if automatic loading is blocked.
 
 - The timeline pauses on every player-controlled turn, including target selection. Tap the enemy artwork or its card to target it; a single valid target is selected automatically.
-- Attack, Dodge, skills, and shared healing/Stamina potions are available. Allies are selected directly for healing and support. Enemy bosses use a special attack every third action.
+- Attack, Dodge, skills, and shared healing/Stamina potions are available. Allies are selected directly for healing and support. Enemy special attacks use their catalogue-defined action intervals. Specials include life drain, self-healing, poison, Gold theft, skipped actions, and self-damaging attacks.
 - Enemies grant XP and Gold immediately on death. Loot is rolled independently on death and collected on victory. All changes remain local to the attempt until victory is saved.
 - SAVE SCUM, defeat, reloading, or leaving an unfinished battle discard the attempt. Normal victories revive KOed heroes at half HP; boss wins fully rest the party, including replays.
 - World-map resting costs 10 Gold. Defeating regional bosses recruits companions and unlocks equipment choices. The world-map party cards link to `hero-manager.html` for equipping items.
@@ -46,12 +46,12 @@ Enemy stats, encounters, and rewards are initial tuning values. Full enemy XP go
 
 The starting shared inventory includes three Healing Potions and one Stamina Potion. Healing Potions restore 50% maximum HP; Stamina Potions restore all Stamina. Characters use the growth proposals from `characters.md`. Big Sword gives +6 Attack and +2 Action Cooldown; Healing Staff gives +2 Attack. Other companion starting weapons currently have no stat bonuses. Level-20 skills require the specified equipped weapon, and their explicit resurrection effects override ordinary KO rules.
 
-The complete standard journey is playable through the Dark King. The subsequent playable Dark King reversal and negative-status catalogue are not implemented yet. Terms and Conditions currently has no enemy-applied negative statuses to remove. The equipment snapshot for the reversal is saved on defeating the Dark King.
+The complete standard journey is playable through the Dark King. The subsequent playable Dark King reversal is not implemented yet. Poison deals direct HP damage each timeline unit, refreshes without stacking, expires after 50 units, and clears on KO or battle end. Terms and Conditions removes poison. Gold theft rounds percentage losses up, cannot take more Gold than the party owns, and is committed only on victory. The equipment snapshot for the reversal is saved on defeating the Dark King.
 
 ## Checks
 
 ```sh
-node --test jrpg/tests/combat.test.js jrpg/tests/equipment.test.js jrpg/tests/shops.test.js
+node --test jrpg/tests/combat.test.js jrpg/tests/equipment.test.js jrpg/tests/shops.test.js jrpg/tests/enemy-specials.test.js
 ```
 
 Run the command from the repository root. Tests cover encounter validation, progression, combat timing, rewards, rollback, inventory capacity, KO recovery, recruitment, skills, and a simulated full journey.

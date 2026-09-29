@@ -52,7 +52,8 @@ function unitCard(unit){
   const meter=document.createElement('div');meter.className='meter';const fill=document.createElement('span');fill.style.width=`${unit.hp/unit.maxHp*100}%`;meter.append(fill);card.append(meter);
   if(unit.side==='ally'){const stamina=document.createElement('small');stamina.textContent=`Stamina ${unit.stamina.toFixed(1)} / ${unit.maxStamina}`;card.append(stamina);const bar=document.createElement('div');bar.className='meter stamina';const f=document.createElement('span');f.style.width=`${unit.stamina/unit.maxStamina*100}%`;bar.append(f);card.append(bar);}
   const statuses=[];if(unit.dodgeUntil>battle.time)statuses.push(`Dodge ${unit.dodgeUntil-battle.time}t`);if(unit.blessUntil>battle.time)statuses.push(`Blessed ${unit.blessUntil-battle.time}t`);if(unit.guardUntil>battle.time)statuses.push('Protecting ally');if(unit.berserk)statuses.push('BERSERK');if(unit.training)statuses.push(`${unit.training} boosted attacks`);
-  if(unit.revealed){const intent=battle.plan(unit);statuses.push(`${intent.name} → ${intent.special?.all?'all allies':battle.allies.find(h=>h.id===intent.target)?.name}`);}
+  if(unit.poison)statuses.push(`Poison ${unit.poison.damage} HP/t · ${Math.max(0,unit.poison.until-battle.time)}t`);
+  if(unit.revealed){const intent=battle.plan(unit),kind=intent.special?.kind;statuses.push(`${intent.name} → ${kind==='heal'||kind==='wait'?unit.name:kind==='steal'?'Party Gold':intent.special?.all?'all allies':battle.allies.find(h=>h.id===intent.target)?.name}`);}
   if(statuses.length){const status=document.createElement('small');status.textContent=statuses.join(' · ');card.append(status);}
   card.setAttribute('aria-label',`${unit.name}, ${Math.ceil(unit.hp)} of ${unit.maxHp} HP${valid?', select target':''}`);return card;
 }
@@ -72,7 +73,7 @@ function render(){
     const items=Object.entries(C.itemInfo).map(([id,info])=>({id,...info,quantity:battle.state.inventory.filter(i=>i.id===id).reduce((n,i)=>n+i.quantity,0)}));
     for(const item of items){const button=document.createElement('button');button.className='choice';button.disabled=!item.quantity;button.textContent=`${item.name} × ${item.quantity}`;const help=document.createElement('small');help.textContent=item.description;button.append(help);button.onclick=()=>choose(`item:${item.id}`);$('choices').append(button);}
   }
-  $('ledger').replaceChildren();const gold=document.createElement('strong');gold.textContent=`${battle.state.gold} Gold`;const reward=document.createElement('div');reward.textContent=`This attempt: +${battle.xp} XP each · +${battle.gold} Gold`;$('ledger').append(gold,reward);
+  $('ledger').replaceChildren();const gold=document.createElement('strong');gold.textContent=`${battle.state.gold} Gold`;const reward=document.createElement('div');reward.textContent=`This attempt: +${battle.xp} XP each · ${battle.gold>=0?'+':''}${battle.gold} Gold`;$('ledger').append(gold,reward);
   const log=$('log');if(log.childElementCount!==Math.min(battle.logs.length,80)||log.dataset.count!==String(battle.logs.length)){
     log.replaceChildren(...battle.logs.slice(-80).map(entry=>{const p=document.createElement('p'),time=document.createElement('time');time.textContent=`T ${entry.time}`;p.append(time,document.createTextNode(entry.message));return p;}));log.dataset.count=String(battle.logs.length);log.scrollTop=log.scrollHeight;
   }draw();
@@ -85,7 +86,7 @@ function finish(){
     const result=battle.finish(),unlocks={'sewers-3':'Lyra joins your party.','countryside-2':'Cape slots unlocked.','city-3':'Grond joins your party.','desert-2':'Big swords unlocked.','swamp-2':'Father Patch joins your party.','mountain-4':'Healing Staff unlocked.','castle-2':'Heart slot unlocked.','final-1':'The Dark King is defeated. The journey is complete.'};
     $('result-copy').textContent=[result.firstClear?unlocks[battle.encounter.id]||'The next battle is now available.':'You have defeated this encounter again.',battle.encounter.boss?'Full rest: all heroes recover HP and Stamina.':'KOed heroes return at half HP.'].join(' ');
     const drops={};for(const item of result.loot)drops[item.name]=(drops[item.name]||0)+item.quantity;
-    $('result-rewards').textContent=`+${result.xp} XP to each hero · +${result.gold} Gold\n${Object.entries(drops).map(([name,n])=>`${name} × ${n}`).join('\n')||'No loot this time.'}`;
+    $('result-rewards').textContent=`+${result.xp} XP to each hero · ${result.gold>=0?'+':''}${result.gold} Gold\n${Object.entries(drops).map(([name,n])=>`${name} × ${n}`).join('\n')||'No loot this time.'}`;
     if(result.dropped.length)$('result-rewards').textContent+='\n\nunfortunately you must drop exceeding loot. what a pity. Return to this battle with a bigger purse and redo the battle\nDropped: '+result.dropped.map(i=>`${i.name} × ${i.quantity}`).join(', ');
     function commit(){try{G.save(result.state);savedVictory=true;$('save-error').textContent='Progress saved.';$('result-action').textContent='Return to the world map';}catch{$('save-error').textContent='The browser could not save your victory. Free some browser storage, then retry. Keep this page open to retain the result.';$('result-action').textContent='Retry saving victory';}}
     commit();$('result-action').onclick=()=>{if(savedVictory)location.href='world.html';else commit();};

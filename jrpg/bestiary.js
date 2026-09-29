@@ -5,6 +5,20 @@
   let entries = [];
   const regionName = id => id === 'final' ? 'Final Boss' : id.charAt(0).toUpperCase() + id.slice(1);
   const percent = value => `${Number((value * 100).toFixed(2))}%`;
+  function specialDescription(s) {
+    if (!s) return 'None — basic attacks only.';
+    const parts = [s.name, `Every ${s.every} actions`];
+    if (s.kind === 'heal') parts.push(`Heals itself by ${s.heal} HP`);
+    else if (s.kind === 'steal') parts.push(s.goldFraction ? `Takes ${percent(s.goldFraction)} of team Gold, rounded up` : `Steals ${s.gold} Gold`);
+    else if (s.kind === 'wait') parts.push('Does nothing');
+    else if (s.kind === 'poison') parts.push(`No direct damage; poison: ${s.poisonDamage} HP/t for ${s.duration}t (refreshes, does not stack)`, s.all ? 'All heroes' : 'One hero');
+    else {
+      parts.push(`${percent(s.multiplier)} damage`, s.all ? 'All heroes' : 'One hero');
+      if (s.kind === 'drain') parts.push('Heals itself by total HP damage dealt');
+      if (s.selfDamage) parts.push(`Loses ${s.selfDamage} HP`);
+    }
+    return parts.join(' · ');
+  }
   function element(tag, text, className) {
     const node = document.createElement(tag);
     if (text !== undefined) node.textContent = text;
@@ -40,7 +54,7 @@
     }
     article.append(stats, element('h3', 'Special attack'));
     const s = enemy.special;
-    article.append(element('p', s ? `${s.name} · Every ${s.every} actions · ${percent(s.multiplier)} damage · ${s.all ? 'All heroes' : 'One hero'}` : 'None — basic attacks only.'));
+    article.append(element('p', specialDescription(s)));
     article.append(element('h3', 'Found in'), element('p', encounters.map(b => b.name).join(' · ') || 'No current encounters.'));
     article.append(element('h3', 'Loot'));
     const loot = element('ul');
