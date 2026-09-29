@@ -1,6 +1,7 @@
 (function(root){
   'use strict';
   const G=root.SiluxGame||(typeof require!=='undefined'?require('./game.js'):null);
+  const E=root.SiluxEquipment||(typeof require!=='undefined'?require('./equipment.js'):null);
   const skills={
     strong:{name:'Strong Attack',cost:10,level:1,kind:'hit',power:1.5,description:'150% attack damage.'},
     double:{name:'Double Attack',cost:15,level:1,kind:'hit',hits:2,accuracy:75,description:'Two independent attacks at 75% accuracy.'},
@@ -64,7 +65,7 @@
       return true;
     }
     skillList(actor){return (heroSkills[actor.id]||[]).map(id=>({id,...skills[id]}));}
-    skillReason(actor,s){if(actor.level<s.level)return `Level ${s.level}`;if(s.weapon&&actor.source.equipment.weapon!==s.weapon)return `Equip ${s.weapon}`;if(actor.stamina+1e-8<s.cost)return `${s.cost} Stamina required`;return '';}
+    skillReason(actor,s){if(actor.level<s.level)return `Level ${s.level}`;if(s.weapon&&!E.hasWeaponType(actor.source,s.weapon))return `Equip ${s.weapon}`;if(actor.stamina+1e-8<s.cost)return `${s.cost} Stamina required`;return '';}
     targets(action,actor){
       if(action==='attack')return this.living('enemy');
       if(action.startsWith('item:'))return this.living('ally');

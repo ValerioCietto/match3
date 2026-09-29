@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "itemsFile": "shop.json",
+  "shops": [
+    {
+      "id": "sewers",
+      "name": "Barely a Bargain",
+      "region": "sewers",
+      "unlockBattle": "sewers-3",
+      "unlockBoss": "Rat King",
+      "merchant": "Moldric, Licensed Finder",
+      "tagline": "Previously discarded. Currently for sale.",
+      "description": "A damp blanket displays things that almost qualify as equipment. The Rat King was the only obstacle to this thriving local economy. Most bonuses are marginal. Several defects are structural.",
+      "greeting": "Everything works. Some of it even works as intended.",
+      "receipt": "No refunds. The receipt has dissolved.",
+      "priceNote": "Prices reflect the effort of fishing these out of the water.",
+      "accent": "#a8b78a"
+    },
+    {
+      "id": "city",
+      "name": "The Sensible Adventurer",
+      "region": "city",
+      "unlockBattle": "city-3",
+      "unlockBoss": "Apache Helicopter",
+      "merchant": "Mara, Actual Blacksmith",
+      "tagline": "New equipment. Actual craftsmanship. No mysterious stains.",
+      "description": "Freshly forged weapons, properly stitched armor, and supplies that have passed a real inspection. Nothing legendary, just basic equipment with good stats and all its original parts.",
+      "greeting": "Yes, it is new. No, you do not need to scrape anything off it.",
+      "receipt": "Thank you. Please keep the receipt somewhere dry.",
+      "priceNote": "You are paying for materials and workmanship. Revolutionary, apparently.",
+      "accent": "#95b9cb"
+    },
+    {
+      "id": "castle",
+      "name": "The Courtyard Collection",
+      "region": "castle",
+      "unlockBattle": "castle-2",
+      "unlockBoss": "Lich",
+      "merchant": "Velvet, Curator of Sudden Inheritances",
+      "tagline": "Epic equipment. Briefly owned. Extensively polished.",
+      "description": "Rare relics keep appearing beneath the tower. They probably fell from the windows, along with the heroes who tried their luck with the Dark King. The curator declines to discuss provenance, but guarantees that most of the blood has been removed.",
+      "greeting": "The equipment is practically free. You are paying for the blood polishing.",
+      "receipt": "Polishing complete. We wish you a longer ownership period.",
+      "priceNote": "All prices include blood removal, dent persuasion, and discreet disposal of the previous owner's name tag.",
+      "accent": "#c6a2d8"
+    }
+  ]
+}

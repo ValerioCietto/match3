@@ -37,10 +37,30 @@
     {id:'borrowed-courage',name:'Borrowed Courage',slots:['heart'],level:12,stats:{maxHp:20},description:'A little extra heart, recovered from someone without one.'}
   ];
   const byId = Object.fromEntries(items.map(item=>[item.id,item]));
+  function validateShopItem(item) {
+    const stats=['attack','defense','accuracy','crit','critDamage','cooldown','maxHp','maxStamina'];
+    if(!item||typeof item.id!=='string'||!/^shop-[a-z0-9-]+$/.test(item.id)||typeof item.name!=='string'||!item.name.trim()||!Array.isArray(item.slots)||!item.slots.length||item.slots.some(slot=>!slots[slot])||!item.stats||typeof item.stats!=='object'||Array.isArray(item.stats))throw Error('Invalid shop equipment definition.');
+    if(Object.entries(item.stats).some(([key,value])=>!stats.includes(key)||!Number.isFinite(value)||Math.abs(value)>1000))throw Error(`Invalid equipment bonuses: ${item.name}`);
+    if(item.classes&&(!Array.isArray(item.classes)||!item.classes.length||item.classes.some(id=>!['silux','lyra','grond','patch'].includes(id))))throw Error(`Invalid equipment classes: ${item.name}`);
+    if(item.level!==undefined&&(!Number.isInteger(item.level)||item.level<1||item.level>20))throw Error(`Invalid equipment level: ${item.name}`);
+    if(item.hands!==undefined&&item.hands!==2)throw Error(`Invalid hand requirement: ${item.name}`);
+    if(item.hands===2&&!item.slots.includes('weapon'))throw Error('Two-handed equipment must be a weapon.');
+    if(item.weaponType&&!['Big Sword','Healing Staff'].includes(item.weaponType))throw Error(`Invalid weapon type: ${item.name}`);
+    if(item.slots.includes('backpack')&&(!Number.isInteger(item.value)||item.value<4||item.value>8))throw Error('Backpacks must add 4–8 slots.');
+    if(item.slots.includes('belt')&&(!Number.isInteger(item.value)||item.value<0||item.value>2))throw Error('Belts must add 0–2 slots.');
+    return item;
+  }
+  function registerShopItems(definitions) {
+    if(!Array.isArray(definitions))throw Error('Invalid saved shop equipment.');
+    definitions.forEach(validateShopItem);
+    for(const definition of definitions){const item=JSON.parse(JSON.stringify(definition)),index=items.findIndex(existing=>existing.id===item.id);if(index<0)items.push(item);else items[index]=item;byId[item.id]=item;}
+  }
   function starting(id,weapon) {
     return {weapon,offhand:null,head:null,torso:{silux:'Worn Shirt',lyra:'Travel Robe',grond:'Padded Armor',patch:'Clerical Robe'}[id],legs:id==='silux'?'Old Trousers':null,feet:{silux:'Leather Shoes',lyra:'Soft Boots',grond:'Work Boots',patch:'Sandals'}[id],ring1:null,ring2:null,cape:null,backpack:4,belt:0,heart:null};
   }
   function itemInSlot(hero,slot) {
+    const exact=byId[hero.equipment?.itemIds?.[slot]];
+    if(exact&&exact.slots.includes(slot))return exact;
     const value=hero.equipment?.[slot];
     return items.find(item=>item.slots.includes(slot)&&(slot==='backpack'||slot==='belt'?item.value===value:item.name===value))||null;
   }
@@ -55,7 +75,7 @@
   function reason(state,hero,slot,item) {
     if(!slots[slot])return 'Unknown equipment slot.';
     const locked=slotReason(state,slot);if(locked)return locked;
-    if(slot==='offhand'&&itemInSlot(hero,'weapon')?.hands===2)return 'Your Big Sword occupies both hands. Change Hand 1 first.';
+    if(slot==='offhand'&&itemInSlot(hero,'weapon')?.hands===2)return 'Your weapon occupies both hands. Change Hand 1 first.';
     if(!item)return '';
     if(!item.slots.includes(slot))return 'This item does not fit this slot.';
     if(item.classes&&!item.classes.includes(hero.id))return 'This hero cannot use this equipment.';
@@ -72,6 +92,7 @@
     if(item.hands===2)bonuses.push('Two-handed');
     return bonuses.join(' · ')||'No stat bonuses';
   }
-  const api={slots,items,byId,starting,itemInSlot,bonuses,slotReason,reason,describe};
+  function hasWeaponType(hero,type){const item=itemInSlot(hero,'weapon');return item?.weaponType===type||item?.name===type;}
+  const api={slots,items,byId,starting,itemInSlot,bonuses,slotReason,reason,describe,validateShopItem,registerShopItems,hasWeaponType};
   root.SiluxEquipment=api;if(typeof module!=='undefined')module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);

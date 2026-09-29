@@ -22,7 +22,7 @@
     const b=roster[hero.id],l=level(hero.xp)-1;
     const result={name:b.name,level:l+1,maxHp:b.hp+b.hpGrowth*l,attack:b.attack+b.attackGrowth*l,defense:b.defense,accuracy:b.accuracy,crit:b.crit,critDamage:b.critDamage,cooldown:b.cooldown,maxStamina:b.stamina+b.staminaGrowth*l};
     for(const [stat,value] of Object.entries(Equipment.bonuses(hero)))result[stat]+=value;
-    result.cooldown=Math.max(1,result.cooldown);result.defense=Math.min(90,result.defense);result.accuracy=Math.min(100,result.accuracy);result.crit=Math.min(100,result.crit);return result;
+    result.maxHp=Math.max(1,result.maxHp);result.maxStamina=Math.max(0,result.maxStamina);result.attack=Math.max(0,result.attack);result.cooldown=Math.max(1,result.cooldown);result.defense=Math.min(90,Math.max(0,result.defense));result.accuracy=Math.min(100,Math.max(0,result.accuracy));result.crit=Math.min(100,Math.max(0,result.crit));return result;
   }
   function newHero(id,xp=0) {
     const hero={id,xp,equipment:Equipment.starting(id,roster[id].weapon)};
@@ -42,6 +42,8 @@
   }
   function normalize(raw){
     const s=defaults();if(raw?.version!==1)return s;
+    if(raw.shopEquipment!==undefined){Equipment.registerShopItems(raw.shopEquipment);s.shopEquipment=clone(raw.shopEquipment);}
+    if(raw.shopPurchases&&typeof raw.shopPurchases==='object'&&!Array.isArray(raw.shopPurchases))s.shopPurchases=Object.fromEntries(Object.entries(raw.shopPurchases).filter(([id,n])=>/^shop-[a-z0-9-]+$/.test(id)&&Number.isSafeInteger(n)&&n>=0));
     s.completed=[...new Set((Array.isArray(raw.completed)?raw.completed:[]).filter(validBattle))];
     s.selected=regions[raw.selected]?raw.selected:'sewers';s.gold=finite(raw.gold,0);
     if(Array.isArray(raw.heroes)){
@@ -74,8 +76,10 @@
     const current=Equipment.itemInSlot(hero,slot);if(current?.id===itemId||(!current&&!item))return next;
     if(item){const stack=next.inventory.find(i=>i.id===item.id&&i.quantity>0);if(!stack)throw Error('This item is not in the shared inventory.');stack.quantity--;next.inventory=next.inventory.filter(i=>i.quantity>0);}
     const returned=[];if(current)returned.push({id:current.id,name:current.name,quantity:1});
-    if(item?.hands===2){const offhand=Equipment.itemInSlot(hero,'offhand');if(offhand)returned.push({id:offhand.id,name:offhand.name,quantity:1});hero.equipment.offhand=null;}
+    hero.equipment.itemIds={...hero.equipment.itemIds};
+    if(item?.hands===2){const offhand=Equipment.itemInSlot(hero,'offhand');if(offhand)returned.push({id:offhand.id,name:offhand.name,quantity:1});hero.equipment.offhand=null;delete hero.equipment.itemIds.offhand;}
     hero.equipment[slot]=item?(item.value??item.name):(['backpack','belt'].includes(slot)?0:null);
+    if(item)hero.equipment.itemIds[slot]=item.id;else delete hero.equipment.itemIds[slot];
     if(addLoot(next,returned).length||next.inventory.length>capacity(next))throw Error('Not enough shared inventory space for this change. Equip a larger Backpack or Belt first.');
     const updated=stats(hero);hero.hp=Math.min(hero.hp,updated.maxHp);hero.stamina=Math.min(hero.stamina,updated.maxStamina);
     return next;

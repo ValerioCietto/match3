@@ -31,7 +31,7 @@ function render(){
     const item=E.itemInSlot(hero,slot),locked=E.slotReason(state,slot),twoHands=slot==='offhand'&&E.itemInSlot(hero,'weapon')?.hands===2;
     const button=document.createElement('button');button.className=`slot${locked?' locked':''}`;button.dataset.slot=slot;button.setAttribute('aria-pressed',String(selectedSlot===slot));
     const name=document.createElement('span');name.className='label';name.textContent=label;
-    const value=document.createElement('strong');value.textContent=locked?'Locked':twoHands?'Big Sword · Hand 2':item?.name||'Empty';
+    const value=document.createElement('strong');value.textContent=locked?'Locked':twoHands?`${E.itemInSlot(hero,'weapon').name} · Hand 2`:item?.name||'Empty';
     const detail=document.createElement('small');detail.textContent=locked||(twoHands?'Occupied by your two-handed weapon':item?E.describe(item):'Select to add equipment');button.append(name,value,detail);
     button.onclick=()=>{selectedSlot=slot;render();};$('slots').append(button);
   }
