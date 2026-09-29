@@ -9,8 +9,8 @@ Companion identities and recruitment below are confirmed. Silux's starting stats
 - All available characters receive XP when an enemy dies, including KOed characters. Full versus divided XP rewards and starting XP for new recruits remain undecided.
 - Level cap: 20. Level-ups increase stats, unlock skills, and allow level-restricted equipment.
 - Stamina regenerates at 0.1 per timeline unit. Every character has Attack, Dodge, Skill, and Item commands.
-- Attacks and skills cancel Dodge, except healing skills. Items and healing preserve it.
-- KO lasts until battle end. Ordinary victories revive KOed allies at half maximum HP; boss victories fully restore the party. No skill resurrects a character during combat.
+- Attacks and skills cancel Dodge, except healing skills. Items and healing preserve it, except Heroic Second Wind, which cancels Dodge.
+- KO lasts until battle end. Ordinary victories revive KOed allies at half maximum HP; boss victories fully restore the party. Explicit revival skills can resurrect characters during combat.
 - Backpack and Belt capacity bonuses contribute to the shared inventory, up to 60 slots total.
 
 ## Roster and recruitment
@@ -52,10 +52,10 @@ Confirmed starting equipment: Rusty Sword, Worn Shirt, Old Trousers, Leather Sho
 
 | Skill | Availability | Stamina | Effect |
 |---|---|---:|---|
-| Strong Attack | Start | 10 | 150% normal attack damage |
-| Double Attack | Start | 15 | Two independent normal-damage attacks, each with 75% Accuracy |
+| Dramatic Entry | Start | 10 | Once per battle: 150% damage to a random enemy; with a Big Sword, 200% damage to all enemies |
+| Ignorant Attack | Start | 15 | Two normal attacks against independently random living enemies, then cleanse self |
 | Heart-piercer | Start | 20 | One attack with 80% Critical Chance and 500% Critical Damage |
-| Heroic Second Wind | Level 5 | 10 | Heal self for 30% maximum HP; preserves Dodge |
+| Heroic Second Wind | Level 5 | 10 | Heal self for 30% maximum HP; cancels Dodge |
 | Mandatory Training Arc | Level 10 | 15 | Next two basic attacks deal 150% damage; does not stack with itself |
 | Flurry of Normal Attacks | Level 20 and big sword equipped | 30 | Thirty attacks at random enemies, 80% damage, 75% accuracy. |
 
@@ -71,11 +71,11 @@ Proposed starting equipment: Dagger, Travel Robe, Soft Boots, Small Backpack. Ex
 
 | Skill | Proposed availability | Stamina | Proposed effect |
 |---|---|---:|---|
-| Suspicious Precision | Recruitment | 8 | One 100%-Accuracy attack for normal damage; target Dodge still applies |
-| Foreshadow | Recruitment | 10 | Reveal a target's next intended action and target until it acts |
-| Plot Armor | Level 6 | 12 | One ally gets Blessed status: takes 25% less damage for 20 timeline units; refreshes instead of stacking |
-| Healing Footnote | Level 10 and Healing Staff equipped | 12 | Heal a living ally for 25% maximum HP; preserves Dodge |
-| Overpowered Healing | Level 20 and Healing Staff equipped | 30 | Revives all allies, Heal all allies fully, gives blessed to all team |
+| Slay like a Queen | Recruitment | 5 | Normal damage at 100% accuracy; next action in 2t; target Dodge still applies |
+| Regal Intimidation | Recruitment | 10 | Once per battle: all enemy cooldowns and next action times increase by 20t for this battle |
+| Plot Armor | Level 6 | 1 | Once per battle: revive one KOed ally to 1 HP, then heal to full; can also fully heal a living ally |
+| Friendship Power | Level 10 and Healing Staff equipped | 15 | Heal all living allies by 10% maximum HP and remove their debuffs |
+| Overpowered Healing | Level 20 | 40 | Once per battle: revive and fully heal all allies, deal 100% attack damage to all enemies, and Bless all allies for 20t |
 
 Healing Staff access requires defeating the Mountain 4 Yeti. Lyra offers backup healing without replacing Father Patch's stronger healing role.
 

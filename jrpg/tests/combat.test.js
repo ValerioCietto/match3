@@ -24,7 +24,7 @@ test('player choice pauses time; cooldown schedules and timeline regenerates Sta
 });
 test('Dodge survives items and healing, and is cancelled by attacks and other skills',()=>{
  const b=create();b.act('dodge');heroTurn(b);const a=b.actor();assert.equal(a.dodgeUntil,20);b.act('item:healing-potion',a.id);assert.equal(a.dodgeUntil,20);heroTurn(b);b.act('attack','enemy-0');assert.equal(a.dodgeUntil,0);
- const s=G.defaults();s.heroes[0]=G.newHero('silux',1600);const h=create('sewers-1',s);h.allies[0].dodgeUntil=20;h.act('wind','silux');assert.equal(h.allies[0].dodgeUntil,20);
+ const s=G.defaults();s.heroes[0]=G.newHero('silux',1600);const h=create('sewers-1',s);h.allies[0].dodgeUntil=20;h.act('wind','silux');assert.equal(h.allies[0].dodgeUntil,0);
  const p=create();p.allies[0].dodgeUntil=20;p.act('strong','enemy-0');assert.equal(p.allies[0].dodgeUntil,0);
 });
 test('KOed characters receive full immediate XP and cannot be healed by ordinary items',()=>{

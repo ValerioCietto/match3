@@ -29,7 +29,7 @@ function choose(action){
   const actor=battle.actor();if(!actor||actor.side!=='ally')return;
   const targets=battle.targets(action,actor),s=C.skills[action];
   if(targets.length===1){perform(action,targets[0].id);return;}
-  if(!targets.length&&(s?.all||s?.kind==='flurry')){perform(action);return;}
+  if(!targets.length&&(s?.all||s?.random||s?.kind==='flurry')){perform(action);return;}
   if(!targets.length){$('notice').textContent='There is no valid target for that action.';return;}
   pending=action;render();
 }

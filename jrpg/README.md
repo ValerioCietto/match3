@@ -44,16 +44,18 @@ If direct `file://` access blocks JSON loading, the map offers a picker for `sho
 
 Enemy stats, encounters, and rewards are initial tuning values. Full enemy XP goes to each recruited hero, including KOed heroes. Recruits join at Silux's cumulative XP. Damage rounds to the nearest integer with a minimum of 1; half-HP recovery and healing round up. Same-time actions use party order, then enemy order. All actions use the actor's Action Cooldown.
 
-The starting shared inventory includes three Healing Potions and one Stamina Potion. Healing Potions restore 50% maximum HP; Stamina Potions restore all Stamina. Characters use the growth proposals from `characters.md`. Big Sword gives +6 Attack and +2 Action Cooldown; Healing Staff gives +2 Attack. Other companion starting weapons currently have no stat bonuses. Level-20 skills require the specified equipped weapon, and their explicit resurrection effects override ordinary KO rules.
+The starting shared inventory includes three Healing Potions and one Stamina Potion. Healing Potions restore 50% maximum HP; Stamina Potions restore all Stamina. Characters use the growth proposals from `characters.md`. Big Sword gives +6 Attack and +2 Action Cooldown; Healing Staff gives +2 Attack. Other companion starting weapons currently have no stat bonuses. Skills with weapon requirements require the specified equipped weapon, and their explicit resurrection effects override ordinary KO rules.
 
 The complete standard journey is playable through the Dark King. The subsequent playable Dark King reversal is not implemented yet. Poison deals direct HP damage each timeline unit, refreshes without stacking, expires after 50 units, and clears on KO or battle end. Terms and Conditions removes poison. Gold theft rounds percentage losses up, cannot take more Gold than the party owns, and is committed only on victory. The equipment snapshot for the reversal is saved on defeating the Dark King.
 
 ## Checks
 
 ```sh
-node --test jrpg/tests/combat.test.js jrpg/tests/equipment.test.js jrpg/tests/shops.test.js jrpg/tests/enemy-specials.test.js
+node --test jrpg/tests/combat.test.js jrpg/tests/equipment.test.js jrpg/tests/shops.test.js jrpg/tests/enemy-specials.test.js jrpg/tests/hero-skills.test.js
 ```
 
 Run the command from the repository root. Tests cover encounter validation, progression, combat timing, rewards, rollback, inventory capacity, KO recovery, recruitment, skills, and a simulated full journey.
 
 `node jrpg/tests/browser-smoke.js` additionally exercises the page flow with an installed headless Chrome. It uses an isolated temporary browser profile; set `CHROME_PATH` when Chrome is installed elsewhere. This check requires permission to launch a working browser renderer.
+
+Silux?s Dramatic Entry and Lyra?s Regal Intimidation, Plot Armor, and Overpowered Healing can each be used once per battle. Used skills remain visible with an explanation. Heroic Second Wind cancels Dodge. Regal Intimidation increases both the next action time and subsequent cooldown of every living enemy by 20t for that battle. Friendship Power requires a Healing Staff; Overpowered Healing only requires level 20.
