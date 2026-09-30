@@ -1,0 +1,202 @@
+html = r'''<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Sewer Rat - Canvas Animation</title>
+<style>
+  *{box-sizing:border-box}
+  body{
+    margin:0; min-height:100vh; display:grid; place-items:center;
+    background:#111512; color:#d8ddd5;
+    font-family:system-ui,-apple-system,Segoe UI,sans-serif;
+  }
+  .game{width:min(100%,700px); padding:14px}
+  canvas{
+    display:block; width:100%; aspect-ratio:16/9;
+    border:1px solid #344039; border-radius:12px;
+    background:linear-gradient(#18201c,#101512);
+    touch-action:none;
+  }
+  .controls{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:12px}
+  button{
+    min-height:52px; border:1px solid #49574e; border-radius:10px;
+    background:#252d28; color:#edf0eb; font-size:16px; font-weight:700;
+  }
+  button:active{transform:translateY(1px); background:#303a34}
+  .state{text-align:center; margin:9px 0 0; font-size:13px; color:#929d95}
+</style>
+</head>
+<body>
+<div class="game">
+  <canvas id="c"></canvas>
+  <div class="controls">
+    <button data-a="run">RUN</button>
+    <button data-a="attack">ATTACK</button>
+    <button data-a="die">DIE</button>
+  </div>
+  <div class="state" id="state">IDLE</div>
+</div>
+
+<script>
+// Run: open this HTML file directly in any modern browser.
+const canvas = document.querySelector("#c");
+const ctx = canvas.getContext("2d");
+const stateEl = document.querySelector("#state");
+
+let state="idle", started=performance.now(), dead=false;
+const durations={run:1500, attack:650, die:900};
+
+function resize(){
+  const dpr=Math.min(devicePixelRatio||1,2);
+  const r=canvas.getBoundingClientRect();
+  canvas.width=Math.round(r.width*dpr);
+  canvas.height=Math.round(r.height*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+addEventListener("resize",resize); resize();
+
+document.querySelectorAll("button").forEach(b=>b.onclick=()=>{
+  state=b.dataset.a; started=performance.now(); dead=false;
+  stateEl.textContent=state.toUpperCase();
+});
+
+function ellipse(x,y,rx,ry,fill,rot=0){
+  ctx.beginPath(); ctx.ellipse(x,y,rx,ry,rot,0,Math.PI*2);
+  ctx.fillStyle=fill; ctx.fill();
+}
+function line(points,width,color){
+  ctx.beginPath(); ctx.moveTo(...points[0]);
+  for(let i=1;i<points.length;i++) ctx.lineTo(...points[i]);
+  ctx.lineWidth=width; ctx.strokeStyle=color; ctx.lineCap="round"; ctx.lineJoin="round"; ctx.stroke();
+}
+function rat(x,y,s,t,mode){
+  let bob=0, leg=0, tail=0, jaw=0, lunge=0, rot=0;
+
+  if(mode==="idle"){
+    bob=Math.sin(t*3)*1.3; tail=Math.sin(t*2.2)*5;
+  }
+  if(mode==="run"){
+    bob=Math.abs(Math.sin(t*12))*3;
+    leg=Math.sin(t*12)*8; tail=Math.sin(t*9)*9;
+  }
+  if(mode==="attack"){
+    const p=Math.min((performance.now()-started)/durations.attack,1);
+    // forward quickly, hold near bite, then return
+    lunge = p<.35 ? p/.35*27 : p<.55 ? 27 : 27*(1-(p-.55)/.45);
+    jaw = Math.sin(Math.min(1,p/.55)*Math.PI)*7;
+    bob=-Math.sin(p*Math.PI)*2;
+  }
+  if(mode==="die"){
+    const p=Math.min((performance.now()-started)/durations.die,1);
+    const q=1-Math.pow(1-p,3);
+    rot=-Math.PI*q;
+    bob=-Math.sin(p*Math.PI)*10;
+  }
+
+  ctx.save();
+  ctx.translate(x+lunge*s,y+bob*s);
+  ctx.scale(s,s);
+  ctx.rotate(rot);
+
+  // tail behind body
+  ctx.beginPath();
+  ctx.moveTo(-42,3);
+  ctx.bezierCurveTo(-67,-7+tail,-83,18+tail,-102,6+2*bob*s);
+  ctx.strokeStyle="#8b5f62"; ctx.lineWidth=7; ctx.lineCap="round"; ctx.stroke();
+  ctx.strokeStyle="#b07a7b"; ctx.lineWidth=2; ctx.stroke();
+
+  // far legs
+  line([[-23,15],[-28,27+leg*.25],[-39,29]],7,"#5b5048");
+  line([[23,15],[19,27-leg*.25],[9,30]],7,"#5b5048");
+
+  // body + belly
+  ellipse(-10,0,43,25,"#514d43",-0.05);
+  ellipse(-4,10,31,13,"#686054",-0.03);
+
+  // scruffy back tufts
+  ctx.fillStyle="#514d43";
+  for(let i=0;i<5;i++){
+    const px=-36+i*13;
+    ctx.beginPath(); ctx.moveTo(px,-18); ctx.lineTo(px+5,-30-(i%2)*3); ctx.lineTo(px+10,-18); ctx.fill();
+  }
+
+  // near legs
+  line([[-18,15],[-13,27-leg],[-25,30]],8,"#756258");
+  line([[19,15],[27,27+leg],[17,30]],8,"#756258");
+
+  // ear behind head
+  ellipse(40,-24,8,9,"#4b4140",.25);
+  //ellipse(40,-24,5,6,"#835d60",.25);
+
+  // head and pointed muzzle
+  ellipse(34,-5,27,22,"#5e574c",-0.12);
+  ctx.beginPath();
+  ctx.moveTo(48,-15); ctx.quadraticCurveTo(69,-9,77,-1);
+  ctx.quadraticCurveTo(65,8,47,8+jaw*.18);
+  ctx.closePath(); ctx.fillStyle="#6c6255"; ctx.fill();
+
+  // ear foreground
+  ellipse(25,-23,11,12,"#493f3c",-.25);
+  ellipse(25,-23,7,8,"#8a6263",-.25);
+
+
+  // jaw during bite
+  if(jaw>1){
+    ctx.save(); ctx.translate(57,3); ctx.rotate(jaw*.035);
+    ellipse(7,5,14,7,"#4c443d",.12);
+    ctx.fillStyle="#d5c8a9";
+    ctx.beginPath(); ctx.moveTo(15,0);ctx.lineTo(20,4);ctx.lineTo(14,5);ctx.fill();
+    ctx.restore();
+  }
+
+  // eye + highlight
+  ellipse(47,-10,4.6,4.6,"#9f302b");
+  ellipse(48.5,-11.5,1.3,1.3,"#ffd6a0");
+
+  // nose
+  ellipse(76,-2,5,4,"#211f1e");
+  // whiskers
+  line([[68,-3],[59,-10]],1,"#9c9485");
+  line([[68,0],[59,1]],1,"#9c9485");
+  line([[68,3],[59,10]],1,"#9c9485");
+
+  ctx.restore();
+}
+
+function sewer(w,h){
+  // floor
+  ctx.fillStyle="#202720"; ctx.fillRect(0,h*.73,w,h*.27);
+  ctx.strokeStyle="#303a31"; ctx.lineWidth=2;
+  for(let x=-20;x<w+60;x+=70){
+    ctx.beginPath(); ctx.moveTo(x,h*.73);ctx.lineTo(x+35,h);ctx.stroke();
+  }
+  // grime/water line
+  ctx.fillStyle="#293b2d";
+  ctx.fillRect(0,h*.76,w,5);
+  for(let x=10;x<w;x+=47) ellipse(x,h*.79,12,2,"#354b38");
+}
+
+function loop(now){
+  const w=canvas.clientWidth,h=canvas.clientHeight;
+  ctx.clearRect(0,0,w,h); sewer(w,h);
+
+  if(state!=="idle" && now-started>=durations[state]){
+    if(state==="die"){ dead=true; }
+    else { state="idle"; stateEl.textContent="IDLE"; started=now; }
+  }
+
+  const scale=Math.min(w/360,h/220)*1.15;
+  rat(w*.48,h*.62,scale,now/1000,dead?"die":state);
+
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
+'''
+path="/mnt/data/sewer_rat_canvas.html"
+with open(path,"w",encoding="utf-8") as f:
+    f.write(html)
+print(path)
