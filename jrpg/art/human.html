@@ -17,13 +17,16 @@
   .label { position:absolute; top:20px; left:22px; color:#afc3bd; font-size:10px; letter-spacing:.2em; pointer-events:none }
   .status { position:absolute; bottom:20px; left:22px; display:flex; align-items:center; gap:8px; font-size:11px; letter-spacing:.12em; text-transform:uppercase }
   .status::before { content:""; width:6px; height:6px; border-radius:50%; background:#e2be78; box-shadow:0 0 12px #e2be7880 }
-  .controls { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:16px }
+  .controls { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:16px }
+  .attacks { grid-template-columns:repeat(4,minmax(0,1fr)); margin-top:10px }
+  .attacks button { flex-wrap:wrap; gap:8px; padding:10px }
   button { cursor:pointer; display:flex; justify-content:center; align-items:center; gap:12px; min-height:58px; border:1px solid #39474c; border-radius:10px; background:#1c272c; color:#d0dbd8; font:600 14px system-ui; transition:background .15s,border-color .15s }
   button:hover { background:#28373c }
   button[aria-pressed="true"] { background:#363528; border-color:#b49b62; color:#ffe0a0 }
   button:focus-visible { outline:2px solid #ffe0a0; outline-offset:4px }
   kbd { font:10px system-ui; color:#a2aaa2; border:1px solid #53605e; border-radius:4px; padding:2px 5px }
   footer { display:flex; justify-content:space-between; gap:16px; margin-top:16px; color:#8d9f9f; font-size:12px; line-height:1.6 }
+  @media(max-width:640px) { .attacks { grid-template-columns:repeat(2,minmax(0,1fr)) } }
   @media(max-width:520px) { body { padding:16px } header { align-items:start } .badge { display:none } kbd { display:none } footer { flex-direction:column; gap:3px } .label { top:14px; left:14px } }
 </style>
 </head>
@@ -35,10 +38,15 @@
     <div class="label">THE OLD FOREST / TRAINING GROUNDS</div>
     <div class="status" id="status" role="status">Idle · at the ready</div>
   </div>
-  <div class="controls" role="group" aria-label="Hero animation">
-    <button type="button" data-mode="idle" aria-pressed="true">Idle <kbd>1</kbd></button>
-    <button type="button" data-mode="run" aria-pressed="false">Run <kbd>2</kbd></button>
-    <button type="button" data-mode="attack" aria-pressed="false">Attack <kbd>SPACE</kbd></button>
+  <div class="controls" role="group" aria-label="Hero stance">
+    <button type="button" data-mode="idle" aria-pressed="true">Idle <kbd>I</kbd></button>
+    <button type="button" data-mode="run" aria-pressed="false">run <kbd>R</kbd></button>
+  </div>
+  <div class="controls attacks" role="group" aria-label="Sword attacks">
+    <button type="button" data-mode="attack" aria-pressed="false">Attack <kbd>1 / SPACE</kbd></button>
+    <button type="button" data-mode="slash" aria-pressed="false">Slash <kbd>2</kbd></button>
+    <button type="button" data-mode="piercer" aria-pressed="false">Heart Piercer <kbd>3</kbd></button>
+    <button type="button" data-mode="cleave" aria-pressed="false">Cleave <kbd>4</kbd></button>
   </div>
   <footer><span>A steady breath. A quick stride. A clean strike.</span><span>Choose a stance, then draw your blade.</span></footer>
 </main>
@@ -51,21 +59,26 @@
   const status = document.querySelector('#status');
   const TAU = Math.PI * 2;
   let mode = 'idle', stance = 'idle', elapsed = 0, attackTime = 0, last = null, travel = 0;
-  const attackDuration = .82;
+  const attacks = {
+    attack:{duration:.82,windup:.22,release:.58,label:'Attacking · sword slash'},
+    slash:{duration:.94,windup:.32,release:.65,label:'Slash · overhead strike'},
+    piercer:{duration:.52,windup:.24,release:.49,label:'Heart Piercer · lunging thrust'},
+    cleave:{duration:.9,windup:.30,release:.66,label:'Cleave · horizontal slash'}
+  };
   const mix = (a,b,t) => a + (b-a)*t;
   const smooth = t => { t = Math.max(0,Math.min(1,t)); return t*t*(3-2*t); };
   function setMode(next) {
-    if(next === 'attack') { attackTime = 0; }
+    if(attacks[next]) { attackTime = 0; }
     else { stance = next; }
     mode = next;
     buttons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.mode === mode)));
-    status.textContent = {idle:'Idle · at the ready',run:'Running · onward',attack:'Attacking · sword slash'}[mode];
+    status.textContent = attacks[mode]?.label || {idle:'Idle · at the ready',run:'Running · onward'}[mode];
   }
   buttons.forEach(button => button.addEventListener('click', () => setMode(button.dataset.mode)));
   addEventListener('keydown', event => {
     if(event.altKey || event.ctrlKey || event.metaKey || /INPUT|TEXTAREA|SELECT/.test(event.target.tagName)) return;
     if(event.code === 'Space' && event.target.closest('button')) return;
-    const next = {Digit1:'idle',Digit2:'run',Digit3:'attack',Space:'attack'}[event.code];
+    const next = {KeyI:'idle',KeyR:'run',Digit1:'attack',Digit2:'slash',Digit3:'piercer',Digit4:'cleave',Space:'attack'}[event.code];
     if(next) { event.preventDefault(); if(!event.repeat) setMode(next); }
   });
   function resize() {
@@ -124,17 +137,47 @@
       oval(x,y,1.2,1.2,`rgba(227,218,155,${.16+.14*Math.sin(t+i)})`);
     }
   }
-  function leg(hip,angle,bend,front) {
-    const knee=joint(...hip,43,angle), ankle=joint(...knee,42,angle-bend);
+  // Ankle flexion relative to the shank: positive points the toes down.
+  // Timing is adapted to this existing stride, not a new leg trajectory.
+  // Reference: https://doi.org/10.1371/journal.pone.0270496 (Fig. 4).
+  const ankleCurve = [[0,-.15],[.18,-.12],[.28,0],[.36,.08],[.43,-.12],[.50,-.38],[.56,-.08],[.62,.25],[.72,.08],[.875,-.24],[1,-.15]];
+  function ankleRotation(shankAngle,phase) {
+    if(mode!=='run') return 0;
+    const curve=ankleCurve;
+    const progress=((phase/TAU)%1+1)%1;
+    for(let i=1;i<curve.length;i++) {
+      const [end,value]=curve[i], [start,previous]=curve[i-1];
+      if(progress<=end) {
+        // Neutral is perpendicular to the shin; only the boot pivots.
+        return -shankAngle+mix(previous,value,smooth((progress-start)/(end-start)));
+      }
+    }
+  }
+  function leg(hip,angle,bend,front,phase=0,hipDrop=0) {
+    let knee=joint(...hip,43,angle);
+    const ankle=joint(...knee,42,angle-bend);
+    if(hipDrop>0) {
+      // Settle the hip beneath the tunic, keeping the existing boot path and
+      // limb lengths. This knee branch bends the shin clockwise on screen.
+      hip=[hip[0],hip[1]+hipDrop];
+      const dx=ankle[0]-hip[0], dy=ankle[1]-hip[1], distance=Math.hypot(dx,dy);
+      const along=(43*43-42*42+distance*distance)/(2*distance);
+      const height=Math.sqrt(Math.max(0,43*43-along*along));
+      knee=[hip[0]+(dx*along+dy*height)/distance,
+            hip[1]+(dy*along-dx*height)/distance];
+    }
     line([hip,knee], '#14252c',25); line([hip,knee],front?'#344653':'#293943',19);
     oval(...knee,12,10,front?'#a8bbc0':'#738c94');
     line([knee,ankle],'#17262b',22); line([knee,ankle],front?'#6f858d':'#465e68',16);
     line([[knee[0]+3,knee[1]+6],[ankle[0]+3,ankle[1]-5]],front?'#b4c5c6':'#7f969a',3);
-    shape([[ankle[0]-10,ankle[1]-8],[ankle[0]+8,ankle[1]-8],[ankle[0]+13,ankle[1]+3],[ankle[0]+24,ankle[1]+8],[ankle[0]+23,ankle[1]+15],[ankle[0]-11,ankle[1]+15]],front?'#43392f':'#302e28');
-    line([[ankle[0]-9,ankle[1]+14],[ankle[0]+22,ankle[1]+14]],'#a99064',3);
+    ctx.save(); ctx.translate(...ankle); ctx.rotate(ankleRotation(angle-bend,phase));
+    shape([[-10,-8],[8,-8],[13,3],[24,8],[23,15],[-11,15]],front?'#43392f':'#302e28');
+    line([[-9,14],[22,14]],'#a99064',3);
+    ctx.restore();
   }
-  function sword(x,y,angle) {
+  function sword(x,y,angle,projection=1) {
     ctx.save(); ctx.translate(x,y); ctx.rotate(angle);
+    if(projection!==1) ctx.scale(1,projection);
     shape([[-5,-14],[-6,-96],[0,-114],[7,-96],[5,-14]],'#c7e1e5');
     shape([[0,-18],[0,-107],[7,-96],[5,-18]],'#799da9',null);
     line([[-3,-24],[-3,-93]],'#f1ffff',1.5);
@@ -143,22 +186,118 @@
     for(let i=0;i<4;i++) line([[-3,-6+i*5],[3,-3+i*5]],'#b09a73',1.5);
     oval(0,15,6,5,'#d4b36b'); ctx.restore();
   }
+  const readyPose = {
+    x:2+Math.sin(.35)*32+Math.sin(1)*30,
+    y:-49+Math.cos(.35)*32+Math.cos(1)*30,
+    blade:.3, drive:0, lunge:0, lean:0, reach:1
+  };
+  // New attacks share the resting pose but have independent wind-up, strike,
+  // and recovery timing. Hand targets are measured from the body in screen axes.
+  const attackMoves = {
+    slash:[
+      {at:0,...readyPose},
+      {at:.32,...readyPose,x:24,y:-100,blade:-.25,lean:-.06},
+      {at:.40,...readyPose,x:24,y:-100,blade:-.25,lean:-.06},
+      {at:.57,...readyPose,x:51,y:-12,blade:1.70,drive:1,lunge:20,lean:.10},
+      {at:.65,...readyPose,x:51,y:-12,blade:1.70,drive:1,lunge:20,lean:.10},
+      {at:1,...readyPose}
+    ],
+    piercer:[
+      {at:0,...readyPose},
+      {at:.24,...readyPose,x:12,y:-49,blade:Math.PI/2,lunge:-8,lean:-.04},
+      {at:.36,...readyPose,x:61,y:-49,blade:Math.PI/2,drive:1,lunge:46,lean:.09},
+      {at:.49,...readyPose,x:61,y:-49,blade:Math.PI/2,drive:1,lunge:46,lean:.09},
+      {at:.72,...readyPose,x:22,y:-49,blade:Math.PI/2,drive:.25,lunge:10,lean:.02},
+      {at:1,...readyPose}
+    ],
+    cleave:[
+      {at:0,...readyPose},
+      {at:.30,...readyPose,x:10,y:-34,blade:Math.PI/2,reach:-.8,lunge:-5,lean:-.05},
+      {at:.57,...readyPose,x:57,y:-34,blade:Math.PI/2,reach:1,drive:1,lunge:18,lean:.08},
+      {at:.66,...readyPose,x:57,y:-34,blade:Math.PI/2,reach:1,drive:1,lunge:18,lean:.08},
+      {at:1,...readyPose}
+    ]
+  };
+  function attackPose(kind,progress) {
+    const frames=attackMoves[kind];
+    for(let i=1;i<frames.length;i++) {
+      const a=frames[i-1], b=frames[i];
+      if(progress<=b.at) {
+        const blend=smooth((progress-a.at)/(b.at-a.at)), pose={};
+        for(const key of Object.keys(readyPose)) pose[key]=mix(a[key],b[key],blend);
+        return pose;
+      }
+    }
+    return {...readyPose};
+  }
+  function attackArm(pose) {
+    // Solve only the new attack arm; existing idle, run, and attack keep their rig.
+    const c=Math.cos(pose.lean), s=Math.sin(pose.lean);
+    const hand=[c*pose.x+s*pose.y,-s*pose.x+c*pose.y];
+    const dx=hand[0]-2, dy=hand[1]+49, distance=Math.hypot(dx,dy);
+    const reach=Math.max(.001,Math.min(61.999,distance));
+    const along=(32*32-30*30+reach*reach)/(2*reach);
+    const bend=Math.sqrt(Math.max(0,32*32-along*along));
+    const elbow=[2+dx/distance*along-dy/distance*bend,
+                 -49+dy/distance*along+dx/distance*bend];
+    return {elbow,hand};
+  }
+  function attackTrail(kind,p,pose) {
+    const start={slash:.40,piercer:.24,cleave:.30}[kind];
+    const end={slash:.70,piercer:.53,cleave:.67}[kind];
+    if(p<=start || p>=end) return;
+    ctx.save(); ctx.rotate(-pose.lean);
+    ctx.globalAlpha=Math.sin((p-start)/(end-start)*Math.PI)*.65;
+    if(kind==='slash') {
+      const outer=[], inner=[];
+      for(let i=0;i<=12;i++) {
+        const q=mix(Math.max(start,p-.14),Math.min(p,.65),i/12);
+        const sample=attackPose(kind,q), x=sample.x+sample.lunge-pose.lunge;
+        outer.push([x+Math.sin(sample.blade)*114,sample.y-Math.cos(sample.blade)*114]);
+        inner.push([x+Math.sin(sample.blade)*82,sample.y-Math.cos(sample.blade)*82]);
+      }
+      shape([...outer,...inner.reverse()],'#dcf5ef66',null);
+      line(outer,'#efffec',2);
+    } else if(kind==='piercer') {
+      line([[pose.x-30,-54],[pose.x+116,-54]],'#efffec',2);
+      line([[pose.x-52,-44],[pose.x+88,-44]],'#dcf5ef88',2);
+    } else {
+      const angle=mix(Math.PI,TAU,smooth((p-.30)/.27));
+      const tail=Math.max(Math.PI,angle-1.25);
+      ctx.beginPath(); ctx.ellipse(28,-34,128,20,0,tail,angle);
+      ctx.ellipse(28,-34,105,12,0,angle,tail,true); ctx.closePath();
+      ctx.fillStyle='#dcf5ef66'; ctx.fill();
+      ctx.beginPath(); ctx.ellipse(28,-34,129,20,0,tail,angle);
+      ctx.strokeStyle='#efffec'; ctx.lineWidth=2; ctx.stroke();
+    }
+    ctx.restore();
+  }
   function hero(t) {
-    const running=mode==='run', attacking=mode==='attack', cycle=t*10;
-    const p=attackTime/attackDuration;
+    const running=mode==='run', attacking=Boolean(attacks[mode]), cycle=t*10;
+    const idle=mode==='idle';
+    const idleFlex=idle?(1-Math.cos(t*1.8))*.5:0;
+    const idleElbow=idle?Math.sin(t*1.8)*.012:0;
+    const p=attacking?attackTime/attacks[mode].duration:0;
+    const pose=attackMoves[mode]?attackPose(mode,p):null;
     const strike=smooth((p-.22)/.24), recover=smooth((p-.58)/.42);
-    const action=strike*(1-recover);
-    const bob=running ? -5-Math.abs(Math.sin(cycle))*7 : Math.sin(t*2.5)*1.7;
-    const lunge=attacking ? action*28 : 0;
+    const action=pose?pose.drive:strike*(1-recover);
+    const attackLoad=attacking?smooth(p/attacks[mode].windup)*
+      (1-smooth((p-attacks[mode].release)/(1-attacks[mode].release))):0;
+    // Load both knees in anticipation, flex the leading knee into the strike,
+    // and release smoothly as the sword recovers. Idle/run keep their poses.
+    const rearKneeDrop=attacking?3*attackLoad*(1-action)+2*action:idleFlex*.08;
+    const frontKneeDrop=attacking?2.5*attackLoad+5.5*action:idleFlex*.04;
+    const bob=running ? -5-Math.abs(Math.sin(cycle))*7 : attacking?Math.sin(t*2.5)*1.7:0;
+    const lunge=pose?pose.lunge:attacking ? action*28 : 0;
     oval(398+lunge,421,running?49:57,running?9:11,'#0c1a2380');
-    ctx.save(); ctx.translate(387+lunge,324+bob); ctx.rotate(running?.1:attacking?action*.12:0);
-    leg([-4,4],running?Math.sin(cycle+Math.PI)*.85:attacking?-.25-action*.38:-.16,running?.3+Math.max(0,Math.cos(cycle+Math.PI))*1.25:.13,false);
+    ctx.save(); ctx.translate(387+lunge,324+bob); ctx.rotate(pose?pose.lean:running?.1:attacking?action*.12:0);
+    leg([-4,4],running?Math.sin(cycle+Math.PI)*.85:attacking?-.25-action*.38:-.16,running?.3+Math.max(0,Math.cos(cycle+Math.PI))*1.25:.13,false,cycle+Math.PI,rearKneeDrop);
     // Rear arm and glove.
-    const rearElbow=joint(-5,-49,32,running?-.65*Math.sin(cycle)-.3:.2-action*.7);
-    const rearHand=joint(...rearElbow,28,-.3);
+    const rearElbow=joint(-5,-49,32,running?-.65*Math.sin(cycle)-.3:.2-action*.7+idleElbow);
+    const rearHand=joint(...rearElbow,28,-.3-idleElbow);
     line([[-5,-49],rearElbow],'#1c303b',21); line([[-5,-49],rearElbow],'#2a5d73',15);
     line([rearElbow,rearHand],'#687f88',14); oval(...rearHand,8,9,'#654b39');
-    leg([5,5],running?Math.sin(cycle)*.85:attacking?.17+action*.55:.17,running?.3+Math.max(0,Math.cos(cycle))*1.25:.04,true);
+    leg([5,5],running?Math.sin(cycle)*.85:attacking?.17+action*.55:.17,running?.3+Math.max(0,Math.cos(cycle))*1.25:.04,true,cycle,frontKneeDrop);
     // Compact torso in profile, with the chest facing right.
     ctx.save(); ctx.scale(.62,.78);
     // Split tunic, fitted breastplate, leather belt, and brass trim.
@@ -187,18 +326,26 @@
     ctx.restore();
     // Leading sword arm: anticipation, fast cut, then recovery.
     let upper=running?.5+Math.sin(cycle)*.45:.35, fore=running?1.8:1.0, blade=running?.55:.3;
-    if(attacking) {
+    upper+=idleElbow; fore-=idleElbow*.8;
+    if(mode==='attack') {
       const wind=smooth(p/.22)*(1-strike);
       upper=mix(.35,2.85,wind); fore=mix(1,3.65,wind); blade=mix(.3,-1.3,wind);
       upper=mix(upper,1.1,action); fore=mix(fore,1.8,action); blade=mix(blade,2.05,action);
     }
-    const elbow=joint(2,-49,32,upper), hand=joint(...elbow,30,fore);
+    let elbow, hand;
+    if(pose) {
+      ({elbow,hand}=attackArm(pose));
+      blade=pose.blade-pose.lean;
+    } else {
+      elbow=joint(2,-49,32,upper); hand=joint(...elbow,30,fore);
+    }
     line([[2,-49],elbow],'#152831',23); line([[2,-49],elbow],'#2e657d',17);
     oval(2,-52,12,11,'#a9bdc1'); line([[-8,-55],[2,-61],[12,-56]],'#e2e8d9',2);
     line([elbow,hand],'#1b3038',19); line([elbow,hand],'#819fa9',14);
     line([[elbow[0]+3,elbow[1]],[hand[0]+3,hand[1]]],'#c6d8d9',3);
-    sword(...hand,blade); oval(...hand,9,8,'#6e503a');
-    if(attacking && p>.25 && p<.59) {
+    if(pose) attackTrail(mode,p,pose);
+    sword(...hand,blade,pose?pose.reach:1); oval(...hand,9,8,'#6e503a');
+    if(mode==='attack' && p>.25 && p<.59) {
       ctx.save(); ctx.globalAlpha=Math.sin((p-.25)/.34*Math.PI)*.7;
       ctx.beginPath(); ctx.arc(27,-57,117,-1.15,1.1); ctx.arc(27,-57,91,1.1,-1.15,true); ctx.closePath();
       ctx.fillStyle='#dcf5ef66'; ctx.fill();
@@ -211,7 +358,7 @@
   }
   function frame(now) {
     const dt=last===null?0:Math.min((now-last)/1000,.05); last=now; elapsed+=dt;
-    if(mode==='attack') { attackTime+=dt; if(attackTime>=attackDuration) setMode(stance); }
+    if(attacks[mode]) { attackTime+=dt; if(attackTime>=attacks[mode].duration) setMode(stance); }
     if(mode==='run') travel+=dt*160;
     ctx.setTransform(canvas.width/800,0,0,canvas.height/500,0,0);
     background(elapsed); hero(elapsed);
