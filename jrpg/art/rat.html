@@ -1,4 +1,4 @@
-html = r'''<!doctype html>
+<!doctype html>
 <html lang="it">
 <head>
 <meta charset="utf-8">
@@ -45,7 +45,7 @@ const ctx = canvas.getContext("2d");
 const stateEl = document.querySelector("#state");
 
 let state="idle", started=performance.now(), dead=false;
-const durations={run:1500, attack:650, die:900};
+const durations={run:Infinity, attack:650, die:900};
 
 function resize(){
   const dpr=Math.min(devicePixelRatio||1,2);
@@ -57,8 +57,10 @@ function resize(){
 addEventListener("resize",resize); resize();
 
 document.querySelectorAll("button").forEach(b=>b.onclick=()=>{
-  state=b.dataset.a; started=performance.now(); dead=false;
+  state=b.dataset.a==="run" && state==="run" ? "idle" : b.dataset.a;
+  started=performance.now(); dead=false;
   stateEl.textContent=state.toUpperCase();
+  document.querySelector('[data-a="run"]').textContent=state==="run" ? "STOP" : "RUN";
 });
 
 function ellipse(x,y,rx,ry,fill,rot=0){
@@ -71,14 +73,19 @@ function line(points,width,color){
   ctx.lineWidth=width; ctx.strokeStyle=color; ctx.lineCap="round"; ctx.lineJoin="round"; ctx.stroke();
 }
 function rat(x,y,s,t,mode){
-  let bob=0, leg=0, tail=0, jaw=0, lunge=0, rot=0;
+  let bob=0, tail=0, jaw=0, lunge=0, rot=0;
+  const running=mode==="run";
+  const cycle=t*2.8, phase=cycle*Math.PI*2;
+  let stretch=1;
 
   if(mode==="idle"){
     bob=Math.sin(t*3)*1.3; tail=Math.sin(t*2.2)*5;
   }
   if(mode==="run"){
-    bob=Math.abs(Math.sin(t*12))*3;
-    leg=Math.sin(t*12)*8; tail=Math.sin(t*9)*9;
+    // One gathered stride followed by an airborne extension.
+    bob=-3-4*Math.sin(phase);
+    stretch=1+Math.cos(phase)*.045;
+    tail=Math.sin(phase-.8)*7;
   }
   if(mode==="attack"){
     const p=Math.min((performance.now()-started)/durations.attack,1);
@@ -102,15 +109,55 @@ function rat(x,y,s,t,mode){
   // tail behind body
   ctx.beginPath();
   ctx.moveTo(-42,3);
-  ctx.bezierCurveTo(-67,-7+tail,-83,18+tail,-102,6+2*bob*s);
+  ctx.bezierCurveTo(-67,-7+tail,-83,18-tail*.6,-102,6+Math.sin(phase-1.7)*(running?10:0));
   ctx.strokeStyle="#8b5f62"; ctx.lineWidth=7; ctx.lineCap="round"; ctx.stroke();
   ctx.strokeStyle="#b07a7b"; ctx.lineWidth=2; ctx.stroke();
 
-  // far legs
-  line([[-23,15],[-28,27+leg*.25],[-39,29]],7,"#5b5048");
-  line([[23,15],[19,27-leg*.25],[9,30]],7,"#5b5048");
+  function paw(x,y,hind,far){
+    line([[x-(hind?5:1.5),y],[x+(hind?8:3),y]],(far?4:5)*(hind?1.1:.7),far?"#715554":"#a27972");
+  }
+
+  function runningLeg(hipX,offset,hind,far){
+    const p=((cycle+offset)%1+1)%1;
+    const stance=.46, reach=hind?12:15;
+    let footX,footY;
+    if(p<stance){
+      // The paw travels backwards at constant speed while on the floor.
+      footX=hipX+reach-2*reach*p/stance;
+      footY=30-bob;
+    }else{
+      const q=(p-stance)/(1-stance);
+      const ease=q*q*(3-2*q);
+      footX=hipX-reach+2*reach*ease;
+      footY=30-bob-Math.sin(q*Math.PI)*(hind?11:13);
+    }
+    const hipY=hind?9:12,dx=footX-hipX,dy=footY-hipY;
+    const distance=Math.max(.001,Math.hypot(dx,dy));
+    const segment=hind?16:23;
+    const bend=Math.sqrt(Math.max(0,segment*segment-distance*distance/4))*(hind?1:-1);
+    const kneeX=(hipX+footX)/2+dy/distance*bend;
+    const kneeY=(hipY+footY)/2-dx/distance*bend;
+    line([[hipX,hipY],[kneeX,kneeY],[footX,footY-2]],(far?6:7)*(hind?1.35:1),far?"#4c443e":"#756258");
+    paw(footX,footY,hind,far);
+  }
+
+  // Cancel body breathing at the feet; knees absorb half the movement.
+  const footOffset=mode==="idle" ? -bob : 0;
+
+  // Offset each pair slightly for a rat's bounding gallop.
+  if(running){
+    runningLeg(-31,.12,true,true);
+    runningLeg(22,.57,false,true);
+  }else{
+    line([[-29,13],[-32,24+footOffset*.5],[-39,29+footOffset]],9,"#5b5048");
+    line([[23,15],[5,22+footOffset*.5],[9,30+footOffset]],7,"#5b5048");
+    paw(-39,30+footOffset,true,true);
+    paw(9,31+footOffset,false,true);
+  }
 
   // body + belly
+  ctx.save();
+  ctx.scale(stretch,1/stretch);
   ellipse(-10,0,43,25,"#514d43",-0.05);
   ellipse(-4,10,31,13,"#686054",-0.03);
 
@@ -120,11 +167,21 @@ function rat(x,y,s,t,mode){
     const px=-36+i*13;
     ctx.beginPath(); ctx.moveTo(px,-18); ctx.lineTo(px+5,-30-(i%2)*3); ctx.lineTo(px+10,-18); ctx.fill();
   }
+  ctx.restore();
 
   // near legs
-  line([[-18,15],[-13,27-leg],[-25,30]],8,"#756258");
-  line([[19,15],[27,27+leg],[17,30]],8,"#756258");
+  if(running){
+    runningLeg(-24,0,true,false);
+    runningLeg(19,.45,false,false);
+  }else{
+    line([[-24,13],[-21,24+footOffset*.5],[-28,30+footOffset]],10,"#756258");
+    line([[19,15],[3,22+footOffset*.5],[17,30+footOffset]],8,"#756258");
+    paw(-28,31+footOffset,true,false);
+    paw(17,31+footOffset,false,false);
+  }
 
+  ctx.save();
+  if(running){ctx.translate(24,-5);ctx.rotate(Math.sin(phase-.5)*.035);ctx.translate(-24,5);}
   // ear behind head
   ellipse(40,-24,8,9,"#4b4140",.25);
   //ellipse(40,-24,5,6,"#835d60",.25);
@@ -162,6 +219,7 @@ function rat(x,y,s,t,mode){
   line([[68,3],[59,10]],1,"#9c9485");
 
   ctx.restore();
+  ctx.restore();
 }
 
 function sewer(w,h){
@@ -187,7 +245,13 @@ function loop(now){
   }
 
   const scale=Math.min(w/360,h/220)*1.15;
-  rat(w*.48,h*.62,scale,now/1000,dead?"die":state);
+  const elapsed=(now-started)/1000;
+  const lift=state==="run" ? (3+4*Math.sin(elapsed*2.8*Math.PI*2))/7 : 0;
+  ctx.save();
+  ctx.globalAlpha=.24-lift*.07;
+  ellipse(w*.48,h*.62+31*scale,(62-lift*6)*scale,5*scale,"#000");
+  ctx.restore();
+  rat(w*.48,h*.62,scale,elapsed,dead?"die":state);
 
   requestAnimationFrame(loop);
 }
@@ -195,8 +259,3 @@ requestAnimationFrame(loop);
 </script>
 </body>
 </html>
-'''
-path="/mnt/data/sewer_rat_canvas.html"
-with open(path,"w",encoding="utf-8") as f:
-    f.write(html)
-print(path)
