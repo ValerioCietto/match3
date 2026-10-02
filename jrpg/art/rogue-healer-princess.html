@@ -1,0 +1,393 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rogue Healer Princess · Hero Animation</title>
+<style>
+  * { box-sizing:border-box }
+  body { margin:0; min-height:100svh; display:grid; place-items:center; background:#10171b; color:#eee9da; font-family:system-ui,sans-serif; padding:24px }
+  main { width:min(900px,100%) }
+  header { display:flex; align-items:end; justify-content:space-between; gap:16px; margin-bottom:22px }
+  .eyebrow { color:#c8ad73; font-size:11px; letter-spacing:.24em; text-transform:uppercase; margin:0 0 8px }
+  h1 { font:400 clamp(28px,5vw,42px) Georgia,serif; margin:0 }
+  .badge { color:#a8b8b6; border:1px solid #39464a; border-radius:30px; padding:8px 12px; font-size:11px; white-space:nowrap }
+  .stage { position:relative; border:1px solid #425050; border-radius:16px; overflow:hidden; background:#18272b }
+  canvas { display:block; width:100%; aspect-ratio:16/10 }
+  .label { position:absolute; top:20px; left:22px; color:#afc3bd; font-size:10px; letter-spacing:.2em; pointer-events:none }
+  .status { position:absolute; bottom:20px; left:22px; display:flex; align-items:center; gap:8px; font-size:11px; letter-spacing:.12em; text-transform:uppercase }
+  .status::before { content:""; width:6px; height:6px; border-radius:50%; background:#e2be78; box-shadow:0 0 12px #e2be7880 }
+  .controls { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:16px }
+  .attacks { grid-template-columns:repeat(5,minmax(0,1fr)); margin-top:10px }
+  .attacks button { flex-wrap:wrap; gap:8px; padding:10px }
+  button { cursor:pointer; display:flex; justify-content:center; align-items:center; gap:12px; min-height:58px; border:1px solid #39474c; border-radius:10px; background:#1c272c; color:#d0dbd8; font:600 14px system-ui; transition:background .15s,border-color .15s }
+  button:hover { background:#28373c }
+  button[aria-pressed="true"] { background:#363528; border-color:#b49b62; color:#ffe0a0 }
+  button:focus-visible { outline:2px solid #ffe0a0; outline-offset:4px }
+  kbd { font:10px system-ui; color:#a2aaa2; border:1px solid #53605e; border-radius:4px; padding:2px 5px }
+  footer { display:flex; justify-content:space-between; gap:16px; margin-top:16px; color:#8d9f9f; font-size:12px; line-height:1.6 }
+  @media(max-width:640px) { .attacks { grid-template-columns:repeat(2,minmax(0,1fr)) } }
+  @media(max-width:520px) { body { padding:16px } header { align-items:start } .badge { display:none } kbd { display:none } footer { flex-direction:column; gap:3px } .label { top:14px; left:14px } }
+  .character-links { display:flex; flex-wrap:wrap; gap:12px; margin-bottom:18px; font-size:13px }
+  .character-links a { color:#e2be78; text-underline-offset:4px }
+  .character-links a[aria-current="page"] { color:#eee9da; font-weight:700 }
+  .character-links a:focus-visible { outline:2px solid #ffe0a0; outline-offset:4px }
+</style>
+</head>
+<body>
+<main>
+  <nav class="character-links" aria-label="Art pages"><a href="barbarian.html">Barbarian</a> <a href="human.html">Human</a> <a href="priest.html">Priest</a> <a href="rat.html">Rat</a> <a href="rogue-healer-princess.html" aria-current="page">Princess</a></nav>
+  <header><div><p class="eyebrow">Character study / Wood elf</p><h1>Rogue Healer Princess</h1></div><span class="badge">WOOD ELF · ROGUE HEALER</span></header>
+  <div class="stage">
+    <canvas id="hero" role="img" aria-label="Animated wood elf rogue healer princess wielding a magic dagger in a forest clearing.">Your browser needs canvas support to display the hero.</canvas>
+    <div class="label">THE OLD FOREST / TRAINING GROUNDS</div>
+    <div class="status" id="status" role="status">Idle · at the ready</div>
+  </div>
+  <div class="controls" role="group" aria-label="Hero stance">
+    <button type="button" data-mode="idle" aria-pressed="true">Idle <kbd>I</kbd></button>
+    <button type="button" data-mode="run" aria-pressed="false">run <kbd>R</kbd></button>
+  </div>
+  <div class="controls attacks" role="group" aria-label="Princess abilities">
+    <button type="button" data-mode="slash" aria-pressed="false">Slash <kbd>1 / SPACE</kbd></button>
+    <button type="button" data-mode="pierce" aria-pressed="false">Pierce <kbd>2</kbd></button>
+    <button type="button" data-mode="heal" aria-pressed="false">Heal <kbd>3</kbd></button>
+    <button type="button" data-mode="healAll" aria-pressed="false">Heal all <kbd>4</kbd></button>
+    <button type="button" data-mode="intimidation" aria-pressed="false">Intimidation <kbd>5</kbd></button>
+  </div>
+  <footer><span>A silent stride. A healing touch. A fearless blade.</span><span>Choose a stance or use abilities 1–5.</span></footer>
+</main>
+<script>
+(() => {
+  'use strict';
+  const canvas = document.querySelector('#hero');
+  const ctx = canvas.getContext('2d');
+  const buttons = [...document.querySelectorAll('[data-mode]')];
+  const status = document.querySelector('#status');
+  const TAU = Math.PI * 2;
+  let mode = 'idle', stance = 'idle', elapsed = 0, attackTime = 0, last = null, travel = 0;
+  const daggerImage = new Image();
+  daggerImage.src = 'magic-dagger.png';
+  const attacks = {
+    slash:{duration:.94,windup:.32,release:.65,label:'Slash · magic dagger'},
+    pierce:{duration:.62,windup:.24,release:.49,label:'Pierce · lunging thrust'},
+    heal:{duration:1.45,windup:.25,release:.72,label:'Heal · renewing light'},
+    healAll:{duration:1.9,windup:.25,release:.76,label:'Heal all · forest blessing'},
+    intimidation:{duration:1.4,windup:.25,release:.74,label:'Intimidation · royal presence'}
+  };
+  const mix = (a,b,t) => a + (b-a)*t;
+  const smooth = t => { t = Math.max(0,Math.min(1,t)); return t*t*(3-2*t); };
+  function setMode(next) {
+    if(attacks[next]) { attackTime = 0; }
+    else { stance = next; }
+    mode = next;
+    buttons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.mode === mode)));
+    status.textContent = attacks[mode]?.label || {idle:'Idle · at the ready',run:'Running · onward'}[mode];
+  }
+  buttons.forEach(button => button.addEventListener('click', () => setMode(button.dataset.mode)));
+  addEventListener('keydown', event => {
+    if(event.altKey || event.ctrlKey || event.metaKey || /INPUT|TEXTAREA|SELECT/.test(event.target.tagName)) return;
+    if(event.code === 'Space' && event.target.closest('button')) return;
+    const next = {KeyI:'idle',KeyR:'run',Digit1:'slash',Digit2:'pierce',Digit3:'heal',Digit4:'healAll',Digit5:'intimidation',Space:'slash'}[event.code];
+    if(next) { event.preventDefault(); if(!event.repeat) setMode(next); }
+  });
+  function resize() {
+    const width = canvas.getBoundingClientRect().width;
+    const dpr = Math.min(window.devicePixelRatio || 1,2);
+    canvas.width = Math.round(width*dpr);
+    canvas.height = Math.round(width*10/16*dpr);
+  }
+  new ResizeObserver(resize).observe(canvas);
+  resize();
+  function shape(points,fill,stroke='#17282e',width=2) {
+    ctx.beginPath(); ctx.moveTo(...points[0]);
+    points.slice(1).forEach(point => ctx.lineTo(...point)); ctx.closePath();
+    ctx.fillStyle=fill; ctx.fill();
+    if(stroke) { ctx.strokeStyle=stroke; ctx.lineWidth=width; ctx.stroke(); }
+  }
+  function oval(x,y,rx,ry,fill) {
+    ctx.beginPath(); ctx.ellipse(x,y,rx,ry,0,0,TAU); ctx.fillStyle=fill; ctx.fill();
+  }
+  function line(points,color,width) {
+    ctx.beginPath(); ctx.moveTo(...points[0]); points.slice(1).forEach(point=>ctx.lineTo(...point));
+    ctx.strokeStyle=color; ctx.lineWidth=width; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.stroke();
+  }
+  function joint(x,y,length,angle) { return [x+Math.sin(angle)*length,y+Math.cos(angle)*length]; }
+  function background(t) {
+    const sky = ctx.createLinearGradient(0,0,0,500);
+    sky.addColorStop(0,'#172b32'); sky.addColorStop(.7,'#3c5653'); sky.addColorStop(1,'#253632');
+    ctx.fillStyle=sky; ctx.fillRect(0,0,800,500);
+    oval(575,116,43,43,'#cbd6b41a'); oval(575,116,30,30,'#cfddbf20');
+    for(let layer=0;layer<2;layer++) {
+      const spacing=105+layer*48;
+      for(let i=-1;i<9;i++) {
+        const offset=travel*(.06+layer*.09);
+        const x=i*spacing-(offset%spacing);
+        const base=332+layer*20, top=35+Math.sin(i*7+layer)*45;
+        // Scale each tree around its roots to keep both layers grounded.
+        const treeScale=.55+layer*.1;
+        ctx.save(); ctx.translate(x,base); ctx.scale(treeScale,treeScale); ctx.translate(-x,-base);
+        shape([[x-9-layer*4,base],[x-4,top],[x+7,top-15],[x+17+layer*4,base]],['#294341','#243c39'][layer],null);
+        shape([[x-55,top+110],[x+3,top-35],[x+65,top+114]],['#294341','#243c39'][layer],null);
+        ctx.restore();
+      }
+    }
+    shape([[440,0],[496,0],[240,382],[110,382]],'#e4ebc307',null);
+    shape([[635,0],[659,0],[493,382],[429,382]],'#e4ebc30a',null);
+    const ground=ctx.createLinearGradient(0,355,0,500);
+    ground.addColorStop(0,'#425249'); ground.addColorStop(1,'#1e302c');
+    shape([[0,369],[190,355],[394,369],[650,351],[800,362],[800,500],[0,500]],ground,null);
+    oval(399,417,240,48,'#aeb38a09');
+    for(let i=0;i<40;i++) {
+      const x=((i*137.3-travel)%850+850)%850-25, y=386+(i*31%112);
+      line([[x-4,y],[x,y-4],[x+4,y]],'#70836b45',1.5);
+    }
+    for(let i=0;i<15;i++) {
+      const x=(i*97+Math.sin(t*.3+i)*18)%800, y=120+(i*43%250)+Math.cos(t*.5+i)*13;
+      oval(x,y,1.2,1.2,`rgba(227,218,155,${.16+.14*Math.sin(t+i)})`);
+    }
+  }
+  // Ankle flexion relative to the shank: positive points the toes down.
+  // Timing is adapted to this existing stride, not a new leg trajectory.
+  // Reference: https://doi.org/10.1371/journal.pone.0270496 (Fig. 4).
+  const ankleCurve = [[0,-.15],[.18,-.12],[.28,0],[.36,.08],[.43,-.12],[.50,-.38],[.56,-.08],[.62,.25],[.72,.08],[.875,-.24],[1,-.15]];
+  function ankleRotation(shankAngle,phase) {
+    if(mode!=='run') return 0;
+    const curve=ankleCurve;
+    const progress=((phase/TAU)%1+1)%1;
+    for(let i=1;i<curve.length;i++) {
+      const [end,value]=curve[i], [start,previous]=curve[i-1];
+      if(progress<=end) {
+        // Neutral is perpendicular to the shin; only the boot pivots.
+        return -shankAngle+mix(previous,value,smooth((progress-start)/(end-start)));
+      }
+    }
+  }
+  function leg(hip,angle,bend,front,phase=0,hipDrop=0) {
+    let knee=joint(...hip,43,angle);
+    const ankle=joint(...knee,42,angle-bend);
+    if(hipDrop>0) {
+      // Settle the hip beneath the tunic, keeping the existing boot path and
+      // limb lengths. This knee branch bends the shin clockwise on screen.
+      hip=[hip[0],hip[1]+hipDrop];
+      const dx=ankle[0]-hip[0], dy=ankle[1]-hip[1], distance=Math.hypot(dx,dy);
+      const along=(43*43-42*42+distance*distance)/(2*distance);
+      const height=Math.sqrt(Math.max(0,43*43-along*along));
+      knee=[hip[0]+(dx*along+dy*height)/distance,
+            hip[1]+(dy*along-dx*height)/distance];
+    }
+line([hip,knee], '#14252c',25); line([hip,knee],front?'#354537':'#27372c',19);
+    oval(...knee,12,10,front?'#a8bbc0':'#738c94');
+    line([knee,ankle],'#17262b',22); line([knee,ankle],front?'#577452':'#3b543e',16);
+    line([[knee[0]+3,knee[1]+6],[ankle[0]+3,ankle[1]-5]],front?'#b4c5c6':'#7f969a',3);
+
+    ctx.save(); ctx.translate(...ankle); ctx.rotate(ankleRotation(angle-bend,phase));
+shape([[-10,-8],[8,-8],[13,3],[24,8],[23,15],[-11,15]],front?'#43392f':'#302e28');
+    line([[-9,14],[22,14]],'#a99064',3);
+
+    ctx.restore();
+  }
+  function dagger(x,y,angle) {
+    ctx.save(); ctx.translate(x,y); ctx.rotate(angle);
+    ctx.shadowColor='#57e9ed'; ctx.shadowBlur=7;
+    if(daggerImage.complete && daggerImage.naturalWidth) {
+      // Original 20 × 110 asset: grip center lands at the wrist; blade points up.
+      ctx.drawImage(daggerImage,-7,-63,14,77);
+    } else {
+      shape([[-4,-8],[-5,-49],[0,-63],[5,-49],[4,-8]],'#7de8ed');
+      line([[0,-6],[0,12]],'#176e92',6);
+    }
+    ctx.restore();
+  }
+  const readyPose = {
+    x:2+Math.sin(.35)*32+Math.sin(1)*30,
+    y:-49+Math.cos(.35)*32+Math.cos(1)*30,
+    blade:.3, drive:0, lunge:0, lean:0, reach:1
+  };
+  // Full arm length directly to the right of the shoulder after the lunge lean.
+  const pierceThrust = {
+    x:2*Math.cos(.09)+49*Math.sin(.09)+62,
+    y:2*Math.sin(.09)-49*Math.cos(.09)
+  };
+  // New attacks share the resting pose but have independent wind-up, strike,
+  // and recovery timing. Hand targets are measured from the body in screen axes.
+  const attackMoves = {
+    slash:[
+      {at:0,...readyPose},
+      {at:.32,...readyPose,x:24,y:-100,blade:-.25,lean:-.06},
+      {at:.40,...readyPose,x:24,y:-100,blade:-.25,lean:-.06},
+      {at:.57,...readyPose,x:51,y:-12,blade:1.70,drive:1,lunge:20,lean:.10},
+      {at:.65,...readyPose,x:51,y:-12,blade:1.70,drive:1,lunge:20,lean:.10},
+      {at:1,...readyPose}
+    ],
+    pierce:[
+      {at:0,...readyPose},
+      {at:.24,...readyPose,x:12,y:-49,blade:Math.PI/2,lunge:-8,lean:-.04},
+      {at:.36,...readyPose,...pierceThrust,blade:Math.PI/2,drive:1,lunge:46,lean:.09},
+      {at:.49,...readyPose,...pierceThrust,blade:Math.PI/2,drive:1,lunge:46,lean:.09},
+      {at:.72,...readyPose,x:22,y:-49,blade:Math.PI/2,drive:.25,lunge:10,lean:.02},
+      {at:1,...readyPose}
+    ],
+    heal:[
+      {at:0,...readyPose},
+      {at:.25,...readyPose,x:32,y:-73,blade:-.3,lean:-.03},
+      {at:.72,...readyPose,x:32,y:-73,blade:-.3,drive:.4,lean:-.03},
+      {at:1,...readyPose}
+    ],
+    healAll:[
+      {at:0,...readyPose},
+      {at:.25,...readyPose,x:12,y:-105,blade:0,lean:-.04},
+      {at:.76,...readyPose,x:12,y:-105,blade:0,drive:.5,lean:-.04},
+      {at:1,...readyPose}
+    ],
+    intimidation:[
+      {at:0,...readyPose},
+      {at:.25,...readyPose,x:48,y:-58,blade:.85,lean:.04},
+      {at:.74,...readyPose,x:48,y:-58,blade:.85,drive:.8,lean:.04,lunge:8},
+      {at:1,...readyPose}
+    ]
+  };
+  function attackPose(kind,progress) {
+    const frames=attackMoves[kind];
+    for(let i=1;i<frames.length;i++) {
+      const a=frames[i-1], b=frames[i];
+      if(progress<=b.at) {
+        const blend=smooth((progress-a.at)/(b.at-a.at)), pose={};
+        for(const key of Object.keys(readyPose)) pose[key]=mix(a[key],b[key],blend);
+        return pose;
+      }
+    }
+    return {...readyPose};
+  }
+  function attackArm(pose) {
+    // Solve only the new attack arm; existing idle, run, and attack keep their rig.
+    const c=Math.cos(pose.lean), s=Math.sin(pose.lean);
+    const hand=[c*pose.x+s*pose.y,-s*pose.x+c*pose.y];
+    const dx=hand[0]-2, dy=hand[1]+49, distance=Math.hypot(dx,dy);
+    const reach=Math.max(.001,Math.min(62,distance));
+    const along=(32*32-30*30+reach*reach)/(2*reach);
+    const bend=Math.sqrt(Math.max(0,32*32-along*along));
+    const elbow=[2+dx/distance*along-dy/distance*bend,
+                 -49+dy/distance*along+dx/distance*bend];
+    return {elbow,hand};
+  }
+  function abilityEffect(kind,p,hand) {
+    const strength=Math.sin(Math.PI*p);
+    if(kind==='slash' && p>.40 && p<.70) {
+      ctx.save(); ctx.globalAlpha=strength*.65;
+      ctx.beginPath(); ctx.arc(hand[0],hand[1],59,-2.4,1.1);
+      ctx.strokeStyle='#a5faff'; ctx.lineWidth=9; ctx.stroke(); ctx.restore();
+    } else if(kind==='pierce' && p>.24 && p<.53) {
+      line([[hand[0]-20,hand[1]],[hand[0]+65,hand[1]]],'#a5faff99',4);
+    } else if(kind==='heal' || kind==='healAll' || kind==='intimidation') {
+      const all=kind==='healAll', fear=kind==='intimidation';
+      const color=fear?'#d9a7ff':'#a5ffd1';
+      ctx.save(); ctx.globalAlpha=strength; ctx.shadowColor=color; ctx.shadowBlur=16;
+      for(let i=0;i<(all?3:1);i++) {
+        const radius=(all?60:35)+p*(all?100:65)+i*24;
+        ctx.beginPath(); ctx.ellipse(0,55,radius,radius*.3,0,0,TAU);
+        ctx.strokeStyle=color; ctx.lineWidth=2; ctx.stroke();
+      }
+      for(let i=0;i<(all?24:12);i++) {
+        const a=i*TAU/(all?24:12)+p*3, r=(all?105:48)*strength;
+        const x=Math.cos(a)*r, y=-30+Math.sin(a)*r*.8-p*25;
+        if(fear) line([[x,y+6],[x,y-6]],color,2);
+        else { line([[x-3,y],[x+3,y]],color,2); line([[x,y-3],[x,y+3]],color,2); }
+      }
+      oval(...hand,9+strength*8,9+strength*8,color+'66'); ctx.restore();
+    }
+  }
+
+  function hero(t) {
+    const running=mode==='run', attacking=Boolean(attacks[mode]), cycle=t*10;
+    const idle=mode==='idle';
+    const idleFlex=idle?(1-Math.cos(t*1.8))*.5:0;
+    const idleElbow=idle?Math.sin(t*1.8)*.012:0;
+    const p=attacking?attackTime/attacks[mode].duration:0;
+    const pose=attackMoves[mode]?attackPose(mode,p):null;
+    const action=pose?pose.drive:0;
+    const attackLoad=attacking?smooth(p/attacks[mode].windup)*
+      (1-smooth((p-attacks[mode].release)/(1-attacks[mode].release))):0;
+    // Load both knees in anticipation, flex the leading knee into the strike,
+    // and release smoothly as the dagger recovers. Idle/run keep their poses.
+    const rearKneeDrop=attacking?3*attackLoad*(1-action)+2*action:idleFlex*.08;
+    const frontKneeDrop=attacking?2.5*attackLoad+5.5*action:idleFlex*.04;
+    const bob=running ? -5-Math.abs(Math.sin(cycle))*7 : attacking?Math.sin(t*2.5)*1.7:0;
+    const lunge=pose?pose.lunge:attacking ? action*28 : 0;
+    oval(398+lunge,421,running?49:57,running?9:11,'#0c1a2380');
+    ctx.save(); ctx.translate(387+lunge,324+bob); ctx.rotate(pose?pose.lean:running?.1:attacking?action*.12:0);
+    leg([-4,4],running?Math.sin(cycle+Math.PI)*.85:attacking?-.25-action*.38:-.16,running?.3+Math.max(0,Math.cos(cycle+Math.PI))*1.25:.13,false,cycle+Math.PI,rearKneeDrop);
+    // Rear arm and glove.
+    const rearElbow=joint(-5,-49,32,running?-.65*Math.sin(cycle)-.3:.2-action*.7+idleElbow);
+    const rearHand=joint(...rearElbow,28,-.3-idleElbow);
+    line([[-5,-49],rearElbow],'#264839',19); line([rearElbow,rearHand],'#9c7756',13); oval(...rearHand,8,9,'#b68e65');
+    leg([5,5],running?Math.sin(cycle)*.85:attacking?.17+action*.55:.17,running?.3+Math.max(0,Math.cos(cycle))*1.25:.04,true,cycle,frontKneeDrop);
+    // Compact torso in profile, with the chest facing right.
+    ctx.save(); ctx.scale(.62,.78);
+
+    // Split tunic, fitted breastplate, leather belt, and brass trim.
+    shape([[-25,-36],[23,-36],[34,25],[8,30],[0,13],[-6,30],[-31,23]],'#315d42');
+    line([[-29,22],[-7,27],[0,12],[9,27],[31,23]],'#c0a269',3);
+    shape([[-26,-77],[9,-82],[27,-67],[23,-28],[-25,-28],[-31,-60]],'#497552');
+    shape([[-22,-74],[10,-77],[23,-64],[18,-40],[-17,-38],[-26,-59]],'#94ae83');
+    shape([[-22,-73],[-7,-70],[-3,-40],[-17,-38],[-26,-59]],'#58794f',null);
+    line([[-5,-69],[14,-67],[12,-47]],'#d9e5de',2);
+    shape([[-25,-34],[25,-34],[26,-24],[-26,-24]],'#4c392f');
+    ctx.restore();
+    // Right-facing profile: one eye, a projecting nose, and a visible ear.
+    ctx.save(); ctx.translate(0,17);
+
+    shape([[-8,-97],[9,-97],[11,-80],[2,-73],[-10,-81]],'#c38e68');
+    shape([[-17,-124],[4,-132],[16,-122],[17,-111],[27,-103],[18,-100],[20,-96],[16,-88],[4,-85],[-13,-96]],'#e3b68c');
+    shape([[-14,-112],[-7,-108],[-6,-94],[6,-87],[-1,-86],[-13,-96]],'#bd805f',null);
+    oval(-4,-106,5,7,'#e3b68c');
+    shape([[-19,-108],[-23,-127],[-15,-140],[-3,-138],[6,-146],[15,-137],[25,-129],[20,-118],[8,-122],[-1,-126],[-9,-115],[-11,-102]],'#70412b');
+    line([[-16,-127],[-5,-134],[9,-133]],'#a96e42',3);
+    line([[12,-113],[19,-113]],'#614439',2);
+    oval(17,-110,1.6,2,'#1e3034'); line([[13,-95],[19,-96]],'#8f5c49',1.5);
+    // Long pointed ear, auburn hair and a leaf-shaped royal circlet.
+    shape([[-7,-112],[-31,-126],[-19,-102],[-6,-100]],'#deb58c','#513d2b',1.5);
+    line([[-24,-119],[-12,-108]],'#a37150',1.4);
+    line([[-15,-129],[0,-132],[18,-124]],'#e5c675',3);
+    shape([[-3,-133],[1,-143],[6,-133],[1,-128]],'#8ee7b5','#d5b85f',1);
+    ctx.restore();
+    // Leading dagger arm: anticipation, fast cut, then recovery.
+    let upper=running?.5+Math.sin(cycle)*.45:.35, fore=running?1.8:1.0, blade=running?.55:.3;
+    upper+=idleElbow; fore-=idleElbow*.8;
+let elbow, hand;
+    if(pose) {
+      ({elbow,hand}=attackArm(pose));
+      blade=pose.blade-pose.lean;
+    } else {
+      elbow=joint(2,-49,32,upper); hand=joint(...elbow,30,fore);
+    }
+
+    line([[2,-49],elbow],'#152831',23); line([[2,-49],elbow],'#4e7650',17);
+    oval(2,-52,12,11,'#a9bdc1'); line([[-8,-55],[2,-61],[12,-56]],'#e2e8d9',2);
+    line([elbow,hand],'#1b3038',19); line([elbow,hand],'#77986a',14);
+    line([[elbow[0]+3,elbow[1]],[hand[0]+3,hand[1]]],'#d4dfb0',3);
+
+    if(pose) abilityEffect(mode,p,hand);
+    dagger(...hand,blade);
+    // Draw the hand last so it covers the dagger grip in every animation.
+    oval(...hand,9,8,'#d6ad80');
+    line([[hand[0]-4,hand[1]-2],[hand[0]+4,hand[1]-2]],'#a67954',1.5);
+    ctx.restore();
+    if(running) {
+      for(let i=0;i<5;i++) { const q=(t*2+i/5)%1; oval(368-q*80,424-q*13,3+q*8,1+q*3,`rgba(184,172,130,${(1-q)*.22})`); }
+    }
+  }
+  function frame(now) {
+    const dt=last===null?0:Math.min((now-last)/1000,.05); last=now; elapsed+=dt;
+    if(attacks[mode]) { attackTime+=dt; if(attackTime>=attacks[mode].duration) setMode(stance); }
+    if(mode==='run') travel+=dt*160;
+    ctx.setTransform(canvas.width/800,0,0,canvas.height/500,0,0);
+    background(elapsed); hero(elapsed);
+    requestAnimationFrame(frame);
+  }
+  document.addEventListener('visibilitychange',()=>{ last=null; });
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
+

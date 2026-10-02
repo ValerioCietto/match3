@@ -25,10 +25,15 @@
   }
   button:active{transform:translateY(1px); background:#303a34}
   .state{text-align:center; margin:9px 0 0; font-size:13px; color:#929d95}
+  .character-links { display:flex; flex-wrap:wrap; gap:12px; margin-bottom:18px; font-size:13px }
+  .character-links a { color:#e2be78; text-underline-offset:4px }
+  .character-links a[aria-current="page"] { color:#eee9da; font-weight:700 }
+  .character-links a:focus-visible { outline:2px solid #ffe0a0; outline-offset:4px }
 </style>
 </head>
 <body>
 <div class="game">
+  <nav class="character-links" aria-label="Art pages"><a href="barbarian.html">Barbarian</a> <a href="human.html">Human</a> <a href="priest.html">Priest</a> <a href="rat.html" aria-current="page">Rat</a> <a href="rogue-healer-princess.html">Princess</a></nav>
   <canvas id="c"></canvas>
   <div class="controls">
     <button data-a="run">RUN</button>
