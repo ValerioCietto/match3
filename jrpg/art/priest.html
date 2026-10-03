@@ -111,8 +111,10 @@
       return {grip:[34-3*recoil,-102-37*aim],angle:.06+(Math.PI/2-.06)*aim};
     }
     if(kind==='heal'||kind==='greater-heal'){
-      const lift=Math.sin(Math.PI*clamp(p/.85));
-      return {grip:[34,-102-30*lift],angle:.06-.38*lift};
+      // Straighten first, lift vertically, hold the blessing, then lower.
+      const lift=ease((p-.10)/.22)*(1-ease((p-.72)/.18));
+      const angle=.06*(1-ease(p/.10)+ease((p-.90)/.10));
+      return {grip:[34,-102-(kind==='greater-heal'?52:44)*lift],angle};
     }
     if(kind==='strike'){
       const swing=p<.3?-.65*ease(p/.3):p<.62?-.65+2.15*ease((p-.3)/.32):1.5*(1-ease((p-.62)/.38));
@@ -181,17 +183,37 @@
     const hem=running?-8+Math.sin(phase-.5)*5:Math.sin(time*2)*3;
     line([rearArm.shoulder,rearArm.elbow,rearArm.hand],'#4c3d61',13);
     line([rearArm.elbow,rearArm.hand],'#968ba9',9);
-    // Long violet vestments, ivory panels, gold edging and crescent clasp.
-    ctx.save();ctx.scale(.65,1);
-    path([[-24,-151],[20,-151],[27,-103],[35+hem,-25],[8,-32],[0,-51],[-9,-27],[-37+hem,-30],[-26,-98]],'#493565');
-    path([[-21,-143],[-7,-133],[-11,-46],[-29+hem,-34],[-19,-97]],'#b6b0cb');
-    path([[8,-139],[20,-145],[22,-99],[29+hem,-34],[10,-43]],'#e0d8e7');
-    line([[-21,-143],[-7,-133],[-11,-46],[-29+hem,-34]],'#c2a766',2);
-    line([[20,-145],[22,-99],[29+hem,-34]],'#d3ba78',2);
-    path([[-26,-147],[-17,-154],[20,-154],[29,-140],[17,-128],[-15,-129]],'#6d5187');
-    line([[-20,-105],[22,-105]],'#c7ad6a',5);ellipse(2,-105,5,7,'#8ce2de');
-    ellipse(0,-141,7,7,'#e3d3a6');ellipse(3,-143,6,6,'#6d5187');
-    ctx.restore();
+    // The same right-facing robe profile is used in every animation: curved
+    // chest on the right, fitted waist, and a trailing back hem on the left.
+    ctx.beginPath();ctx.moveTo(-12,-150);
+    ctx.bezierCurveTo(-18,-140,-17,-117,-13,-105);
+    ctx.quadraticCurveTo(-14,-86,-20,-67);
+    ctx.bezierCurveTo(-23+hem*.5,-49,-26+hem,-35,-30+hem,-27);
+    ctx.quadraticCurveTo(-8+hem,-21,24+hem*.2,-31);
+    ctx.bezierCurveTo(21+hem*.2,-55,15,-78,12,-102);
+    ctx.quadraticCurveTo(11,-111,18,-119);
+    ctx.bezierCurveTo(25,-133,18,-146,7,-151);
+    ctx.closePath();ctx.fillStyle='#493565';ctx.fill();
+    // Back folds follow the cloth toward the trailing hem.
+    path([[-12,-143],[-8,-116],[-9,-101],[-13,-77],[-17+hem*.6,-43],[-24+hem,-28],[-30+hem,-27],[-20,-67],[-13,-105]],'#352744');
+    line([[-5,-96],[-7,-72],[-10+hem*.5,-48],[-16+hem,-30]],'#715784',2);
+    // One narrow ivory front panel follows the right edge in side view.
+    ctx.beginPath();ctx.moveTo(10,-146);
+    ctx.bezierCurveTo(22,-135,18,-124,11,-112);
+    ctx.quadraticCurveTo(8,-107,10,-98);
+    ctx.bezierCurveTo(13,-76,20+hem*.2,-48,24+hem*.2,-31);
+    ctx.lineTo(17+hem*.2,-30);
+    ctx.bezierCurveTo(13,-54,7,-80,5,-101);
+    ctx.quadraticCurveTo(3,-112,9,-123);
+    ctx.quadraticCurveTo(16,-134,6,-144);
+    ctx.closePath();ctx.fillStyle='#e0d8e7';ctx.fill();
+    line([[10,-145],[17,-134],[14,-123],[8,-108],[9,-96],[15,-65],[22+hem*.2,-33]],'#d3ba78',1.5);
+    line([[-28+hem,-27],[-8+hem*.5,-25],[23+hem*.2,-31]],'#c2a766',2);
+    // Collar and fasteners sit on the front edge of the profile.
+    path([[-13,-149],[-6,-155],[9,-153],[16,-143],[9,-136],[-9,-141]],'#6d5187');
+    line([[-12,-105],[0,-103],[12,-104]],'#c7ad6a',4);
+    ellipse(12,-104,2.5,5,'#8ce2de');
+    ellipse(12,-143,3.5,6,'#e3d3a6');ellipse(14,-145,3,5,'#6d5187');
     // White hair silhouette, violet profile and visibly long pointed ear.
     path([[-19,-184],[-27,-162],[-30,-126],[-14,-140],[2,-160],[22,-174],[17,-194],[-3,-202]],'#b7b7d7');
     line([[1,-161],[1,-146]],'#8866a7',12);
