@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cave Bat · Canvas Animation</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100svh;display:grid;place-items:center;padding:24px;background:#100f19;color:#eee7f4;font-family:system-ui,sans-serif}
+main{width:min(900px,100%)}
+.character-links{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:24px;font-size:13px}
+a{color:#bba1d5;text-underline-offset:4px}a[aria-current]{color:#fff;font-weight:700}
+header{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:20px}
+.eyebrow{margin:0 0 8px;color:#b49acb;font-size:11px;letter-spacing:.24em;text-transform:uppercase}
+h1{margin:0;font:400 clamp(30px,5vw,44px) Georgia,serif}
+.badge{border:1px solid #493951;border-radius:24px;padding:8px 12px;font-size:11px;color:#bdaac9}
+.stage{position:relative;overflow:hidden;border:1px solid #493951;border-radius:16px;background:#171320}
+canvas{display:block;width:100%;aspect-ratio:16/10}
+.label,.status{position:absolute;left:22px;font-size:10px;letter-spacing:.18em;pointer-events:none}
+.label{top:20px;color:#a79ab9}.status{bottom:20px;color:#dec5ed;text-transform:uppercase}
+.status:before{content:'';display:inline-block;width:6px;height:6px;background:#eea6bf;border-radius:50%;margin-right:10px;box-shadow:0 0 12px #eea6bf}
+.controls{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:16px}
+button{min-height:56px;border:1px solid #493951;border-radius:10px;background:#211a2b;color:#e5d7ed;font:600 14px system-ui;cursor:pointer}
+button:hover{background:#35243e}button[aria-pressed=true]{background:#452b50;border-color:#be86ce}
+button:focus-visible,a:focus-visible{outline:2px solid #f1bfdf;outline-offset:4px}
+kbd{margin-left:8px;font:10px system-ui;color:#bda6cb;border:1px solid #60486c;border-radius:4px;padding:2px 5px}
+footer{display:flex;justify-content:space-between;gap:12px;margin-top:16px;font-size:12px;color:#a396af;line-height:1.6}
+@media(max-width:520px){body{padding:16px}.badge,kbd{display:none}.controls{grid-template-columns:repeat(2,1fr)}footer{flex-direction:column;gap:2px}.label,.status{left:14px;font-size:9px}}
+</style>
+</head>
+<body>
+<main>
+  <nav class="character-links" aria-label="Art pages"><a href="barbarian.html">Barbarian</a><a href="bat.html" aria-current="page">Bat</a><a href="human.html">Human</a><a href="lich.html">Lich</a><a href="priest.html">Priest</a><a href="rat.html">Rat</a><a href="rogue-healer-princess.html">Princess</a> <a href="Scorpion-bear.html">Scorpion Bear</a></nav>
+  <nav class="character-links" aria-label="Scenery"><span>Scenery</span> <a href="city.html">City</a> <a href="sewers.html">Sewers</a> <a href="countryside.html">Countryside</a></nav>
+  <header><div><p class="eyebrow">Creature study / Nocturnal</p><h1>The Cave Bat</h1></div><span class="badge">BEAST · NIGHT WINGS</span></header>
+  <div class="stage">
+    <canvas id="bat" role="img" aria-label="An animated purple cave bat with scalloped wings, pointed ears, amber eyes and little fangs in a moonlit cavern.">Canvas support is needed to display the bat.</canvas>
+    <div class="label">THE HOLLOW CAVERN / AFTER DUSK</div>
+    <div class="status" id="status" role="status">Hover · listening in the dark</div>
+  </div>
+  <div class="controls" role="group" aria-label="Bat animations">
+    <button type="button" data-mode="idle" aria-pressed="true">Hover <kbd>I</kbd></button>
+    <button type="button" data-mode="fly" aria-pressed="false">Fly <kbd>F</kbd></button>
+    <button type="button" data-mode="attack" aria-pressed="false">Bite <kbd>SPACE</kbd></button>
+    <button type="button" data-mode="die" aria-pressed="false">Die <kbd>D</kbd></button>
+  </div>
+  <footer><span>A whisper of wings. A flash of fangs.</span><span>Choose Hover or Fly to revive.</span></footer>
+</main>
+<script>
+(() => {
+  'use strict';
+  const canvas=document.querySelector('#bat'),ctx=canvas.getContext('2d');
+  const buttons=[...document.querySelectorAll('[data-mode]')],status=document.querySelector('#status');
+  const labels={idle:'Hover · listening in the dark',fly:'Fly · on silent wings',attack:'Bite · a sudden strike',die:'Fallen · the cavern falls quiet'};
+  const reduced=matchMedia('(prefers-reduced-motion: reduce)');
+  let mode='idle',stance='idle',age=0,time=0,last=null;
+  const clamp=x=>Math.max(0,Math.min(1,x)),ease=x=>{x=clamp(x);return x*x*(3-2*x);};
+  function setMode(next){
+    mode=next;age=0;
+    if(next==='idle'||next==='fly')stance=next;
+    status.textContent=labels[next];
+    buttons.forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.mode===next)));
+  }
+  buttons.forEach(button=>button.addEventListener('click',()=>setMode(button.dataset.mode)));
+  addEventListener('keydown',event=>{
+    if(event.repeat||event.altKey||event.ctrlKey||event.metaKey||/INPUT|TEXTAREA|SELECT|BUTTON|A/.test(event.target.tagName)||event.target.isContentEditable)return;
+    const next={i:'idle',f:'fly',r:'fly',' ':'attack',d:'die'}[event.key.toLowerCase()];
+    if(next){event.preventDefault();setMode(next);}
+  });
+  function resize(){
+    const rect=canvas.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2);
+    canvas.width=Math.round(rect.width*dpr);canvas.height=Math.round(rect.height*dpr);
+  }
+  addEventListener('resize',resize);resize();
+  function oval(x,y,rx,ry,color,rotation=0){
+    ctx.beginPath();ctx.ellipse(x,y,rx,ry,rotation,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
+  }
+  function path(points,color,width=2){
+    ctx.beginPath();ctx.moveTo(...points[0]);points.slice(1).forEach(p=>ctx.lineTo(...p));
+    ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke();
+  }
+  function cavern(){
+    const glow=ctx.createRadialGradient(450,215,10,450,250,480);
+    glow.addColorStop(0,'#3a2e50');glow.addColorStop(.55,'#211c32');glow.addColorStop(1,'#100f1b');
+    ctx.fillStyle=glow;ctx.fillRect(0,0,900,562.5);
+    // Distant shafts of moonlight and layered limestone silhouettes.
+    ctx.fillStyle='#ac9be009';
+    for(let i=0;i<3;i++){
+      ctx.beginPath();ctx.moveTo(490+i*42,0);ctx.lineTo(200+i*70,475);ctx.lineTo(355+i*65,475);ctx.lineTo(510+i*42,0);ctx.fill();
+    }
+    for(let layer=0;layer<2;layer++){
+      ctx.fillStyle=layer?'#12101d':'#1b1728';
+      for(let i=0;i<13;i++){
+        const x=i*80-40+layer*20,len=35+(Math.sin(i*7.3+layer)+1)*48;
+        ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+38,len);ctx.lineTo(x+76,0);ctx.fill();
+      }
+    }
+    ctx.fillStyle='#161321';ctx.beginPath();ctx.moveTo(0,462);
+    for(let x=0;x<=900;x+=30)ctx.lineTo(x,460+Math.sin(x*.019)*9);
+    ctx.lineTo(900,563);ctx.lineTo(0,563);ctx.fill();
+    for(let i=0;i<18;i++){
+      const x=(i*137+25)%900,y=115+(i*67)%310;
+      oval(x,y+Math.sin(time*.5+i)*5,1.2,1.2,'#a697bb44');
+    }
+    for(const [x,y,s] of [[78,466,1],[760,468,.8],[811,479,1.3]]){
+      ctx.fillStyle='#433652';ctx.beginPath();ctx.moveTo(x-9*s,y);ctx.lineTo(x-5*s,y-34*s);ctx.lineTo(x+4*s,y-44*s);ctx.lineTo(x+11*s,y);ctx.fill();
+      path([[x+4*s,y-44*s],[x+2*s,y-8*s]],'#796087',1);
+    }
+  }
+  function wing(side,flap,fold){
+    ctx.save();ctx.scale(side,1);ctx.translate(16,0);ctx.rotate(-.12+flap*.52+fold*.9);
+    ctx.scale(1-fold*.66,1-Math.max(0,flap)*.16);
+    const membrane=ctx.createLinearGradient(0,-65,85,55);membrane.addColorStop(0,'#995f91');membrane.addColorStop(1,'#432a53');
+    ctx.beginPath();ctx.moveTo(0,-10);ctx.quadraticCurveTo(42,-79,83,-62);ctx.lineTo(157,9);
+    ctx.quadraticCurveTo(107,-5,108,47);ctx.quadraticCurveTo(74,14,63,62);ctx.quadraticCurveTo(36,28,15,48);ctx.lineTo(0,17);ctx.closePath();
+    ctx.fillStyle=membrane;ctx.fill();ctx.strokeStyle='#281d35';ctx.lineWidth=3;ctx.stroke();
+    path([[0,-10],[45,-55],[83,-62],[157,9]],'#bf8aa8',4);
+    for(const end of [[108,47],[63,62],[15,48]]){
+      ctx.beginPath();ctx.moveTo(83,-62);ctx.quadraticCurveTo(end[0]-8,-4,...end);ctx.strokeStyle='#b77b9b';ctx.lineWidth=2;ctx.stroke();
+    }
+    path([[47,-53],[46,-68],[52,-73]],'#e9c1bb',3);ctx.restore();
+  }
+  function bat(x,y,flap,fall,bite){
+    ctx.save();ctx.translate(x,y);ctx.rotate(fall*1.45+(mode==='fly'?Math.cos(time*2)*.12:0));
+    wing(-1,flap,fall);wing(1,flap,fall);
+    // Small hooked feet remain behind the fur.
+    for(const side of [-1,1]){
+      path([[side*10,31],[side*14,45],[side*21,46]],'#a087a8',3);
+      path([[side*14,45],[side*15,49]],'#e2c5bd',2);
+    }
+    oval(0,11,27,37,'#35293f');oval(0,17,18,27,'#62506b');
+    for(const side of [-1,1]){
+      ctx.beginPath();ctx.moveTo(side*6,-28);ctx.quadraticCurveTo(side*13,-64,side*29,-77);ctx.quadraticCurveTo(side*39,-45,side*24,-21);ctx.closePath();ctx.fillStyle='#46314f';ctx.fill();
+      ctx.beginPath();ctx.moveTo(side*14,-32);ctx.lineTo(side*28,-64);ctx.quadraticCurveTo(side*31,-43,side*23,-30);ctx.fillStyle='#b27391';ctx.fill();
+    }
+    oval(0,-18,31,27,'#4e3a59');
+    for(const side of [-1,1]){
+      ctx.fillStyle='#4e3a59';ctx.beginPath();ctx.moveTo(side*22,-18);ctx.lineTo(side*38,-13);ctx.lineTo(side*26,-5);ctx.lineTo(side*33,0);ctx.lineTo(side*17,5);ctx.fill();
+      if(fall>.8){path([[side*10-5,-23],[side*10+5,-15]],'#cbb2c7',2);path([[side*10+5,-23],[side*10-5,-15]],'#cbb2c7',2);}
+      else{oval(side*12,-21,8,7,'#201a2c');oval(side*12,-20,5,4,'#efb877');oval(side*12,-20,1.4,3.5,'#34202c');oval(side*12-1,-22,1.3,1.3,'#fff2c9');}
+    }
+    oval(0,-5,13,7+bite*6,'#211925');
+    ctx.fillStyle='#f2dfcd';
+    for(const side of [-1,1]){ctx.beginPath();ctx.moveTo(side*6-3,-9);ctx.lineTo(side*6+3,-9);ctx.lineTo(side*6,1+bite*6);ctx.fill();}
+    oval(-6,-12,8,5,'#85677f');oval(6,-12,8,5,'#85677f');oval(0,-15,5,3,'#c595ab');
+    path([[-9,-40],[-3,-46],[1,-40],[6,-44],[11,-39]],'#786080',2);
+    ctx.restore();
+  }
+  function frame(now){
+    const dt=last===null?0:Math.min((now-last)/1000,.05);last=now;age+=dt;time+=reduced.matches?0:dt;
+    if(mode==='attack'&&age>=.85)setMode(stance);
+    ctx.setTransform(canvas.width/900,0,0,canvas.height/562.5,0,0);cavern();
+    const fall=mode==='die'?ease(age/1.1):0;
+    const bite=mode==='attack'?Math.sin(clamp(age/.85)*Math.PI):0;
+    const travel=mode==='fly'&&!reduced.matches?Math.sin(time*2)*115:0;
+    const x=450+travel+bite*95,y=270+Math.sin(time*3)*9+bite*38+fall*162;
+    oval(x,474,53+fall*18,8,'#08071066');
+    const flap=mode==='die'?Math.sin(time*14)*(1-fall):Math.sin(time*(mode==='fly'?19:12));
+    bat(x,y,flap,fall,bite);
+    requestAnimationFrame(frame);
+  }
+  document.addEventListener('visibilitychange',()=>{last=null;});
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
