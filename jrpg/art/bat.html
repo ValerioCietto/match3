@@ -27,11 +27,12 @@ kbd{margin-left:8px;font:10px system-ui;color:#bda6cb;border:1px solid #60486c;b
 footer{display:flex;justify-content:space-between;gap:12px;margin-top:16px;font-size:12px;color:#a396af;line-height:1.6}
 @media(max-width:520px){body{padding:16px}.badge,kbd{display:none}.controls{grid-template-columns:repeat(2,1fr)}footer{flex-direction:column;gap:2px}.label,.status{left:14px;font-size:9px}}
 </style>
+<link rel="stylesheet" href="menu.css">
+<script src="menu.js" defer></script>
 </head>
 <body>
 <main>
-  <nav class="character-links" aria-label="Art pages"><a href="barbarian.html">Barbarian</a><a href="bat.html" aria-current="page">Bat</a><a href="human.html">Human</a><a href="lich.html">Lich</a><a href="priest.html">Priest</a><a href="rat.html">Rat</a><a href="rogue-healer-princess.html">Princess</a> <a href="Scorpion-bear.html">Scorpion Bear</a></nav>
-  <nav class="character-links" aria-label="Scenery"><span>Scenery</span> <a href="city.html">City</a> <a href="sewers.html">Sewers</a> <a href="countryside.html">Countryside</a></nav>
+  <div data-art-menu><a class="art-menu-fallback" href="menu.html">Browse Characters, Enemies and Scenery</a></div>
   <header><div><p class="eyebrow">Creature study / Nocturnal</p><h1>The Cave Bat</h1></div><span class="badge">BEAST · NIGHT WINGS</span></header>
   <div class="stage">
     <canvas id="bat" role="img" aria-label="An animated purple cave bat with scalloped wings, pointed ears, amber eyes and little fangs in a moonlit cavern.">Canvas support is needed to display the bat.</canvas>

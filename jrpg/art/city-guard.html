@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>City Guard · Canvas Animation</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100svh;display:grid;place-items:center;padding:24px;background:#171610;color:#e4e8f1;font-family:system-ui,sans-serif}
+main{width:min(900px,100%)}
+.character-links{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:24px;font-size:13px}
+a{color:#bba1d5;text-underline-offset:4px}a[aria-current]{color:#fff;font-weight:700}
+header{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:20px}
+.eyebrow{margin:0 0 8px;color:#d7bb79;font-size:11px;letter-spacing:.24em;text-transform:uppercase}
+h1{margin:0;font:400 clamp(30px,5vw,44px) Georgia,serif}
+.badge{border:1px solid #514b3b;border-radius:24px;padding:8px 12px;font-size:11px;color:#bfb394}
+.stage{position:relative;overflow:hidden;border:1px solid #514b3b;border-radius:16px;background:#29281e}
+canvas{display:block;width:100%;aspect-ratio:16/10}
+.label,.status{position:absolute;left:22px;font-size:10px;letter-spacing:.18em;pointer-events:none}
+.label{top:20px;color:#c3bda8}.status{bottom:20px;color:#ecdda5;text-transform:uppercase}
+.status:before{content:'';display:inline-block;width:6px;height:6px;background:#e7c766;border-radius:50%;margin-right:10px;box-shadow:0 0 12px #e7c766}
+.controls{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:16px}
+button{padding:8px;min-height:56px;border:1px solid #514b3b;border-radius:10px;background:#2b2b21;color:#d9e1ef;font:600 14px system-ui;cursor:pointer}
+button:hover{background:#414132}button[aria-pressed=true]{background:#4b452c;border-color:#d0b975}
+button:focus-visible,a:focus-visible{outline:2px solid #f4dfa0;outline-offset:4px}
+kbd{margin-left:8px;font:10px system-ui;color:#b4b6ce;border:1px solid #586078;border-radius:4px;padding:2px 5px}
+footer{display:flex;justify-content:space-between;gap:12px;margin-top:16px;font-size:12px;color:#9ca9bf;line-height:1.6}
+@media(max-width:520px){body{padding:16px}.badge,kbd{display:none}.controls{grid-template-columns:repeat(2,1fr)}footer{flex-direction:column;gap:2px}.label,.status{left:14px;font-size:9px}}
+</style>
+<link rel="stylesheet" href="menu.css">
+<script src="menu.js" defer></script>
+</head>
+<body>
+<main>
+  <div data-art-menu><a class="art-menu-fallback" href="menu.html">Browse Characters, Enemies and Scenery</a></div>
+  <header><div><p class="eyebrow">Enemy study / Night watch</p><h1>The City Guard</h1></div><span class="badge">HUMAN &middot; SHIFT NEVER ENDS</span></header>
+  <div class="stage">
+    <canvas id="city-guard" role="img" aria-label="A very tired human city guard in weathered armor, a dented metal helmet and shoulder plates, sleeping upright with a sword pointed down and a round buckler.">Canvas support is needed to display the city guard.</canvas>
+    <div class="label">THE CITY GATE / ONE SHIFT TOO MANY</div>
+    <div class="status" id="status" role="status">Idle &middot; asleep on his feet</div>
+  </div>
+  <div class="controls" role="group" aria-label="City Guard animations">
+    <button type="button" data-mode="idle" aria-pressed="true">Idle <kbd>I</kbd></button>
+    <button type="button" data-mode="attack" aria-pressed="false">Attack <kbd>A</kbd></button>
+    <button type="button" data-mode="nap" aria-pressed="false">Overdue sleep nap <kbd>N</kbd></button>
+    <button type="button" data-mode="flee" aria-pressed="false">Flee <kbd>F</kbd></button>
+  </div>
+  <footer><span>Underpaid. Over-armored. Very, very tired.</span><span>Choose another animation to bring him back.</span></footer>
+</main>
+<script src="city-guard-scene.js"></script>
+</body></html>

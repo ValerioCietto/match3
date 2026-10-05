@@ -30,11 +30,12 @@
   footer { display:flex; justify-content:space-between; gap:16px; margin-top:16px; color:#a393b2; font-size:12px; line-height:1.6 }
   @media(max-width:520px) { body { padding:16px } .badge,kbd { display:none } footer { flex-direction:column; gap:3px } .attacks button { padding:8px 4px } }
 </style>
+<link rel="stylesheet" href="menu.css">
+<script src="menu.js" defer></script>
 </head>
 <body>
 <main>
-  <nav class="character-links" aria-label="Art pages"><a href="barbarian.html">Barbarian</a> <a href="bat.html">Bat</a> <a href="human.html">Human</a> <a href="lich.html" aria-current="page">Lich</a> <a href="priest.html">Priest</a> <a href="rat.html">Rat</a> <a href="rogue-healer-princess.html">Princess</a> <a href="Scorpion-bear.html">Scorpion Bear</a></nav>
-  <nav class="character-links" aria-label="Scenery"><span>Scenery</span> <a href="city.html">City</a> <a href="sewers.html">Sewers</a> <a href="countryside.html">Countryside</a></nav>
+  <div data-art-menu><a class="art-menu-fallback" href="menu.html">Browse Characters, Enemies and Scenery</a></div>
   <header><div><p class="eyebrow">Character study / Undead</p><h1>The Lich</h1></div><span class="badge">SKELETON · DARK MAGE</span></header>
   <div class="stage">
     <canvas id="lich" role="img" aria-label="Left-facing skeletal dark mage holding a dark scythe in both hands, with glowing purple eyes in a ruined graveyard.">Your browser needs canvas support to display the Lich.</canvas>
