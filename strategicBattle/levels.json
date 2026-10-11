@@ -1,0 +1,165 @@
+[
+  {
+    "name": "The river frontier",
+    "description": "Difficulty 1/10. An even frontier: 20 troops against 20. Secure the valley.",
+    "nodes": [
+      [130,180,"village","Player"],
+      [150,430,"mine","Player"],
+      [320,300,"village","Neutral"],
+      [420,130,"tower","Neutral"],
+      [490,470,"mine","Neutral"],
+      [620,300,"city","Neutral"],
+      [790,160,"barracks","Enemy"],
+      [820,450,"village","Enemy"]
+    ]
+  },
+  {
+    "name": "Iron archipelago",
+    "description": "Difficulty 2/10. 19 troops against 24. Secure the islands before the enemy expands.",
+    "nodes": [
+      [110,180,"village","Player",10],
+      [120,430,"mine","Player",9],
+      [280,120,"village","Neutral",7],
+      [300,460,"mine","Neutral",8],
+      [470,290,"tower","Neutral",10],
+      [590,120,"barracks","Neutral",10],
+      [590,470,"village","Neutral",10],
+      [750,160,"city","Enemy",12],
+      [820,430,"village","Enemy",12]
+    ]
+  },
+  {
+    "name": "Copper crossing",
+    "description": "Difficulty 3/10. 18 troops against 30. A third enemy outpost threatens the crossing.",
+    "nodes": [
+      [110,180,"village","Player",9],
+      [120,430,"mine","Player",9],
+      [280,290,"village","Neutral",7],
+      [390,120,"mine","Neutral",9],
+      [400,470,"tower","Neutral",10],
+      [580,290,"barracks","Neutral",10],
+      [750,130,"city","Enemy",10],
+      [850,310,"village","Enemy",10],
+      [750,480,"mine","Enemy",10]
+    ]
+  },
+  {
+    "name": "Twin capitals",
+    "description": "Difficulty 4/10. 17 troops against 36. Two hostile capitals anchor the eastern front.",
+    "nodes": [
+      [110,180,"village","Player",9],
+      [120,430,"mine","Player",8],
+      [280,160,"village","Neutral",7],
+      [280,440,"mine","Neutral",9],
+      [460,300,"tower","Neutral",11],
+      [560,120,"barracks","Neutral",10],
+      [560,480,"village","Neutral",10],
+      [740,120,"city","Enemy",12],
+      [850,300,"village","Enemy",12],
+      [740,480,"city","Enemy",12]
+    ]
+  },
+  {
+    "name": "Red basin",
+    "description": "Difficulty 5/10. 16 troops against 44. Four enemy outposts press into the basin.",
+    "nodes": [
+      [110,180,"village","Player",8],
+      [120,430,"mine","Player",8],
+      [270,300,"village","Neutral",7],
+      [360,120,"mine","Neutral",9],
+      [360,480,"tower","Neutral",11],
+      [520,300,"village","Neutral",11],
+      [650,120,"city","Enemy",11],
+      [850,180,"barracks","Enemy",11],
+      [650,480,"city","Enemy",11],
+      [850,430,"mine","Enemy",11]
+    ]
+  },
+  {
+    "name": "Siege corridor",
+    "description": "Difficulty 6/10. 15 troops against 52. Three hostile cities guard a narrow approach.",
+    "nodes": [
+      [110,180,"village","Player",8],
+      [120,430,"mine","Player",7],
+      [260,170,"village","Neutral",6],
+      [280,440,"mine","Neutral",9],
+      [440,300,"tower","Neutral",12],
+      [560,470,"barracks","Neutral",11],
+      [640,140,"city","Enemy",13],
+      [820,120,"city","Enemy",13],
+      [740,310,"barracks","Enemy",13],
+      [820,490,"city","Enemy",13]
+    ]
+  },
+  {
+    "name": "Broken perimeter",
+    "description": "Difficulty 7/10. 14 troops against 60. Five garrisons leave little room to expand.",
+    "nodes": [
+      [110,180,"village","Player",7],
+      [120,430,"mine","Player",7],
+      [270,300,"village","Neutral",6],
+      [390,120,"mine","Neutral",9],
+      [390,480,"barracks","Neutral",11],
+      [520,300,"tower","Neutral",12],
+      [650,110,"city","Enemy",12],
+      [850,120,"city","Enemy",12],
+      [700,300,"tower","Enemy",12],
+      [640,490,"city","Enemy",12],
+      [850,470,"barracks","Enemy",12]
+    ]
+  },
+  {
+    "name": "City of embers",
+    "description": "Difficulty 8/10. 13 troops against 72. Four cities support a six-outpost offensive.",
+    "nodes": [
+      [110,180,"village","Player",7],
+      [120,430,"mine","Player",6],
+      [260,170,"village","Neutral",6],
+      [270,450,"mine","Neutral",9],
+      [440,300,"tower","Neutral",12],
+      [620,110,"city","Enemy",12],
+      [830,130,"city","Enemy",12],
+      [660,290,"barracks","Enemy",12],
+      [870,310,"mine","Enemy",12],
+      [620,480,"city","Enemy",12],
+      [830,490,"city","Enemy",12]
+    ]
+  },
+  {
+    "name": "Crimson empire",
+    "description": "Difficulty 9/10. 12 troops against 84. Five cities dominate the far bank. Defend, then advance.",
+    "nodes": [
+      [110,180,"village","Player",6],
+      [120,430,"mine","Player",6],
+      [260,300,"village","Neutral",5],
+      [380,120,"mine","Neutral",9],
+      [380,480,"tower","Neutral",12],
+      [470,300,"barracks","Neutral",12],
+      [610,110,"city","Enemy",14],
+      [830,130,"city","Enemy",14],
+      [650,290,"city","Enemy",14],
+      [870,310,"barracks","Enemy",14],
+      [610,480,"city","Enemy",14],
+      [830,490,"city","Enemy",14]
+    ]
+  },
+  {
+    "name": "The last stronghold",
+    "description": "Difficulty 10/10. 10 troops against 98. Six enemy cities. Hold your foothold and reclaim the capital.",
+    "nodes": [
+      [110,180,"village","Player",5],
+      [120,430,"mine","Player",5],
+      [260,300,"village","Neutral",5],
+      [370,120,"mine","Neutral",9],
+      [370,480,"tower","Neutral",12],
+      [470,300,"barracks","Neutral",12],
+      [590,100,"city","Enemy",14],
+      [790,110,"city","Enemy",14],
+      [640,270,"city","Enemy",14],
+      [880,290,"city","Enemy",14],
+      [590,470,"city","Enemy",14],
+      [790,490,"city","Enemy",14],
+      [760,380,"barracks","Enemy",14]
+    ]
+  }
+]

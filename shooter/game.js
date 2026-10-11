@@ -15,6 +15,9 @@
     "bullet type": "round",
     "bullet number": 1,
     "bullet spread": 0,    // degrees
+    "critical unlocked": false,
+    "critical chance": 20,
+    "critical damage bonus": 100,
     "bullet fire rate": 0.5, // shots/sec
     "spawn quantity": 1, // how many enemies to spawn
   };
@@ -130,6 +133,11 @@
       state.player.moveRight = false;
       e.preventDefault();
     }
+  });
+
+  window.addEventListener('blur', () => {
+    state.player.moveLeft = false;
+    state.player.moveRight = false;
   });
 
   // ---------- Audio ----------
@@ -258,13 +266,20 @@
   }
 
   // ---------- Shooting ----------
+  function addBullet(properties) {
+    const chance = Math.max(0, Math.min(90, state.save["critical chance"] ?? 20));
+    const critical = !!state.save["critical unlocked"] && Math.random() * 100 < chance;
+    const bonus = Math.max(0, state.save["critical damage bonus"] ?? 100);
+    state.bullets.push({ ...properties, critical, damage: critical ? 1 + bonus / 100 : 1 });
+  }
+
   function shootFan(centerX, centerY, count, stepDeg, speed=320) {
     const center = -Math.PI/2; // -90°
     const total = (count-1) * (stepDeg * Math.PI/180);
     const start = center - total/2;
     for (let i=0;i<count;i++){
       const angle = start + i*(stepDeg * Math.PI/180);
-      state.bullets.push({
+      addBullet({
         x: centerX,
         y: centerY,
         vx: Math.cos(angle) * speed,
@@ -286,7 +301,7 @@
       const step = (num === 1) ? 0 : spreadRad / (num-1);
       for (let i=0;i<num;i++){
         const angle = startAngle + i*step;
-        state.bullets.push({
+        addBullet({
           x: state.player.x * canvas.clientWidth,
           y: state.player.y * canvas.clientHeight - state.player.size - 4,
           vx: Math.cos(angle) * 200, // orizzontale
@@ -405,8 +420,8 @@
         }
       }
       if (hitIndex >= 0) {
-        state.bullets.splice(hitIndex, 1);
-        e.hp -= 1;
+        const [bullet] = state.bullets.splice(hitIndex, 1);
+        e.hp = Math.round((e.hp - bullet.damage) * 1e10) / 1e10;
 
         if (e.hp <= 0) {
           commitSave({
@@ -575,8 +590,8 @@
     }
 
     // bullets
-    ctx.fillStyle = '#f5f7ff';
     for (const b of state.bullets) {
+      ctx.fillStyle = b.critical ? '#ff3030' : '#f5f7ff';
       ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill();
     }
 

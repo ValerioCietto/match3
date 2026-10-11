@@ -1,6 +1,37 @@
 {
   "upgrades": [
     {
+      "id": "critical_ability",
+      "name": "Abilità colpi critici",
+      "description": "Ogni proiettile ha il 20% di probabilità di infliggere il 100% di danno in più. I proiettili critici sono rossi.",
+      "type": "toggle",
+      "cost": 50,
+      "storage": { "flag": "critical unlocked" }
+    },
+    {
+      "id": "critical_chance",
+      "name": "Frequenza critico",
+      "description": "Aumenta di 5 punti percentuali la probabilità di critico, fino al 90%. Richiede Abilità colpi critici.",
+      "type": "linear",
+      "requires": "critical unlocked",
+      "baseValue": 20,
+      "increment": 5,
+      "maxValue": 90,
+      "cost": { "base": 25, "growth": 1.3 },
+      "storage": { "value": "critical chance" }
+    },
+    {
+      "id": "critical_damage",
+      "name": "Danno critico",
+      "description": "Aumenta il danno extra dei critici di 20 punti percentuali per livello, senza limite. Costo ×1,5 per livello. Richiede Abilità colpi critici.",
+      "type": "linear",
+      "requires": "critical unlocked",
+      "baseValue": 100,
+      "increment": 20,
+      "cost": { "base": 30, "growth": 1.5 },
+      "storage": { "value": "critical damage bonus" }
+    },
+    {
       "id": "fire_rate",
       "name": "Frequenza di fuoco",
       "description": "Aumenta i colpi al secondo (+0.1 per livello).",

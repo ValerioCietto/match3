@@ -108,7 +108,7 @@
   const grid = document.getElementById('upgradesGrid');
   const moneyEl = document.getElementById('money');
   const statusEl = document.getElementById('loadStatus');
-  const fmtMoney = (n)=>`§${(n|0)}`;
+  const fmtMoney = (n)=>`§${Math.floor(n)}`;
   function refreshMoney(){ moneyEl.textContent = `Soldi: ${fmtMoney(save.money || 0)}`; }
 
   function elCard({name, desc, stat, price, actions}) {
@@ -183,6 +183,7 @@
 
   // --- LINEAR ---
   function renderLinear(u) {
+    const unlocked = !u.requires || !!getKey(u.requires, false);
     const curVal = Number(getKey(u.storage?.value, u.baseValue));
     const level = linearLevelFromValue(u.baseValue, u.increment, curVal);
     const price = linearPrice(u.cost?.base || 0, u.cost?.growth || 1, level);
@@ -194,10 +195,10 @@
       (u.maxValue === undefined || curVal < u.maxValue) &&
       (u.minValue === undefined || curVal > u.minValue || (u.increment||0) > 0);
 
-    const buyDisabled = !(save.money >= price && canIncrease);
+    const buyDisabled = !(unlocked && Number.isFinite(price) && save.money >= price && canIncrease);
 
     const buyBtn = btn('Compra', () => {
-      if (save.money < price || !canIncrease) return;
+      if (buyDisabled) return;
       setKey(u.storage.value, nextVal);
       commitSave({ money: (save.money||0) - price });
       renderAll();
@@ -208,7 +209,7 @@
     const card = elCard({
       name: u.name,
       desc: u.description,
-      stat: formatStatValue(curVal, u),
+      stat: unlocked ? formatStatValue(curVal, u) : 'Richiede Abilità colpi critici',
       price: priceLabel,
       actions: [buyBtn]
     });
@@ -216,6 +217,8 @@
   }
 
   function formatStatValue(v, u) {
+    if (u.id === 'critical_chance') return `Probabilità: ${v}%`;
+    if (u.id === 'critical_damage') return `Danno extra: +${v}% (${1 + v / 100}× totale)`;
     if (u.id === 'bullet_spread') return `Attuale: ${v}°`;
     if (u.id === 'fire_rate') return `Attuale: ${Number(v).toFixed(2)} colpi/s`;
     if (u.id === 'spawn_rate') return `Intervallo: ${Number(v).toFixed(1)}s`;
