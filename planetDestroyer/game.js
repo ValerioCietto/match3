@@ -8,12 +8,22 @@
     ['Terra',1000,[.85,.65,.40,.20],200], ['Bedrock',1200,[.87,.68,.43,.22],250],
     ['Cinder',1400,[.88,.71,.46,.24],300], ['Basalt',1600,[.89,.73,.49,.27],350],
     ['Ironheart',1800,[.90,.75,.52,.30],400], ['Anvil',2000,[.91,.77,.55,.33],450],
-    ['Crucible',2250,[.92,.79,.58,.36],500], ['Titan',2500,[.93,.81,.61,.39],550],
+    ['Turtle',2250,[.92,.79,.58,.36],500], ['Chaos',2500,[.93,.81,.61,.39],550],
     ['Obsidian',2750,[.94,.83,.64,.42],600], ['Last Sun',3000,[.95,.85,.67,.45],1000]
   ];
   const layerNames=['Crust','Upper mantle','Lower mantle','Outer core','Inner core'];
   const cinderHP=[15,30,60,90,120], cinderCredits=[2,4,6,8,12];
   const material=(name,hp,reward,tint,phase='solid',core=false)=>({name,max:hp,hp,reward,tint,phase,core});
+  const HEX_SIZE=72;
+  function hexSector(x,y){
+    const q=(Math.sqrt(3)/3*x-y/3)/HEX_SIZE,r=2*y/3/HEX_SIZE;
+    let a=Math.round(q),b=Math.round(-q-r),c=Math.round(r);
+    const da=Math.abs(a-q),db=Math.abs(b+q+r),dc=Math.abs(c-r);
+    if(da>db&&da>dc)a=-b-c;else if(db>dc)b=-a-c;else c=-a-b;
+    const cx=HEX_SIZE*Math.sqrt(3)*(a+c/2),cy=HEX_SIZE*1.5*c,dx=x-cx,dy=y-cy;
+    const face=Math.max(Math.abs(dx),Math.abs(dx*.5+dy*Math.sqrt(3)/2),Math.abs(-dx*.5+dy*Math.sqrt(3)/2));
+    return {id:`${a}:${c}`,q:a,r:c,x:cx,y:cy,wall:HEX_SIZE*Math.sqrt(3)/2-face<CELL*.85};
+  }
   function planetMaterial(index,r,depth,x,y,layer){
     if(index===0){
       if(depth<1)return material('Gas',1,1,[22,64,112],'gas');
@@ -28,12 +38,24 @@
       }
       return material('Solid core',30,8,[145,45,40],'solid',true);
     }
+    if(index===3)return depth<2?material('Armored crust',100,8,[65,43,48]):material('Liquid interior',10,4,[101,58,34],'liquid');
+    if(index===4){
+      const sector=hexSector(x,y);
+      const m=depth<2?material('City crust',200,10,[32,73,90]):sector.wall?material('Hex sector wall',250,12,[44,98,114]):material('Sector liquid',15,5,[20,37,68],'liquid');
+      return {...m,sectorId:sector.id,civilized:true};
+    }
+    if(index===5){
+      if(depth<3)return {...material('Regenerative shell',10,4,[38,100,67]),regen:10};
+      if(r>.28)return {...material('Reflective liquid',10,5,[30,107,122],'liquid'),reflective:true};
+      return material('Fortified core',80,10,[107,78,130],'solid',true);
+    }
+    if(index===6)return depth<5?{...material('Reflective shell',50,8,[55,104,62]),reflective:true,regenStep:5,regenInterval:.1}:material('Turtle core',10,5,[113,92,55],'solid',true);
     // Later planets retain their radial layout and scale beyond Cinder's new HP.
     const scale=index===2?1:1+(index-2)*.2;
     return material(layerNames[layer],Math.round(cinderHP[layer]*scale),cinderCredits[layer]+Math.max(0,index-2),index===2?[68,70,76]:[26,30,42]);
   }
-  const colors=['#7afce1','#ffb76b','#c19aff','#f58bbe','#b2baff','#79dbff','#ffe080','#e6faff','#ff7dce','#adff73','#ff963e','#65caff'];
-  const icons=['Ⅱ','⋰','ϟ','◉','⌒','↕','◔','⟶','⋙','⌖','☢','✥'];
+  const colors=['#7afce1','#ffb76b','#c19aff','#f58bbe','#b2baff','#79dbff','#ffe080','#e6faff','#ff7dce','#adff73','#ff963e','#65caff','#e8fff1','#99ecff'];
+  const icons=['Ⅱ','⋰','ϟ','◉','⌒','↕','◔','⟶','⋙','⌖','☢','✥','❄','◎'];
   const descriptions={
     parallel_projectiles:'Two straight shots. A dependable tool for carving tunnels.',
     spread_projectiles:'A wide pellet fan that shreds crust and opens up the surface.',
@@ -44,13 +66,18 @@
     returning_blade:'A curved cutting pass, followed by a return to your ship.',
     piercing_beam:'An instant beam that drills through multiple layers.',
     guided_missiles:'A rapid flurry of homing missiles. Seeks exposed blocks near your aim and explodes on impact.',
-    guided_laser:'Rapidly locks onto the nearest block, regardless of aim. Every upgrade adds one ray focused on that block.',
+    guided_laser:'Rapidly locks onto nearby blocks, regardless of aim. Each ray hits a different block, nearest first. Every upgrade adds one ray.',
     piercing_nuke:'Flies to your mouse position and detonates there. Drills up to 5 × level blocks on the way; blast radius is 4 × level block widths.',
-    mining_drones:'Autonomous miners roam near the ship and reserve different nearest blocks. Each level adds a drone, one pierced block, and one laser damage.'
+    mining_drones:'Autonomous miners roam near the ship and reserve different nearest blocks. Each level adds a drone, one pierced block, and one laser damage.',
+    plague:'Infectious snow falls toward the planet center. Infected blocks take damage every second and spread infection through sustained edge contact.',
+    shockwave:'Expanding thunder ring. Deals 2× outward, 1× sideways, and 0.5× inward damage, smoothly by angle. Pushes liquid; cannot be deflected. Upgrades increase range.'
   };
   let definitions=[], byId={}, state, planet, ship, mode='welcome', auto=false;
   let bullets=[], blades=[], shells=[], effects=[], particles=[], cooldowns={};
   let drones=[];
+  let waves=[];
+  let shockwaves=[];
+  let snow=[],plagueContacts=new Map();
   let simTime=0, last=0, accumulator=0, saveTimer=0, hudTimer=0, selectedSlot=0, shopReturn='play';
   let view={w:1,h:1,scale:1,ox:0,oy:0}, pointer={x:0,y:0,moved:false};
   let keys=new Set(), toastTimer, storageOK=true, lastFocus=null;
@@ -70,6 +97,8 @@
     const blocks=[], grid=new Map();
     for(const g of selected) for(const [i,j] of [[g.i,g.j],[-g.i-1,-g.j-1]]) {
       const x=(i+.5)*CELL,y=(j+.5)*CELL,r=Math.hypot(x,y)/radius;
+      const depth=(radius-Math.hypot(x,y))/CELL;
+      if(index===6&&depth>=5&&depth<7)continue; // Real empty space: no collision, reward, or plague bridge.
       let layer=0; while(layer<4 && r<=spec[2][layer]) layer++;
       const b={id:blocks.length,i,j,x,y,layer,...planetMaterial(index,r,(radius-Math.hypot(x,y))/CELL,x,y,layer)};
       blocks.push(b); grid.set(key(i,j),b);
@@ -81,14 +110,40 @@
       for(let i=shuffled.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];}
       for(const b of shuffled.slice(0,100)){b.name='Gold';b.gold=true;b.reward=10;b.tint=[175,127,20];}
     }
+    if(index===7){
+      let randomState=seed>>>0;
+      const innerRadius=CELL/Math.sqrt(2);
+      for(const b of blocks){
+        randomState=(Math.imul(randomState,1664525)+1013904223)>>>0;
+        const roll=randomState/4294967296;
+        const hp=1+Math.round(249*clamp((radius-Math.hypot(b.x,b.y))/(radius-innerRadius),0,1));
+        if(roll<.4)Object.assign(b,material('Turtle blocks',hp,8,[55,104,62]),{reflective:true,regenStep:5,regenInterval:.1});
+        else if(roll<.8)Object.assign(b,material('Liquid',hp,5,[30,107,122],'liquid'));
+        else Object.assign(b,material('Gold',hp,10,[175,127,20]),{gold:true});
+      }
+    }
+    const chaosTotal=index===7?blocks.filter(b=>b.phase==='liquid'||b.gold).length:0;
     const coreTotal=blocks.filter(b=>b.core).length;
-    return {blocks,grid,radius,remaining:blocks.length,total:blocks.length,coreTotal,coreRemaining:coreTotal,collapseOnCore:index<2,collapse:null,compaction:0,halfW:Math.max(600,radius+220),halfH:Math.max(450,radius+170)};
+    const liquidTotal=blocks.filter(b=>b.phase==='liquid').length;
+    const turrets=[];
+    if([3,4,5,6].includes(index)){
+      const turretCount=index===6?10:index===5?8:index===4?6:30,turretRange=index===5?600:index===3?150:320;
+      const surface=blocks.filter(b=>index>=5?b.core:(radius-Math.hypot(b.x,b.y))/CELL<1),used=new Set();
+      for(let n=0;n<turretCount;n++){
+        const angle=n/turretCount*TAU-Math.PI/2,mountRadius=index===6?radius-7*CELL:index===5?radius*.28:radius,target={x:Math.cos(angle)*mountRadius,y:Math.sin(angle)*mountRadius};
+        const anchor=surface.filter(b=>!used.has(b.id)).sort((a,b)=>distance(a,target)-distance(b,target)||a.id-b.id)[0];
+        used.add(anchor.id);anchor.turret=true;
+        const r=Math.hypot(anchor.x,anchor.y);
+        turrets.push({blockId:anchor.id,x:anchor.x+anchor.x/r*13,y:anchor.y+anchor.y/r*13,cooldown:0,angle,range:turretRange,wave:index===5,waveCooldown:0});
+      }
+    }
+    return {blocks,grid,radius,turrets,remaining:blocks.length,total:blocks.length,coreTotal,coreRemaining:coreTotal,liquidTotal,liquidRemaining:liquidTotal,chaosTotal,chaosRemaining:chaosTotal,collapseOnTurtleOnly:index===7,collapseOnLiquid:index===3,collapseOnCore:index<2||index===6,collapse:null,compaction:0,regenAccumulator:0,halfW:Math.max(600,radius+220),halfH:Math.max(450,radius+170)};
   }
   function freshState(){return {version:2,seed:Math.floor(Math.random()*4294967296),level:0,credits:0,owned:{double_parallel_shot:1},slots:['double_parallel_shot',null,null],paid:[],auto:false,reduced:false,time:0};}
-  function load() {
+  function load(incoming) {
     state=freshState();
     try {
-      const raw=localStorage.getItem(SAVE_KEY);
+      const raw=incoming?JSON.stringify(incoming):localStorage.getItem(SAVE_KEY);
       if(raw){
         const s=JSON.parse(raw);
         if(![1,2].includes(s.version)||!Number.isInteger(s.level)||s.level<0||s.level>=10||!Number.isFinite(s.credits)||s.credits<0||!s.owned||!Array.isArray(s.slots)||s.slots.length!==3||!Array.isArray(s.paid)) throw Error('Invalid save');
@@ -97,6 +152,11 @@
         if(new Set(equipped).size!==equipped.length||equipped.some(id=>!s.owned[id])) throw Error('Invalid loadout');
         if(s.paid.some(i=>!Number.isInteger(i)||i<0||i>=10)) throw Error('Invalid completion state');
         state={...state,...s,time:Number.isFinite(s.time)?Math.max(0,s.time):0};
+        if(s.level===3&&s.basaltRevision!==1){delete state.hp;delete state.positions;delete state.ship;delete state.turretCooldowns;toast('Basalt defenses updated. Equipment and credits kept; this planet has been rebuilt.');}
+        if(s.level===4&&s.ironheartRevision!==1){delete state.hp;delete state.positions;delete state.ship;delete state.turretCooldowns;toast('Ironheart sectors updated. Equipment and credits kept; this planet has been rebuilt.');}
+        if(s.level===5&&s.anvilRevision!==1){delete state.hp;delete state.positions;delete state.ship;delete state.turretCooldowns;delete state.waveCooldowns;toast('Anvil updated. Equipment and credits kept; this planet has been rebuilt.');}
+        if(s.level===6&&s.turtleRevision!==1){delete state.hp;delete state.positions;delete state.ship;delete state.plagued;delete state.plagueContacts;delete state.collapse;delete state.turretCooldowns;delete state.regenAccumulator;toast('Crucible is now Turtle. Equipment and credits kept; the planet has been rebuilt.');}
+        if(s.level===7&&s.chaosRevision!==1){for(const field of ['hp','positions','ship','plagued','plagueContacts','collapse','compaction','regenAccumulator'])delete state[field];toast('Titan is now Chaos. Equipment and credits kept; the planet has been rebuilt.');}
         if(s.version===1){delete state.hp;delete state.positions;delete state.ship;state.version=2;toast('Planet materials updated. Equipment and credits kept; the current planet has been rebuilt.');}
         if(!Number.isInteger(state.seed))state.seed=12345;
         $('welcomeNote').textContent='Flight log found. Resume your damaged planet with all equipment and credits intact.';
@@ -113,18 +173,31 @@
       const occupied=new Set();
       const valid=state.positions.every((p,i)=>{
         const b=planet.blocks[i];
-        if(!Array.isArray(p)||p.length!==2||!p.every(Number.isInteger)||Math.hypot(p[0]+.5,p[1]+.5)*CELL>planet.radius+.01)return false;
+        if(!Array.isArray(p)||p.length!==2||!p.every(Number.isInteger)||Math.hypot(p[0]+.5,p[1]+.5)*CELL>planet.radius+(b.phase==='liquid'?96:.01))return false;
         if(b.phase!=='liquid'&&(p[0]!==b.i||p[1]!==b.j))return false;
         if(b.hp>0){const k=key(...p);if(occupied.has(k))return false;occupied.add(k);}return true;
       });
       if(valid)planet.blocks.forEach((b,i)=>{[b.i,b.j]=state.positions[i];b.x=(b.i+.5)*CELL;b.y=(b.j+.5)*CELL;});
     }
-    if(state.paid.includes(state.level))planet.blocks.forEach(b=>b.hp=0);
+    if(state.paid.includes(state.level)&&!state.replaying)planet.blocks.forEach(b=>b.hp=0);
     rebuildGrid();
     planet.coreRemaining=planet.blocks.filter(b=>b.core&&b.hp>0).length;
+    planet.liquidRemaining=planet.blocks.filter(b=>b.phase==='liquid'&&b.hp>0).length;
+    planet.chaosRemaining=planet.collapseOnTurtleOnly?planet.blocks.filter(b=>b.hp>0&&(b.phase==='liquid'||b.gold)).length:0;
     planet.remaining=planet.blocks.filter(b=>b.hp>0).length;
+    plagueContacts=new Map();
+    if(state.owned.plague&&Array.isArray(state.plagued)&&state.plagueLevel===state.level){
+      for(const id of state.plagued)if(Number.isInteger(id)&&planet.blocks[id]?.hp>0)planet.blocks[id].plagued=true;
+      if(Array.isArray(state.plagueContacts))for(const contact of state.plagueContacts){
+        if(!Array.isArray(contact)||contact.length!==3)continue;
+        const [sourceId,targetId,elapsed]=contact,source=planet.blocks[sourceId],target=planet.blocks[targetId];
+        if(source?.plagued&&source.hp>0&&target?.hp>0&&!target.plagued&&Math.abs(source.i-target.i)+Math.abs(source.j-target.j)===1&&Number.isFinite(elapsed)&&elapsed>=0)plagueContacts.set(`${sourceId}:${targetId}`,Math.min(elapsed,stats('plague').spreadSeconds));
+      }
+    }
+    planet.turrets.forEach((t,i)=>{const cd=state.turretCooldowns?.[i],wcd=state.waveCooldowns?.[i];t.cooldown=Number.isFinite(cd)?clamp(cd,0,.35):0;t.waveCooldown=Number.isFinite(wcd)?clamp(wcd,0,1.6):0;});
     planet.compaction=Number.isFinite(state.compaction)?clamp(state.compaction,0,.999):0;
-    if(planet.collapseOnCore&&planet.coreRemaining===0&&planet.remaining>0)planet.collapse=Number.isFinite(state.collapse)?clamp(state.collapse,0,1.4):0;
+    planet.regenAccumulator=Number.isFinite(state.regenAccumulator)?clamp(state.regenAccumulator,0,.099999):0;
+    if(collapseReady()&&planet.remaining>0)planet.collapse=Number.isFinite(state.collapse)?clamp(state.collapse,0,1.4):0;
     ship={x:0,y:-planet.radius-90,vx:0,vy:0,angle:Math.PI/2};
     if(state.ship&&Number.isFinite(state.ship.x)&&Number.isFinite(state.ship.y)){
       ship.x=clamp(state.ship.x,-planet.halfW+20,planet.halfW-20); ship.y=clamp(state.ship.y,-planet.halfH+20,planet.halfH-20);
@@ -133,13 +206,19 @@
     auto=!!state.auto;
     $('reducedMotion').checked=!!state.reduced;
     cooldowns={}; for(const d of definitions) cooldowns[d.id]=.3;
-    drones=[];syncDrones();
+    drones=[];waves=[];snow=[];shockwaves=[];syncDrones();
     updateHUD();
   }
   function save(){
     if(!state||!planet)return;
     state.hp=planet.blocks.map(b=>b.hp);state.ship={x:ship.x,y:ship.y};state.auto=auto;
     state.positions=planet.blocks.map(b=>[b.i,b.j]);state.collapse=planet.collapse;state.compaction=planet.compaction;
+    state.basaltRevision=1;state.turretCooldowns=planet.turrets.map(t=>t.cooldown);
+    state.ironheartRevision=1;
+    state.anvilRevision=1;state.waveCooldowns=planet.turrets.map(t=>t.waveCooldown);
+    state.turtleRevision=1;state.chaosRevision=1;state.regenAccumulator=planet.regenAccumulator;
+    state.plagueLevel=state.level;state.plagued=planet.blocks.filter(b=>b.hp>0&&b.plagued).map(b=>b.id);
+    state.plagueContacts=[...plagueContacts].map(([key,elapsed])=>[...key.split(':').map(Number),elapsed]);
     try{localStorage.setItem(SAVE_KEY,JSON.stringify(state));}
     catch{storageOK=false;$('saveStatus').textContent='Session only · storage unavailable';}
   }
@@ -154,7 +233,7 @@
   function setMode(next){
     const previous=mode;mode=next;keys.clear();
     if(previous==='play'&&next!=='play')lastFocus=document.activeElement;
-    for(const id of ['welcome','shop','pause','complete'])$(id).hidden=next!==id;
+    for(const id of ['welcome','shop','pause','complete','galaxy'])$(id).hidden=next!==id;
     if(next!=='play') {save(); const first=$(next)?.querySelector('button:not(:disabled)'); first?.focus();}
     else if(lastFocus){lastFocus.blur();lastFocus=null;}
     $('pauseBtn').textContent=next==='pause'?'Resume ESC':'Pause ESC';
@@ -167,7 +246,11 @@
     $('levelLabel').textContent=`Sector ${String(state.level+1).padStart(2,'0')} / 10`;
     $('progress').style.width=`${percentage}%`;$('percent').textContent=`${percentage.toFixed(1)}% cleared`;
     $('remaining').textContent=`${format(planet.remaining)} blocks`;
-    $('planetObjective').textContent=planet.collapseOnCore?`Destroy the core: ${planet.coreRemaining} / ${planet.coreTotal} blocks left${planet.collapse!==null?' · COLLAPSING':''}`:state.level===2?`Gold remaining: ${planet.blocks.filter(b=>b.gold&&b.hp>0).length} / 100 · 10 credits each`:'Destroy every block to advance';
+    $('planetObjective').textContent=planet.collapseOnCore?`Destroy the core: ${planet.coreRemaining} / ${planet.coreTotal} blocks left${planet.collapse!==null?' · COLLAPSING':''}`:state.level===2?`Gold remaining: ${planet.blocks.filter(b=>b.gold&&b.hp>0).length} / 100 · 10 credits each`:planet.turrets.length?`Point defense: ${planet.turrets.filter(t=>planet.blocks[t.blockId].hp>0).length} / ${planet.turrets.length} · ${state.level===5?'Core waves · Shell regenerates 10 HP/s':state.level===4?'Long-range sector defenses':'Destroy their crust mounts'}`:'Destroy every block to advance';
+    if(planet.collapseOnTurtleOnly)$('planetObjective').textContent=`Liquid + gold: ${planet.chaosRemaining} / ${planet.chaosTotal} · ${planet.collapse!==null?'COLLAPSING':'Destroy both to collapse Chaos'}`;
+    const plagueCount=planet.blocks.filter(b=>b.hp>0&&b.plagued).length;if(plagueCount)$('planetObjective').textContent+=` · ${plagueCount} plagued`;
+    if(planet.collapseOnLiquid)$('planetObjective').textContent=`Liquid: ${planet.liquidRemaining} / ${planet.liquidTotal} · ${planet.collapse!==null?'COLLAPSING · ':''}`+$('planetObjective').textContent;
+    if(state.level===6)$('planetObjective').textContent+=` · Defense: ${planet.turrets.filter(t=>planet.blocks[t.blockId].hp>0).length} / 10 · Shell +5 HP / 0.1s`;
     const materials=new Map();for(const b of planet.blocks){const entry=materials.get(b.name)||{min:b.max,max:b.max};entry.min=Math.min(entry.min,b.max);entry.max=Math.max(entry.max,b.max);materials.set(b.name,entry);}
     $('composition').innerHTML=[...materials].map(([name,hp])=>`<span>${name}</span><b>${hp.min===hp.max?hp.min:`${hp.min}–${hp.max}`} HP</b>`).join('');
     $('autoBtn').classList.toggle('active',auto);$('autoBtn').setAttribute('aria-pressed',String(auto));$('autoBtn').innerHTML=`Auto fire: ${auto?'ON':'OFF'} <small>F</small>`;
@@ -185,10 +268,10 @@
     $('weaponGrid').innerHTML=definitions.map((d,i)=>{
       const owned=state.owned[d.id]||0,s=stats(d.id),next=d.upgrades.find(u=>u.level===owned+1),equipped=state.slots.includes(d.id);
       const timing=s.cooldown||s.cycleDuration||s.contactInterval;
-      const special=s.droneCount?`${s.droneCount} drones · ${s.penetration} blocks pierced · autonomous`:s.drillBlocks?`${s.drillBlocks} blocks drilled · ${s.blastRadiusBlocks}-block blast radius`:s.rayCount?`${s.rayCount} ${s.rayCount===1?'ray':'rays'} per block · ${(1/s.cooldown).toFixed(1)} pulses/s`:s.missileCount?`${s.missileCount} guided missiles · ${s.blastRadius} blast radius`:s.pelletCount?`${s.pelletCount} pellets`:s.maxTargets?`${s.maxTargets} targets`:s.penetration?`${s.penetration} blocks pierced`:s.blastRadius?`${s.blastRadius} blast radius`:s.orbitRadius?`${s.orbitRadius} orbit radius`:`${Math.round(s.range)} range`;
+      const special=s.spreadSeconds?`${s.damage} damage/s · ${Number(s.spreadSeconds.toFixed(2))}s contact to spread`:s.droneCount?`${s.droneCount} drones · ${s.penetration} blocks pierced · autonomous`:s.drillBlocks?`${s.drillBlocks} blocks drilled · ${s.blastRadiusBlocks}-block blast radius`:s.rayCount?`${s.rayCount} ${s.rayCount===1?'ray':'rays'} on different blocks · ${(1/s.cooldown).toFixed(1)} pulses/s`:s.missileCount?`${s.missileCount} guided missiles · ${s.blastRadius} blast radius`:s.pelletCount?`${s.pelletCount} pellets`:s.maxTargets?`${s.maxTargets} targets`:s.penetration?`${s.penetration} blocks pierced`:s.blastRadius?`${s.blastRadius} blast radius`:s.orbitRadius?`${s.orbitRadius} orbit radius`:`${Math.round(s.range)} range`;
       let preview='';
-      if(next)preview=Object.entries(next.modifiers.add).map(([k,v])=>`+${Number(v.toFixed(2))} ${k.replace(/([A-Z])/g,' $1').toLowerCase()}`).join(' · ')+(Object.values(next.modifiers.multiply||{}).some(v=>v===.92)?' · 8% faster':'');
-      return `<article class="weapon-card"><div class="weapon-icon" style="color:${colors[i]}">${icons[i]}</div><div><h3>${d.name}</h3><div class="badge">${owned?`LEVEL ${owned} / 5${equipped?' · EQUIPPED':''}`:'LOCKED'}</div></div><p>${descriptions[d.behavior]}</p><div class="numbers">${Number(s.damage.toFixed(2))} damage · ${timing.toFixed(2)}s<br>${special}</div><div class="actions">${!owned?`<button class="primary" data-buy="${d.id}" ${state.credits<d.unlockCost?'disabled':''}>Unlock · ${d.unlockCost} ◈</button>`:`<button data-upgrade="${d.id}" ${!next||state.credits<next.cost?'disabled':''}>${next?`Upgrade · ${next.cost} ◈`:'Maximum level'}</button><button data-equip="${d.id}">${equipped?'Unequip':`Equip in slot ${selectedSlot+1}`}</button>`}</div>${owned&&next?`<small class="eyebrow" style="letter-spacing:0;text-transform:none">Next: ${preview}</small>`:''}</article>`;
+      if(next)preview=Object.entries(next.modifiers.add).map(([k,v])=>`+${Number(v.toFixed(2))} ${k.replace(/([A-Z])/g,' $1').toLowerCase()}`).join(' · ')+(Object.values(next.modifiers.multiply||{}).some(v=>v===.92)?' · 8% faster':'')+(next.modifiers.multiply?.spreadSeconds?` · ${(s.spreadSeconds*next.modifiers.multiply.spreadSeconds).toFixed(2)}s spread`:'');
+      return `<article class="weapon-card"><div class="weapon-icon" style="color:${colors[i]}">${icons[i]}</div><div><h3>${d.name}</h3><div class="badge">${owned?`LEVEL ${owned} / 5${equipped?' · EQUIPPED':''}`:'LOCKED'}</div></div><p>${descriptions[d.behavior]}</p><div class="numbers">${Number(s.damage.toFixed(2))} ${s.spreadSeconds ? "damage/s" : "damage"} · ${timing.toFixed(2)}s<br>${special}</div><div class="actions">${!owned?`<button class="primary" data-buy="${d.id}" ${state.credits<d.unlockCost?'disabled':''}>Unlock · ${d.unlockCost} ◈</button>`:`<button data-upgrade="${d.id}" ${!next||state.credits<next.cost?'disabled':''}>${next?`Upgrade · ${next.cost} ◈`:'Maximum level'}</button><button data-equip="${d.id}">${equipped?'Unequip':`Equip in slot ${selectedSlot+1}`}</button>`}</div>${owned&&next?`<small class="eyebrow" style="letter-spacing:0;text-transform:none">Next: ${preview}</small>`:''}</article>`;
     }).join('');
     $('shopMessage').textContent=`Slot ${selectedSlot+1} selected. ${state.slots[selectedSlot]?'Equipping another weapon replaces this slot.':'Ready for a weapon.'}`;
   }
@@ -245,10 +328,12 @@
     if(state.reduced)count=Math.min(count,1);
     for(let n=0;n<count&&particles.length<650;n++){const a=Math.random()*TAU,speed=25+Math.random()*110;particles.push({x,y,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,life:.2+Math.random()*.35,max:.55,color});}
   }
+  function collapseReady(){return (planet.collapseOnCore&&planet.coreRemaining===0)||(planet.collapseOnLiquid&&planet.liquidRemaining===0)||(planet.collapseOnTurtleOnly&&planet.chaosRemaining===0);}
   function damage(b,amount){
     if(!b||b.hp<=0)return;b.hp=Math.max(0,b.hp-amount);
-    if(b.hp===0){planet.remaining--;state.credits+=b.reward;if(b.core)planet.coreRemaining--;effects.push({type:'flash',x:b.x,y:b.y,life:.16,max:.16});spark(b.x,b.y,'#ffe080',4);
-      if(planet.collapseOnCore&&planet.coreRemaining===0&&planet.collapse===null){planet.collapse=0;bullets=[];shells=[];blades=[];toast(state.level===0?'Core destroyed. Terra is collapsing!':'Core destroyed. Bedrock is crumbling!');}
+    if(b.hp===0){planet.remaining--;state.credits+=b.reward;if(b.core)planet.coreRemaining--;if(b.phase==='liquid')planet.liquidRemaining--;effects.push({type:'flash',x:b.x,y:b.y,life:.16,max:.16});spark(b.x,b.y,'#ffe080',4);
+      if(planet.collapseOnTurtleOnly&&(b.phase==='liquid'||b.gold))planet.chaosRemaining--;
+      if(collapseReady()&&planet.collapse===null){planet.collapse=0;bullets=[];shells=[];blades=[];shockwaves=[];toast(planet.collapseOnTurtleOnly?'Only Turtle blocks remain. Chaos is collapsing!':planet.collapseOnLiquid?'Liquid interior destroyed. Basalt is collapsing!':`Core destroyed. ${levels[state.level][0]} is collapsing!`);}
     }
     else spark(b.x,b.y,'#ffad45',1);
   }
@@ -258,6 +343,12 @@
     const d=byId[id],s=stats(id),a=ship.angle,color=colors[definitions.indexOf(d)],target=aim();
     const direction={x:Math.cos(a),y:Math.sin(a)};
     switch(d.behavior){
+      case 'shockwave':shockwaves.push({x:ship.x,y:ship.y,radius:0,s,color,hits:new Set()});break;
+      case 'plague':
+        for(let n=0;n<s.particleCount&&snow.length<400;n++){
+          const heading=a+(Math.random()-.5)*s.spreadDegrees*Math.PI/180;
+          snow.push({x:ship.x+direction.x*17,y:ship.y+direction.y*17,vx:Math.cos(heading)*s.projectileSpeed,vy:Math.sin(heading)*s.projectileSpeed,life:s.lifetime,gravity:s.gravity,maxSpeed:s.maxSpeed,size:1.5+Math.random()*2});
+        }break;
       case 'mining_drones':return; // Drone lasers have their own autonomous firing loop.
       case 'piercing_nuke':{
         const heading=Math.atan2(target.y-ship.y,target.x-ship.x);
@@ -265,20 +356,12 @@
         break;
       }
       case 'guided_laser':{
-        let nearest=null,best=s.range*s.range;
-        for(const b of planet.blocks){
-          if(b.hp<=0)continue;
-          const squared=(b.x-ship.x)**2+(b.y-ship.y)**2;
-          if(squared<best||(!nearest&&squared===best)){nearest=b;best=squared;}
-        }
-        if(nearest){
-          const angle=Math.atan2(nearest.y-ship.y,nearest.x-ship.x);
-          for(let ray=0;ray<s.rayCount;ray++){
-            const offset=(ray-(s.rayCount-1)/2)*5;
-            lineEffect([{x:ship.x-Math.sin(angle)*offset,y:ship.y+Math.cos(angle)*offset},{x:nearest.x,y:nearest.y}],color,Math.min(.06,s.cooldown*.7));
-          }
-          // One pulse focuses every ray on this block; overkill does not spill to others.
-          damage(nearest,s.damage*s.rayCount);
+        const targets=planet.blocks.filter(b=>b.hp>0&&distance(b,ship)<=s.range)
+          .sort((a,b)=>distance(a,ship)-distance(b,ship)||a.id-b.id).slice(0,s.rayCount);
+        for(const [ray,block] of targets.entries()){
+          const angle=Math.atan2(block.y-ship.y,block.x-ship.x),offset=(ray-(targets.length-1)/2)*5;
+          lineEffect([{x:ship.x-Math.sin(angle)*offset,y:ship.y+Math.cos(angle)*offset},{x:block.x,y:block.y}],color,Math.min(.06,s.cooldown*.7));
+          damage(block,s.damage);
         }
         break;
       }
@@ -308,6 +391,8 @@
       }
       case 'piercing_beam':{
         const end={x:ship.x+direction.x*s.range,y:ship.y+direction.y*s.range},hits=rayBlocks(ship.x,ship.y,end.x,end.y).slice(0,s.penetration);
+        const reach=hits.length===s.penetration?hits.at(-1):end;
+        if(interceptAttack(ship,reach)){cooldowns[id]=s.cooldown;return;}
         hits.forEach(b=>damage(b,s.damage));
         const lastHit=hits.length===s.penetration?hits.at(-1):end;
         lineEffect([{x:ship.x,y:ship.y},{x:lastHit.x,y:lastHit.y}],color,.24);break;
@@ -320,6 +405,132 @@
     cooldowns[id]=s.cooldown||s.cycleDuration||.1;
   }
   const sawHits=new Map();
+  function shockwaveMultiplier(origin,block){
+    const dx=block.x-origin.x,dy=block.y-origin.y;
+    const length=Math.hypot(dx,dy)*Math.hypot(block.x,block.y);
+    return length?2**clamp((dx*block.x+dy*block.y)/length,-1,1):1;
+  }
+  function pushLiquid(block,origin,cells){
+    if(block.hp<=0||block.phase!=='liquid')return;
+    const dx=block.x-origin.x,dy=block.y-origin.y;
+    const di=Math.abs(dx)>=Math.abs(dy)?Math.sign(dx):0,dj=di?0:Math.sign(dy);
+    if(!di&&!dj)return;
+    for(let step=0;step<cells;step++){
+      const i=block.i+di,j=block.j+dj,x=(i+.5)*CELL,y=(j+.5)*CELL;
+      if(planet.grid.get(key(i,j))?.hp>0||Math.hypot(x,y)>planet.radius+96||Math.hypot(ship.x-clamp(ship.x,x-8,x+8),ship.y-clamp(ship.y,y-8,y+8))<12)break;
+      if(planet.grid.get(key(block.i,block.j))===block)planet.grid.delete(key(block.i,block.j));
+      Object.assign(block,{i,j,x,y});planet.grid.set(key(i,j),block);
+    }
+  }
+  function updateShockwaves(dt){
+    for(const wave of shockwaves){
+      const previous=wave.radius;wave.radius=Math.min(wave.s.range,previous+wave.s.waveSpeed*dt);
+      const touched=planet.blocks.filter(b=>{
+        if(b.hp<=0||wave.hits.has(b.id))return false;
+        const near=Math.hypot(wave.x-clamp(wave.x,b.x-8,b.x+8),wave.y-clamp(wave.y,b.y-8,b.y+8));
+        const far=Math.hypot(Math.abs(wave.x-b.x)+8,Math.abs(wave.y-b.y)+8);
+        return near<=wave.radius&&far>=previous;
+      });
+      for(const b of touched){wave.hits.add(b.id);damage(b,wave.s.damage*shockwaveMultiplier(wave,b));}
+      touched.sort((a,b)=>distance(b,wave)-distance(a,wave)).forEach(b=>pushLiquid(b,wave,wave.s.pushCells));
+    }
+    shockwaves=shockwaves.filter(w=>w.radius<w.s.range);
+  }
+  function infectBlock(b){if(b&&b.hp>0)b.plagued=true;}
+  function updateSnow(dt){
+    for(const flake of snow){
+      flake.life-=dt;if(flake.life<=0)continue;
+      const radius=Math.hypot(flake.x,flake.y);
+      if(radius>0){flake.vx-=flake.x/radius*flake.gravity*dt;flake.vy-=flake.y/radius*flake.gravity*dt;}
+      const speed=Math.hypot(flake.vx,flake.vy);if(speed>flake.maxSpeed){flake.vx*=flake.maxSpeed/speed;flake.vy*=flake.maxSpeed/speed;}
+      const nx=flake.x+flake.vx*dt,ny=flake.y+flake.vy*dt,hit=rayBlocks(flake.x,flake.y,nx,ny)[0];
+      if(hit){infectBlock(hit);flake.life=0;}flake.x=nx;flake.y=ny;
+    }
+    snow=snow.filter(f=>f.life>0);
+  }
+  function updatePlague(dt){
+    if(!state.owned.plague)return;
+    const s=stats('plague'),infected=planet.blocks.filter(b=>b.hp>0&&b.plagued),nextContacts=new Map(),newInfections=new Set();
+    // Snapshot sources so a newly infected block cannot spread again in the same step.
+    for(const source of infected){
+      const activeTime=Math.min(dt,source.hp/s.damage);
+      for(const [di,dj] of [[1,0],[-1,0],[0,1],[0,-1]]){
+        const target=planet.grid.get(key(source.i+di,source.j+dj));if(!target||target.hp<=0||target.plagued)continue;
+        const pair=`${source.id}:${target.id}`,elapsed=(plagueContacts.get(pair)||0)+activeTime;
+        if(elapsed+1e-9>=s.spreadSeconds)newInfections.add(target.id);else if(source.hp>s.damage*dt)nextContacts.set(pair,elapsed);
+      }
+    }
+    for(const source of infected)damage(source,s.damage*dt);
+    for(const id of newInfections)infectBlock(planet.blocks[id]);
+    plagueContacts=nextContacts;
+  }
+  function regenerateBlocks(dt){
+    planet.regenAccumulator+=dt;
+    const ticks=Math.floor((planet.regenAccumulator+1e-9)/.1);planet.regenAccumulator=Math.max(0,planet.regenAccumulator-ticks*.1);
+    for(const b of planet.blocks)if(b.hp>0&&b.hp<b.max){if(b.regen)b.hp=Math.min(b.max,b.hp+b.regen*dt);if(b.regenStep&&ticks)b.hp=Math.min(b.max,b.hp+b.regenStep*ticks);}
+  }
+  function reflectProjectile(m,block){
+    if(!block.reflective)return false;
+    const speed=Math.hypot(m.vx,m.vy);if(!speed)return false;
+    // Slab entry point supplies the true face normal, including oblique impacts.
+    let entry=-Infinity,exit=Infinity,normal={x:0,y:0};
+    for(const axis of ['x','y']){
+      const velocity=m[axis==='x'?'vx':'vy'],origin=m[axis],lo=block[axis]-8,hi=block[axis]+8;
+      if(!velocity)continue;
+      const a=(lo-origin)/velocity,b=(hi-origin)/velocity,near=Math.min(a,b);
+      if(near>entry){entry=near;normal={x:0,y:0};normal[axis]=velocity>0?-1:1;}exit=Math.min(exit,Math.max(a,b));
+    }
+    if(entry<0||entry>exit){const norm=Math.hypot(block.x,block.y)||1;normal={x:block.x/norm,y:block.y/norm};entry=0;}
+    const traveled=Math.max(0,entry)*speed;
+    m.x+=m.vx*Math.max(0,entry);m.y+=m.vy*Math.max(0,entry);
+    const dot=m.vx*normal.x+m.vy*normal.y;
+    m.vx-=2*dot*normal.x;m.vy-=2*dot*normal.y;
+    m.x+=normal.x*.5;m.y+=normal.y*.5;m.left=Math.max(0,m.left-traveled);
+    m.reflected=true;m.targetId=null;m.bounces=(m.bounces||0)+1;
+    if(m.bounces>=6)m.left=0;
+    if(m.nuke){m.tx=m.x+m.vx/speed*m.left;m.ty=m.y+m.vy/speed*m.left;if(m.left===0)m.neutralized=true;}
+    spark(m.x,m.y,'#78edff',5);return true;
+  }
+  function pushShip(dx,dy){
+    const length=Math.hypot(dx,dy)||1,nx=dx/length,ny=dy/length;
+    for(let step=0;step<14;step++){
+      const x=clamp(ship.x+nx*6,-planet.halfW+20,planet.halfW-20),y=clamp(ship.y+ny*6,-planet.halfH+20,planet.halfH-20);
+      if(collides(x,y))break;ship.x=x;ship.y=y;
+    }
+    ship.vx+=nx*400;ship.vy+=ny*400;
+  }
+  function updateCoreWaves(dt){
+    for(const turret of planet.turrets){
+      if(!turret.wave||planet.blocks[turret.blockId].hp<=0)continue;
+      turret.waveCooldown=Math.max(0,turret.waveCooldown-dt);
+      if(turret.waveCooldown>0||distance(turret,ship)>600)continue;
+      if(rayBlocks(turret.x,turret.y,ship.x,ship.y).some(b=>b.id!==turret.blockId))continue;
+      const a=Math.atan2(ship.y-turret.y,ship.x-turret.x);
+      waves.push({x:turret.x,y:turret.y,vx:Math.cos(a)*260,vy:Math.sin(a)*260,left:600,sourceId:turret.blockId});
+      turret.waveCooldown=1.6;turret.angle=a;
+    }
+    for(const wave of waves){
+      const travel=Math.min(260*dt,wave.left),nx=wave.x+wave.vx/260*travel,ny=wave.y+wave.vy/260*travel;
+      if(rayBlocks(wave.x,wave.y,nx,ny).some(b=>b.id!==wave.sourceId)){wave.left=0;continue;}
+      const dx=nx-wave.x,dy=ny-wave.y,t=clamp(((ship.x-wave.x)*dx+(ship.y-wave.y)*dy)/(dx*dx+dy*dy||1),0,1);
+      if(Math.hypot(ship.x-(wave.x+dx*t),ship.y-(wave.y+dy*t))<=27){pushShip(wave.vx,wave.vy);wave.left=0;spark(ship.x,ship.y,'#d5a1ff',8);}
+      else wave.left-=travel;
+      wave.x=nx;wave.y=ny;
+    }
+    waves=waves.filter(w=>w.left>0);
+  }
+  function interceptAttack(start,end=start){
+    const dx=end.x-start.x,dy=end.y-start.y,length2=dx*dx+dy*dy;
+    for(const turret of planet.turrets){
+      if(turret.cooldown>0||planet.blocks[turret.blockId].hp<=0)continue;
+      const fraction=length2?clamp(((turret.x-start.x)*dx+(turret.y-start.y)*dy)/length2,0,1):0;
+      const hit={x:start.x+dx*fraction,y:start.y+dy*fraction};
+      if(distance(turret,hit)>turret.range)continue;
+      if(rayBlocks(turret.x,turret.y,hit.x,hit.y).some(b=>b.id!==turret.blockId))continue;
+      turret.cooldown=.35;turret.angle=Math.atan2(hit.y-turret.y,hit.x-turret.x);
+      lineEffect([{x:turret.x,y:turret.y},hit],'#ff4765',.15);spark(hit.x,hit.y,'#ff8d9d',5);return true;
+    }return false;
+  }
   function droneWaypoint(s,minRadius=0,maxRadius=s.roamRadius){
     const angle=Math.random()*TAU,radius=Math.sqrt(minRadius*minRadius+Math.random()*(maxRadius*maxRadius-minRadius*minRadius));
     return {x:clamp(ship.x+Math.cos(angle)*radius,-planet.halfW+15,planet.halfW-15),y:clamp(ship.y+Math.sin(angle)*radius,-planet.halfH+15,planet.halfH-15)};
@@ -336,6 +547,7 @@
   function assignDroneTargets(s){
     const reserved=new Set();
     for(const drone of drones){
+      if(drone.respawn>0){drone.targetId=null;continue;}
       const candidates=planet.blocks.filter(b=>b.hp>0&&!reserved.has(b.id)&&distance(b,drone)<=s.range);
       candidates.sort((a,b)=>distance(a,drone)-distance(b,drone)||a.id-b.id);
       // A clear first hit ensures a drone really shoots its own assigned block.
@@ -345,6 +557,7 @@
     }
   }
   function fireDroneLaser(drone,s){
+    if(drone.respawn>0)return false;
     const target=drone.targetId===null?null:planet.blocks[drone.targetId];
     if(!target||target.hp<=0||distance(target,drone)>s.range)return false;
     const angle=Math.atan2(target.y-drone.y,target.x-drone.x);
@@ -360,10 +573,13 @@
     syncDrones();if(!drones.length)return;
     const s=stats('mining_drones');
     for(const drone of drones){
+      if(drone.respawn>0){drone.respawn=Math.max(0,drone.respawn-dt);if(drone.respawn===0){Object.assign(drone,droneWaypoint(s,s.spawnMinRadius,s.spawnMaxRadius));drone.goal=droneWaypoint(s);drone.cooldown=.3;}continue;}
+      const old={x:drone.x,y:drone.y};
       drone.wander-=dt;drone.cooldown=Math.max(0,drone.cooldown-dt);
       if(drone.wander<=0||distance(drone,drone.goal)<8||distance(drone,ship)>s.roamRadius*1.5){drone.goal=droneWaypoint(s);drone.wander=1+Math.random()*2;}
       const dist=distance(drone,drone.goal),step=Math.min(s.moveSpeed*dt,dist);
       if(dist>0){drone.x+=(drone.goal.x-drone.x)/dist*step;drone.y+=(drone.goal.y-drone.y)/dist*step;}
+      if(interceptAttack(old,drone)){drone.respawn=3;drone.targetId=null;}
     }
     assignDroneTargets(s);
     for(const drone of drones){
@@ -380,12 +596,14 @@
     effects.push({type:'blast',x,y,r:radius,color:m.color,life:.65,max:.65});spark(x,y,m.color,24);
   }
   function advanceNuke(m,dt){
-    if(m.exploded)return;
+    if(m.exploded||m.neutralized)return;
     const remaining=Math.hypot(m.tx-m.x,m.ty-m.y),travel=Math.min(m.s.projectileSpeed*dt,remaining),arrived=travel>=remaining;
     const nx=arrived?m.tx:m.x+(m.tx-m.x)/remaining*travel,ny=arrived?m.ty:m.y+(m.ty-m.y)/remaining*travel;
+    if(interceptAttack(m,{x:nx,y:ny})){m.left=0;m.neutralized=true;return;}
     m.trail.push({x:m.x,y:m.y});if(m.trail.length>16)m.trail.shift();
     for(const b of rayBlocks(m.x,m.y,nx,ny)){
-      if(m.drilled.size>=m.s.drillBlocks)break;
+      if(reflectProjectile(m,b))return;
+      if(m.drilled.size>=m.s.drillBlocks)continue;
       if(m.drilled.has(b.id)||b.hp<=0)continue;
       m.drilled.add(b.id);damage(b,b.hp);
     }
@@ -407,6 +625,7 @@
       m.x=ship.x+Math.cos(ship.angle)*17;m.y=ship.y+Math.sin(ship.angle)*17;
       m.vx=Math.cos(angle)*m.s.projectileSpeed;m.vy=Math.sin(angle)*m.s.projectileSpeed;
     }
+    if(m.reflected){m.trail.push({x:m.x,y:m.y});if(m.trail.length>12)m.trail.shift();return true;}
     m.seekTimer-=dt;
     let target=m.targetId===null?null:planet.blocks[m.targetId];
     if(target&&(target.hp<=0||distance(target,m)>m.s.seekRange))target=null;
@@ -430,7 +649,10 @@
       }else updateHUD();
       return;
     }
-    if(state.level===0){planet.compaction+=dt;if(planet.compaction>=1){planet.compaction-=1;compactMantle();}}
+    for(const turret of planet.turrets)turret.cooldown=Math.max(0,turret.cooldown-dt);
+    regenerateBlocks(dt);
+    if([0,3,4,5,7].includes(state.level)){planet.compaction+=dt;if(planet.compaction>=1){planet.compaction-=1;compactMantle();}}
+    updateSnow(dt);updatePlague(dt);updateShockwaves(dt);
     const ax=(keys.has('KeyD')?1:0)-(keys.has('KeyA')?1:0),ay=(keys.has('KeyS')?1:0)-(keys.has('KeyW')?1:0),length=Math.hypot(ax,ay)||1;
     ship.vx+=ax/length*850*dt;ship.vy+=ay/length*850*dt;
     const drag=Math.exp(-3.3*dt);ship.vx*=drag;ship.vy*=drag;
@@ -438,6 +660,7 @@
     let x=clamp(ship.x+ship.vx*dt,-planet.halfW+20,planet.halfW-20),y=clamp(ship.y+ship.vy*dt,-planet.halfH+20,planet.halfH-20);
     if(!collides(x,ship.y))ship.x=x;else ship.vx=0;
     if(!collides(ship.x,y))ship.y=y;else ship.vy=0;
+    updateCoreWaves(dt);
     const target=aim();ship.angle=Math.atan2(target.y-ship.y,target.x-ship.x);
     updateDrones(dt);
     const firing=keys.has('Space')||auto;
@@ -447,7 +670,9 @@
       const d=byId[id],s=stats(id);
       if(d.behavior==='mining_drones')continue;
       if(d.behavior==='orbiting_blade'){
+        if(cooldowns[id]>0)continue;
         const angle=simTime*s.orbitSpeedDegrees*Math.PI/180,bx=ship.x+Math.cos(angle)*s.orbitRadius,by=ship.y+Math.sin(angle)*s.orbitRadius;
+        if(interceptAttack({x:bx,y:by})){cooldowns[id]=1;continue;}
         for(const b of nearby(bx,by,s.bladeDiameter/2+8))if(distance(b,{x:bx,y:by})<s.bladeDiameter/2+8&&(sawHits.get(b.id)||0)<=simTime){damage(b,s.damage);sawHits.set(b.id,simTime+s.contactInterval);}
       }else if(cooldowns[id]<=0)fire(id);
     }
@@ -455,14 +680,25 @@
       if(b.nuke){advanceNuke(b,dt);continue;}
       if(b.guided&&!guideMissile(b,dt))continue;
       const speed=Math.hypot(b.vx,b.vy),travel=Math.min(speed*dt,b.left),nx=b.x+b.vx/speed*travel,ny=b.y+b.vy/speed*travel;
+      if(interceptAttack(b,{x:nx,y:ny})){b.left=0;continue;}
       const hit=rayBlocks(b.x,b.y,nx,ny)[0];if(hit){
-        if(b.guided){for(const block of nearby(hit.x,hit.y,b.s.blastRadius))if(distance(block,hit)<=b.s.blastRadius)damage(block,b.damage);effects.push({type:'blast',x:hit.x,y:hit.y,r:b.s.blastRadius,color:b.color,life:.25,max:.25});}
+        if(reflectProjectile(b,hit))continue;
+        if(b.guided||b.blastRadius){const radius=b.blastRadius||b.s.blastRadius;for(const block of nearby(hit.x,hit.y,radius))if(distance(block,hit)<=radius)damage(block,b.damage);effects.push({type:'blast',x:hit.x,y:hit.y,r:radius,color:b.color,life:.25,max:.25});}
         else damage(hit,b.damage);
         b.left=0;
       }else b.left-=travel;
       b.x=nx;b.y=ny;
     }bullets=bullets.filter(b=>b.left>0);
-    for(const shell of shells){shell.age+=dt;if(shell.age>=shell.duration){
+    for(const shell of shells){
+      const t=clamp(shell.age/shell.duration,0,1),nextT=clamp((shell.age+dt)/shell.duration,0,1);
+      const at=v=>({x:shell.x+(shell.tx-shell.x)*v,y:shell.y+(shell.ty-shell.y)*v-Math.sin(v*Math.PI)*60});
+      if(interceptAttack(at(t),at(nextT))){shell.age=shell.duration;continue;}
+      shell.age+=dt;if(shell.age>=shell.duration){
+      const landing=blockAt(shell.tx,shell.ty);
+      if(landing?.hp>0&&landing.reflective){
+        const norm=Math.hypot(shell.tx,shell.ty)||1,vx=shell.tx/norm*260,vy=shell.ty/norm*260;
+        bullets.push({x:shell.tx+vx/260*18,y:shell.ty+vy/260*18,vx,vy,left:600,damage:shell.s.damage,color:shell.color,guided:false,reflected:true,bounces:1,blastRadius:shell.s.blastRadius});spark(shell.tx,shell.ty,'#78edff',5);continue;
+      }
       for(const b of nearby(shell.tx,shell.ty,shell.s.blastRadius))if(distance(b,{x:shell.tx,y:shell.ty})<=shell.s.blastRadius)damage(b,shell.s.damage);
       effects.push({type:'blast',x:shell.tx,y:shell.ty,r:shell.s.blastRadius,color:shell.color,life:.38,max:.38});spark(shell.tx,shell.ty,shell.color,15);
     }}shells=shells.filter(s=>s.age<s.duration);
@@ -488,26 +724,58 @@
     if(planet.remaining===0)completeLevel();
   }
   function sweepBlade(b,old){
+    if(interceptAttack(old,b)){b.done=true;return;}
     const steps=Math.max(1,Math.ceil(distance(old,b)/6));
     for(let n=1;n<=steps;n++){
       const x=old.x+(b.x-old.x)*n/steps,y=old.y+(b.y-old.y)*n/steps;
+      const liquid=nearby(x,y,b.s.bladeDiameter/2+8).find(block=>block.reflective&&distance(block,{x,y})<b.s.bladeDiameter/2+8);
+      if(liquid){b.x=old.x;b.y=old.y;b.returning=true;b.hits.clear();spark(x,y,'#78edff',4);return;}
       for(const block of nearby(x,y,b.s.bladeDiameter/2+8))if(!b.hits.has(block.id)&&distance(block,{x,y})<b.s.bladeDiameter/2+8){b.hits.add(block.id);damage(block,b.s.damage);}
     }
+  }
+  let galaxyReturn='play';
+  const visitFields=['hp','positions','ship','collapse','compaction','turretCooldowns','waveCooldowns','regenAccumulator','plagueLevel','plagued','plagueContacts','replaying'];
+  function unlockedLevel(index){return Number.isInteger(index)&&index>=0&&index<levels.length&&(index===0||index===state.level||state.paid.includes(index)||state.paid.includes(index-1));}
+  function openGalaxy(){
+    if(!state||mode==='welcome'||mode==='galaxy')return;
+    galaxyReturn=mode;setMode('galaxy');
+    $('galaxyGrid').innerHTML=levels.map((spec,index)=>{
+      const current=index===state.level,active=current&&planet.remaining>0,visited=state.visits?.[index],cleared=state.paid.includes(index),unlocked=unlockedLevel(index);
+      const action=active||visited?'Resume':cleared?'Replay':'Launch';
+      return `<article class="weapon-card"><div class="eyebrow">Sector ${String(index+1).padStart(2,'0')}</div><h3>${spec[0]}</h3><div class="badge">${current?'Current destination':cleared?'Completed':unlocked?'Available':'Locked'}</div><button data-planet="${index}" ${unlocked?'':'disabled'}>${unlocked?action:'Clear previous planet'}</button></article>`;
+    }).join('');
+    $('galaxyGrid').querySelectorAll('[data-planet]').forEach(button=>button.onclick=()=>visitLevel(Number(button.dataset.planet)));
+  }
+  function visitLevel(index){
+    if(!unlockedLevel(index))return;
+    if(index===state.level&&planet.remaining>0){setMode('play');return;}
+    save();
+    if(!state.visits||typeof state.visits!=='object'||Array.isArray(state.visits))state.visits={};
+    if(planet.remaining>0)state.visits[state.level]=Object.fromEntries(visitFields.filter(k=>state[k]!==undefined).map(k=>[k,state[k]]));
+    else delete state.visits[state.level];
+    const destination=state.visits[index];
+    for(const field of visitFields)delete state[field];
+    state.level=index;state.replaying=state.paid.includes(index);
+    if(destination&&typeof destination==='object')for(const field of visitFields)if(destination[field]!==undefined)state[field]=destination[field];
+    delete state.visits[index];
+    resetFlight();load(state);save();setMode('play');resize();
   }
   function completeLevel(){
     const spec=levels[state.level];
     if(!state.paid.includes(state.level)){state.credits+=spec[3];state.paid.push(state.level);}
     $('completeEyebrow').textContent=state.level===9?'All ten planets cleared':'Demolition complete';
     $('completeTitle').textContent=state.level===9?'A quieter universe.':`${spec[0]} dismantled.`;
-    $('bonus').textContent=`+${format(spec[3])} ◈`;
-    $('completeText').textContent=`${format(spec[1])} blocks cleared. First-clear bonus recorded. ${state.level===9?'Campaign complete! Start again to try a new arsenal.':`Next destination: ${levels[state.level+1][0]}. Your equipment travels with you.`}`;
-    $('nextBtn').textContent=state.level===9?'New campaign':'Next planet →';updateHUD();setMode('complete');
+    $('bonus').textContent=state.replaying?'Replay complete':`+${format(spec[3])} ◈`;
+    $('completeText').textContent=`${format(planet.total)} blocks cleared. First-clear bonus recorded. ${state.level===9?'Campaign complete! Start again to try a new arsenal.':`Next destination: ${levels[state.level+1][0]}. Your equipment travels with you.`}`;
+    if(state.replaying)$('completeText').textContent=`${format(planet.total)} blocks cleared. Block credits earned; the first-clear bonus was already collected. Choose another destination in Galaxy.`;
+    $('nextBtn').textContent=state.replaying?'Choose planet':state.level===9?'New campaign':'Next planet →';updateHUD();setMode('complete');
   }
   function nextLevel(){
+    if(state.replaying){openGalaxy();return;}
     if(state.level===9){newCampaign();return;}
-    state.level++;delete state.hp;delete state.ship;delete state.positions;delete state.collapse;delete state.compaction;planet=generatePlanet(state.level,state.seed);resetFlight();save();setMode('play');updateHUD();resize();
+    visitLevel(state.level+1);
   }
-  function resetFlight(){ship={x:0,y:-planet.radius-90,vx:0,vy:0,angle:Math.PI/2};bullets=[];blades=[];shells=[];effects=[];particles=[];cooldowns={};drones=[];sawHits.clear();pointer.moved=false;syncDrones();}
+  function resetFlight(){ship={x:0,y:-planet.radius-90,vx:0,vy:0,angle:Math.PI/2};bullets=[];blades=[];shells=[];effects=[];particles=[];cooldowns={};drones=[];waves=[];snow=[];shockwaves=[];plagueContacts=new Map();sawHits.clear();pointer.moved=false;syncDrones();}
   function newCampaign(){if(!window.confirm('Start a new campaign? This resets all planets, credits, and weapon upgrades.'))return;state=freshState();auto=false;planet=generatePlanet(0);resetFlight();save();$('reducedMotion').checked=false;setMode('play');resize();updateHUD();}
 
   const stops=[[5,5,8],[89,16,24],[212,58,18],[255,149,0],[255,243,106]];
@@ -529,6 +797,15 @@
     if(collapseFraction){const shrink=state.reduced?1:Math.max(.02,1-collapseFraction*collapseFraction);ctx.scale(shrink,shrink);ctx.globalAlpha=1-collapseFraction;}
     for(const b of planet.blocks){if(b.hp<=0)continue;const jitter=state.level===1&&collapseFraction&&!state.reduced?Math.sin(b.id*13+simTime*23)*collapseFraction*10:0;ctx.fillStyle=blockColor(b);ctx.fillRect(b.x-7.3+jitter,b.y-7.3-jitter,14.6,14.6);if(b.hp===b.max){ctx.strokeStyle=b.gold?'#ffd65f':b.phase==='gas'?'#386b99':'#364158';ctx.lineWidth=b.gold?1.2:.6;ctx.strokeRect(b.x-7.3+jitter,b.y-7.3-jitter,14.6,14.6);}if(b.gold){ctx.fillStyle='#ffdf75';ctx.fillRect(b.x-2,b.y-2,4,4);}}
     ctx.restore();
+    for(const b of planet.blocks)if(b.hp>0&&b.plagued){ctx.strokeStyle='#baffdc';ctx.lineWidth=1;ctx.strokeRect(b.x-6,b.y-6,12,12);ctx.fillStyle='#edfff6';ctx.fillRect(b.x-3,b.y-3,2,2);ctx.fillRect(b.x+2,b.y+2,2,2);}
+    for(const flake of snow){ctx.fillStyle='#f2fff9';ctx.fillRect(flake.x-flake.size/2,flake.y-flake.size/2,flake.size,flake.size);if(!state.reduced){ctx.strokeStyle='#d5ffe7';ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(flake.x-3,flake.y);ctx.lineTo(flake.x+3,flake.y);ctx.moveTo(flake.x,flake.y-3);ctx.lineTo(flake.x,flake.y+3);ctx.stroke();}}
+    if(state.level===4){
+      for(const b of planet.blocks){
+        if(b.hp<=0||b.phase==='liquid')continue;
+        ctx.fillStyle=b.hp<b.max?'#dca769':'#a2e8ef';
+        const height=2+(b.id%3);ctx.fillRect(b.x-4,b.y-height/2,2,height);ctx.fillRect(b.x+2,b.y-height/2,2,height);
+      }
+    }
     for(const e of effects){ctx.globalAlpha=e.life/e.max;if(e.type==='flash'){ctx.fillStyle='#fff36a';ctx.fillRect(e.x-8,e.y-8,16,16);}else if(e.type==='blast'){ctx.strokeStyle=e.color;ctx.lineWidth=3;ctx.beginPath();ctx.arc(e.x,e.y,e.r*(1.3-e.life/e.max*.3),0,TAU);ctx.stroke();}else{
       ctx.strokeStyle=e.color;ctx.lineWidth=e.points.length>2?2:3;ctx.shadowColor=e.color;ctx.shadowBlur=state.reduced?0:12;ctx.beginPath();ctx.moveTo(e.points[0].x,e.points[0].y);
       for(let i=1;i<e.points.length;i++){const p=e.points[i-1],q=e.points[i];if(e.points.length>2){ctx.lineTo((p.x+q.x)/2+Math.sin(i*17+e.life*90)*9,(p.y+q.y)/2+Math.cos(i*11+e.life*60)*9);}ctx.lineTo(q.x,q.y);}ctx.stroke();ctx.shadowBlur=0;
@@ -546,25 +823,40 @@
         ctx.save();ctx.translate(b.x,b.y);ctx.rotate(Math.atan2(b.vy,b.vx));ctx.fillStyle=b.color;ctx.beginPath();ctx.moveTo(7,0);ctx.lineTo(-5,-3);ctx.lineTo(-3,0);ctx.lineTo(-5,3);ctx.closePath();ctx.fill();ctx.fillStyle='#ffe3a0';ctx.fillRect(-9,-1,5,2);ctx.restore();
       }else{ctx.strokeStyle=b.color;ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(b.x,b.y);ctx.lineTo(b.x-b.vx*.015,b.y-b.vy*.015);ctx.stroke();}
     }
+    for(const wave of shockwaves){
+      ctx.save();ctx.strokeStyle=wave.color;ctx.globalAlpha=.8;ctx.lineWidth=2;ctx.shadowColor=wave.color;ctx.shadowBlur=state.reduced?0:14;
+      ctx.beginPath();ctx.arc(wave.x,wave.y,wave.radius,0,TAU);ctx.stroke();
+      if(!state.reduced){ctx.strokeStyle='#efffff';ctx.lineWidth=1.5;ctx.beginPath();const segments=Math.max(40,Math.ceil(wave.radius/4));
+        for(let n=0;n<=segments;n++){const a=n/segments*TAU,r=wave.radius+Math.sin(n*17+Math.floor(simTime*18))*6,x=wave.x+Math.cos(a)*r,y=wave.y+Math.sin(a)*r;n?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.closePath();ctx.stroke();}
+      ctx.restore();
+    }
     for(const s of shells){const t=s.age/s.duration,x=s.x+(s.tx-s.x)*t,y=s.y+(s.ty-s.y)*t-Math.sin(t*Math.PI)*60;ctx.strokeStyle=s.color;ctx.globalAlpha=.35;ctx.beginPath();ctx.arc(s.tx,s.ty,s.s.blastRadius,0,TAU);ctx.stroke();ctx.globalAlpha=1;ctx.fillStyle=s.color;ctx.beginPath();ctx.arc(x,y,5+Math.sin(t*Math.PI)*3,0,TAU);ctx.fill();}
     for(const b of blades){if(b.behavior==='tethered_blade'){ctx.strokeStyle='#79dbff66';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(ship.x,ship.y);ctx.lineTo(b.x,b.y);ctx.stroke();}drawBlade(b.x,b.y,b.s.bladeDiameter/2,b.color);}
-    if(mode==='play'&&(auto||keys.has('Space')))for(const id of state.slots.filter(Boolean)){if(byId[id].behavior==='orbiting_blade'){const s=stats(id),a=simTime*s.orbitSpeedDegrees*Math.PI/180;ctx.strokeStyle='#f58bbe22';ctx.beginPath();ctx.arc(ship.x,ship.y,s.orbitRadius,0,TAU);ctx.stroke();drawBlade(ship.x+Math.cos(a)*s.orbitRadius,ship.y+Math.sin(a)*s.orbitRadius,s.bladeDiameter/2,'#f58bbe');}}
+    if(mode==='play'&&(auto||keys.has('Space')))for(const id of state.slots.filter(Boolean)){if(byId[id].behavior==='orbiting_blade'&&!(cooldowns[id]>0)){const s=stats(id),a=simTime*s.orbitSpeedDegrees*Math.PI/180;ctx.strokeStyle='#f58bbe22';ctx.beginPath();ctx.arc(ship.x,ship.y,s.orbitRadius,0,TAU);ctx.stroke();drawBlade(ship.x+Math.cos(a)*s.orbitRadius,ship.y+Math.sin(a)*s.orbitRadius,s.bladeDiameter/2,'#f58bbe');}}
     for(const p of particles){ctx.globalAlpha=clamp(p.life/p.max,0,1);ctx.fillStyle=p.color;ctx.fillRect(p.x-1,p.y-1,2.5,2.5);}ctx.globalAlpha=1;
     for(const drone of drones){
+      if(drone.respawn>0)continue;
       ctx.save();ctx.translate(drone.x,drone.y);ctx.rotate(drone.angle);ctx.strokeStyle='#65caff';ctx.fillStyle='#122b40';ctx.lineWidth=1.5;
       ctx.beginPath();ctx.moveTo(9,0);ctx.lineTo(3,-6);ctx.lineTo(-6,-5);ctx.lineTo(-6,5);ctx.lineTo(3,6);ctx.closePath();ctx.fill();ctx.stroke();
       ctx.fillStyle='#b9edff';ctx.fillRect(-2,-2,4,4);ctx.strokeRect(-7,-9,8,3);ctx.strokeRect(-7,6,8,3);ctx.restore();
     }
+    for(const turret of planet.turrets){
+      const mount=planet.blocks[turret.blockId];if(mount.hp<=0)continue;
+      if(state.level===4){ctx.strokeStyle='#ff476520';ctx.lineWidth=1;ctx.setLineDash([4,10]);ctx.beginPath();ctx.arc(turret.x,turret.y,turret.range,0,TAU);ctx.stroke();ctx.setLineDash([]);}
+      ctx.strokeStyle='#ff4765';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(mount.x,mount.y);ctx.lineTo(turret.x,turret.y);ctx.stroke();
+      ctx.save();ctx.translate(turret.x,turret.y);ctx.rotate(turret.angle);ctx.fillStyle=turret.cooldown>0?'#5f2435':'#ff4765';ctx.fillRect(-6,-6,12,12);ctx.strokeStyle='#ffd2d9';ctx.strokeRect(-6,-6,12,12);ctx.fillStyle='#ffb2bc';ctx.fillRect(4,-2,12,4);ctx.restore();
+    }
+    for(const wave of waves){ctx.save();ctx.translate(wave.x,wave.y);ctx.rotate(Math.atan2(wave.vy,wave.vx));ctx.strokeStyle='#d6a2ff';ctx.lineWidth=3;ctx.beginPath();ctx.arc(-8,0,22,-Math.PI/3,Math.PI/3);ctx.stroke();ctx.globalAlpha=.4;ctx.beginPath();ctx.arc(-15,0,22,-Math.PI/3,Math.PI/3);ctx.stroke();ctx.restore();}
     const target=aim();
     if(mode==='play'){ctx.strokeStyle='#7afce144';ctx.lineWidth=1;ctx.beginPath();ctx.arc(target.x,target.y,9,0,TAU);ctx.moveTo(target.x-14,target.y);ctx.lineTo(target.x-6,target.y);ctx.moveTo(target.x+6,target.y);ctx.lineTo(target.x+14,target.y);ctx.moveTo(target.x,target.y-14);ctx.lineTo(target.x,target.y-6);ctx.moveTo(target.x,target.y+6);ctx.lineTo(target.x,target.y+14);ctx.stroke();}
     ctx.save();ctx.translate(ship.x,ship.y);ctx.rotate(ship.angle);
     if(Math.hypot(ship.vx,ship.vy)>20){ctx.fillStyle='#7afce1';ctx.globalAlpha=.7;ctx.beginPath();ctx.moveTo(-8,-4);ctx.lineTo(-18-(state.reduced?0:Math.sin(simTime*55)*5),0);ctx.lineTo(-8,4);ctx.fill();ctx.globalAlpha=1;}
     ctx.shadowColor='#7afce1';ctx.shadowBlur=state.reduced?0:12;ctx.strokeStyle='#9affea';ctx.fillStyle='#142e35';ctx.lineWidth=1.8;ctx.beginPath();ctx.moveTo(16,0);ctx.lineTo(-10,-10);ctx.lineTo(-5,0);ctx.lineTo(-10,10);ctx.closePath();ctx.fill();ctx.stroke();ctx.shadowBlur=0;ctx.restore();
-    const b=blockAt(target.x,target.y);$('targetInfo').textContent=b&&b.hp>0?`${b.name} · ${Number(b.hp.toFixed(2))} / ${b.max} HP · ${b.reward} credits`:`${state.slots.some(Boolean)?'WASD to fly · Mouse to aim':'No weapons equipped · Open the armory'}${auto?' · AUTO ACTIVE':''}`;
+    const b=blockAt(target.x,target.y);$('targetInfo').textContent=b&&b.hp>0?`${b.plagued?'PLAGUED · ':''}${b.turret?'Turret mount / ':''}${b.name} · ${Number(b.hp.toFixed(2))} / ${b.max} HP · ${b.reward} credits`:`${state.slots.some(Boolean)?'WASD to fly · Mouse to aim':'No weapons equipped · Open the armory'}${auto?' · AUTO ACTIVE':''}`;
   }
   function frame(now){const delta=Math.min((now-last)/1000||0,.1);last=now;if(mode==='play'){accumulator+=delta;while(accumulator>=1/60&&mode==='play'){update(1/60);accumulator-=1/60;}}else accumulator=0;draw();requestAnimationFrame(frame);}
   function toggleAuto(){if(!state||mode!=='play')return;auto=!auto;save();updateHUD();}
-  function togglePause(){if(mode==='play')setMode('pause');else if(mode==='pause')setMode('play');else if(mode==='shop')setMode(shopReturn);}
+  function togglePause(){if(mode==='play')setMode('pause');else if(mode==='pause')setMode('play');else if(mode==='shop')setMode(shopReturn);else if(mode==='galaxy')setMode(galaxyReturn);}
   window.addEventListener('keydown',event=>{
     if(['Space','KeyW','KeyA','KeyS','KeyD','KeyF','KeyU','Escape'].includes(event.code)&&!['INPUT','TEXTAREA'].includes(event.target.tagName)){
       if(event.code==='Space'&&mode!=='play')return;
@@ -585,6 +877,7 @@
   $('pauseBtn').onclick=togglePause;$('resumeBtn').onclick=()=>setMode('play');$('shopBtn').onclick=openShop;
   $('closeShop').onclick=()=>setMode(shopReturn);$('autoBtn').onclick=toggleAuto;$('restartBtn').onclick=newCampaign;
   $('completeShop').onclick=openShop;$('nextBtn').onclick=nextLevel;
+  $('galaxyBtn').onclick=openGalaxy;$('pauseGalaxy').onclick=openGalaxy;$('completeGalaxy').onclick=openGalaxy;$('closeGalaxy').onclick=()=>setMode(galaxyReturn);
   $('reducedMotion').onchange=event=>{state.reduced=event.target.checked;save();};
   async function init(){
     try{

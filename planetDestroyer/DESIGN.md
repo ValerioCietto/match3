@@ -30,12 +30,14 @@ The visual reference is classic Asteroids: a dark starfield, a crisp outlined sh
 3. Receive credits immediately when a block is destroyed.
 4. Open the upgrade page at any time to buy weapons, improve them, and change the three-slot loadout. Gameplay pauses and progress is preserved.
 5. Resume the same planet with the new equipment.
-6. Destroy the entire core on Terra or Bedrock to collapse the planet; clear every block on later planets. Receive the planet's completion bonus.
+6. Destroy the entire core on Terra or Bedrock, or every liquid block on Basalt, to collapse the planet; clear every block on the other planets. Receive the planet's completion bonus.
 7. Launch the next unlocked planet, retaining credits, purchases, and loadout. Completing level 10 finishes the campaign.
 
 The first version has no loss condition. Its challenge is choosing positions and combinations that clear a planet efficiently. The ten levels increase block count and material HP, with liquid compaction, polar weaknesses, and gold deposits giving early planets distinct mechanics. See `levels.md` for authoritative generation, material HP, rewards, progression, and difficulty targets.
 
 ## Flight and controls
+
+The **Galaxy** button opens a paused destination selector, also reachable from pause and completion screens. Completed planets can be replayed with the current loadout and shared credits. Each unfinished visit keeps its damage, material positions, infection, and timers when switching planets or reloading. Replays pay normal block rewards, with first-clear bonuses awarded once per campaign. Unvisited planets unlock by clearing their predecessor.
 
 | Input | Action |
 | --- | --- |
@@ -54,6 +56,16 @@ Opening menus or losing window focus pauses simulation and clears held inputs. S
 
 ## Planet construction
 
+Level 8 is **Chaos**, replacing Titan: 2,500 seeded random blocks, mixing Turtle-style reflective regenerating solids, liquid, and gold. HP increases linearly from 1 at the surface to 250 at the center for every material. Turtle blocks heal 5 HP per 0.1 seconds; liquid settles once per second. See `levels.md` for mix probabilities, rewards, and save migration.
+
+Level 7 is now **Turtle**, replacing Crucible: five reflective shell layers with 50 HP and discrete 5 HP healing every 0.1 seconds, two genuinely empty radial layers, and a non-regenerating 10 HP core defended by ten turrets. Railgun pierces the shell. The gap prevents contact-based plague spread. Destroying the entire core triggers collapse. The former 2,250-cell footprint now contains 1,990 destructible blocks after removing the hollow band. See `levels.md` for rewards, turret tuning, migration, and regeneration timing.
+
+Anvil now uses `levels.md`'s custom layout: three 10 HP shell layers regenerating 10 HP/s while alive, reflective 10 HP liquid mantle, and an 80 HP core with eight turrets. Core turrets combine projectile interception with visible pushback waves requiring clear sight and a ship within 600 units. Regeneration never resurrects destroyed blocks. All blocks must be cleared; see `levels.md` for reflection, wave collision, tuning, and persistence rules.
+
+Ironheart's current design is a fully developed 1,800-block world: a two-layer 200 HP city crust surrounding a honeycomb of 250 HP hex-sector walls and 15 HP liquid compartments, extending to the center. Six surface turrets use 320-unit range. The planet uses square destructible cells to construct hexagonal sector boundaries, city-window details, and one-second liquid settling. No core collapse; all blocks must be cleared. These material values are initial balance choices. `levels.md` contains generation and persistence requirements.
+
+Basalt now uses the authoritative custom layout in `levels.md`: 30 point-defense turrets on unique crust mounts, two 100 HP crust layers, and a 10 HP liquid interior. It has no collapse core: destroying every liquid block triggers collapse, clears the remaining crust and turret mounts, and pays their normal rewards exactly once. Defenses intercept the listed physical weapons and railgun beams, destroy drones temporarily, and can be disabled by destroying their mount. Guided laser and chain lightning bypass interception. See `levels.md` for range, recharge, recovery, and save behavior; these supersede Basalt's original generic layers.
+
 Use a square grid with a circular silhouette. Level 1 contains exactly 1,000 cells, selected by distance from the planet center with deterministic boundary tie-breaking as specified in `levels.md`. A proposed cell size is 16 world units, making the first planet approximately 576 units across in a 1,200 × 900 world. Larger levels expand the world and fit the camera to preserve surrounding flight space.
 
 Each block stores its stable ID, grid position, material, phase, reward, color tint, core membership, maximum HP, and remaining HP. Material is assigned at generation. Liquid movement preserves it and its damage. The following table documents the original prototype only; use `levels.md` for the current values.
@@ -68,7 +80,7 @@ Each block stores its stable ID, grid position, material, phase, reward, color t
 
 Solid blocks remain fixed. Terra's liquid mantle settles inward once each second into adjacent vacant cells, avoiding the ship. Detached islands remain targets until destroyed or cleared by core collapse. Debris is cosmetic and cannot block shots or award credits.
 
-On Terra and Bedrock, destroying the entire core starts an animated implosion/crumble that clears and rewards the remaining blocks exactly once. Later planets require every block to be destroyed. Completion awards the level's bonus once; Terra awards 200 credits. See `levels.md` for details.
+On Terra and Bedrock, destroying the entire core starts an animated implosion/crumble that clears and rewards the remaining blocks exactly once. Basalt collapses when its last liquid block is destroyed. Other planets require every block to be destroyed. Completion awards the level's bonus once; Terra awards 200 credits. See `levels.md` for details.
 
 ## Damage and color
 
@@ -90,6 +102,10 @@ Every damage source uses one shared damage function. It ignores already destroye
 
 ## Weapons
 
+**Shockwave** emits a circular thunder ring from the ship's launch position. Each block is hit once as the expanding front crosses its square, regardless of intervening material, reflection, or point defense. Let `c` be the dot product of the normalized propagation direction (origin to block) and local outward radial direction (center to block). Damage is `baseDamage * 2^c`: 2× outward, 1× perpendicular, 0.5× inward, smoothly interpolated. At an undefined direction, use 1×.
+
+Initial balance in `weapons.json`: 8 base damage, 1.5-second cooldown, 300 units/second expansion, 240 range. Each upgrade adds 80 range, reaching 560 at level 5; damage and cooldown remain fixed. Unlock costs 750 credits; upgrades cost 1,000 / 2,500 / 5,000 / 10,000. Surviving liquid is pushed up to two grid cells along the dominant propagation axis, stopping at other blocks or the ship. Liquids may move up to 96 units beyond the initial planet radius and later settle inward. Positions persist in saves and Galaxy visits; airborne rings are transient. Reduced motion keeps a simple ring without flickering lightning.
+
 `weapons.json` is the authoritative balance data. Each entry contains a stable `id`, display name, `behavior` registry key, unlock cost, `baseStats`, and an `upgrades` array listing every available upgrade's target level, cost, and stat modifiers. JavaScript supplies behavior implementations only; gameplay and the store load the same JSON rather than duplicating statistics or upgrade lists.
 
 Upgrade modifiers are cumulative: `add` adds to the current stat and `multiply` multiplies the current stat. Apply purchased upgrades in ascending level order. Damage upgrades add 25% of level-1 damage each time; timing upgrades multiply the relevant interval by 0.92. Milestone bonuses are explicit entries in each weapon's upgrade, not hard-coded weapon-name checks. Units are seconds, world units, and degrees. Validate unique IDs, known behavior keys, sequential upgrade levels, nonnegative costs, and valid numeric stats before starting play. Invalid data shows a loading error instead of silently using different defaults.
@@ -107,15 +123,17 @@ All weapons use unlimited ammunition. Firing activates each equipped weapon acco
 | Boomerang | Follow a curved outward path up to 330 units, then home back to the moving ship | 2 damage per block on each outward/return leg; 1.1 s cycle | Carve broad curved paths |
 | Railgun | Instant narrow beam that pierces up to 12 blocks in distance order | 4 damage per block, beam every 1.4 s | Drill toward the core |
 | Guided missile flurry | Six staggered homing missiles; favor exposed blocks near the cursor, reacquire lost targets, explode on collision | 3 damage in a 24-unit radius, 0.07 s launch spacing, salvo every 1.4 s | Seek and bombard exposed material while maneuvering |
-| Guided laser | Automatically selects the nearest living block within 600 units, independently of mouse aim; simultaneous rays focus on that block | 0.75 damage per ray, pulse every 0.09 s; starts with one ray | Rapid close-range precision fire while maneuvering |
+| Guided laser | Each ray selects a different living block within 600 units, nearest first and independently of mouse aim | 0.75 damage per ray, pulse every 0.09 s; starts with one ray | Rapid close-range precision fire while maneuvering |
 | Piercing nuke | Flies to the mouse position captured at launch; drills up to 5 × level blocks and detonates only at the target coordinates | 20 base blast damage, 4 × level block-width radius, 3.2 s base cooldown | Place a penetrating explosion precisely |
 | Mining drones | One autonomous roaming drone per weapon level; each selects a different nearest visible block | Level L: L damage per block and L pierced blocks, pulse every 0.55 s per drone | Independent mining without trigger input |
+| Plague | Snow pulled toward the center infects blocks and spreads through sustained edge contact | Level L: L damage/s per infected block; 5/L seconds to spread | Persistent damage and infection across connected material |
 
 ### Interaction rules
 
+- Plague emits six snow-like particles per 0.25-second volley, with a starting speed of 90 units/s, 80-degree spread, inward gravity of 170 units/s², speed cap of 340 units/s, seven-second lifetime, and a 400-particle cap. A swept collision infects the first living block. Snow bypasses projectile interception and liquid reflection. Infection deals weapon-level HP/s continuously; repeated exposure does not stack. Each infected-source/healthy-neighbor pair tracks continuous shared-edge contact, with spread after 5 / weapon level seconds. Diagonals do not count, multiple sources do not combine timers, and broken contact resets that pair. Newly infected blocks begin spreading on the next simulation step. A dying source contributes only the time it remains alive. Infections remain attached to moving liquid blocks. Existing infection continues after unequip and uses current purchased upgrades. Saves retain infected block IDs and partial contact timers; free-flying snow is transient. New planets clear all infections. Regeneration and plague damage both apply, so Anvil's shell can outheal low-level infection. Initial interpretation of unspecified plague damage: 1 damage/s per weapon level.
 - Mining drones operate whenever equipped, independently of Space and AUTO. Level L deploys L drones (1–5). Each spawns at a random point 30–70 units from the ship, wanders toward changing random destinations within 220 units of the ship at 85 units/s, and flies above material without physical collision. Each picks the nearest visible, unreserved living block within 450 units; targets are reserved once per drone in a shared assignment pass. Surplus drones idle. A laser hits its assigned block first and up to L blocks total along the same ray, dealing L damage to each. Piercing tails can incidentally hit another drone's target; primary target reservations never overlap. Reassign destroyed targets on the next simulation step. Pause/armory freeze movement and firing. Unequip removes drones immediately; upgrades add only the missing drones. Reload and level transitions recreate the correct fleet near the ship. This weapon's four upgrades add one drone, one damage, and one penetration each; its cooldown remains 0.55 s rather than using the default 8% speed upgrade.
 - Piercing nuke (320-credit unlock, 140-credit base upgrade cost): captures the mouse coordinates at launch and detonates exactly at that point, even in empty space. Later mouse movement does not redirect it. At weapon level L, it destroys up to 5 × L distinct living blocks on the way. Exhausting that allowance does not trigger an early explosion: the missile continues through remaining material without additional drilling damage. Blast radius is 4 × L block widths (16 world units per block). Base blast damage is 20, cooldown 3.2 s, and speed 300 units/s. There is no range-based detonation. Every upgrade adds 5 drill blocks, 4 radius blocks, 5 blast damage, and multiplies cooldown by 0.92 in weapons.json. A target ring shows the blast radius. Holes do not consume drilling allowance. Arrival is clamped to the destination to prevent overshoot, including zero-distance shots. Each blast damages blocks whose centers lie within its radius once; standard rewards and core collapse still apply.
-- Guided laser selects the nearest surviving block each pulse and applies all its rays to that one target. Every upgrade adds one ray, from one at level 1 to five at level 5, in addition to normal damage/cooldown improvements. Overkill is discarded, with retargeting on the next pulse. No in-range block means no beam. Green converging beams visually distinguish it from railgun; releasing the trigger stops new pulses unless auto fire is enabled.
+- Guided laser selects up to one distinct surviving block per ray each pulse, nearest first within 600 units. Each selected block takes one ray of damage, never the combined damage of the whole volley. Every upgrade adds one ray, from one at level 1 to five at level 5, alongside the existing damage/cooldown improvements. If there are fewer available blocks than rays, extra rays idle. Selection refreshes each pulse; overkill is discarded. Green beams fan out toward their separate targets. Releasing the trigger stops new pulses unless auto fire is enabled.
 - Guided missiles travel at 350 units/s with a 1,000-unit path limit, acquire visible exposed targets within 700 units, and turn at up to 300 degrees/s. They use swept collision, cannot pass through blocks, and finish an already launched salvo after trigger release. No target means straight flight until acquisition or range expiry. Pause freezes the salvo. Pink missile bodies and curved trails distinguish them from ordinary shots; reduced motion hides trails.
 - Ordinary projectiles hit the first solid square along their swept path, including when crossing multiple cells in one frame.
 - Lightning's first target requires line of sight. Subsequent jumps may reach through material within 48 units of the last target. Each discharge visits a block at most once and never arcs back to the ship.
@@ -128,7 +146,7 @@ All weapons use unlimited ammunition. Firing activates each equipped weapon acco
 
 ## Upgrade page and economy
 
-Provide a dedicated `upgrades.html` page with the same neon visual style. Show credits, the three equipment slots, and cards for all twelve weapons. Every card shows ownership, level, behavior, current statistics, next-level changes, and price.
+Provide a dedicated `upgrades.html` page with the same neon visual style. Show credits, the three equipment slots, and cards for all thirteen weapons. Every card shows ownership, level, behavior, current statistics, next-level changes, and price.
 
 | Weapon | Unlock cost | Base upgrade cost |
 | --- | ---: | ---: |
@@ -144,6 +162,7 @@ Provide a dedicated `upgrades.html` page with the same neon visual style. Show c
 | Guided laser | 160 | 80 |
 | Piercing nuke | 320 | 140 |
 | Mining drones | 240 | 100 |
+| Plague | 1,000 | Level 2: 10,000; level 3: 100,000; level 4: 1,000,000; level 5: 10,000,000 (fixed prices, exempt from the base-cost formula) |
 
 Purchases unlock level 1. Each weapon has five levels initially. Buying level `L` costs `base upgrade cost × (L - 1)`. At level `L`, base damage is multiplied by `1 + 0.25 × (L - 1)` and cooldown by `0.92^(L - 1)`. For the buzzsaw, cooldown scaling applies to the contact interval. For returning blades it applies to cycle duration. Display fractional damage honestly.
 
@@ -163,6 +182,7 @@ At level 3 and again at level 5, apply the following weapon-specific improvement
 | Guided laser | +1 ray at **every** upgrade (levels 2, 3, 4, and 5), not only milestones |
 | Piercing nuke | +5 drilled blocks and +4 block widths of blast radius at **every** upgrade |
 | Mining drones | +1 drone, +1 damage, +1 penetration at **every** upgrade; fixed cooldown |
+| Plague | +1 damage/s and spread delay reduced to 5 / new level at **every** upgrade; fixed firing cooldown |
 
 Owned weapons can be equipped or removed freely. Do not allow duplicate weapons across slots. When all three slots are occupied, equipping a weapon asks which slot to replace. Buying a weapon does not silently replace equipment. Empty slots are allowed, including an empty loadout; the HUD points the player toward upgrades if no weapon is equipped.
 
@@ -211,7 +231,7 @@ Visiting upgrades pauses and saves before navigation. Returning loads the same d
 ## Delivery sequence
 
 1. Flight, aiming, responsive canvas, approximately 1,000 layered squares, shared damage/color logic, and the starting double shot.
-2. All twelve weapons, collision exceptions, individual cooldowns, and three-slot firing with manual/auto modes.
+2. All thirteen weapons, collision exceptions, individual cooldowns, and three-slot firing with manual/auto modes.
 3. Upgrade page, purchase and equipment rules, persistence, and resume behavior.
 4. Completion loop, audiovisual polish, accessibility settings, balance pass, and performance checks.
 
@@ -222,7 +242,7 @@ Visiting upgrades pauses and saves before navigation. Returning loads the same d
 - Gameplay and the store derive weapon stats and available upgrades from `weapons.json`; every upgrade resolves to the same values in both screens.
 - Damage colors follow remaining-HP fraction. Lethal hits, including crust hits, visibly flash yellow.
 - Destroyed squares cease blocking shots and movement, award credits once, and leave permanent holes.
-- Each of the twelve weapons has its specified distinct behavior. Fast shots cannot skip thin layers.
+- Each of the thirteen weapons has its specified distinct behavior. Fast shots cannot skip thin layers.
 - At most three distinct weapons can be equipped, and each fires on its own timing under held Space or AUTO.
 - Releasing Space stops new manual attacks. Pause, focus loss, and upgrade navigation cannot leave a held trigger stuck.
 - Buying and improving weapons deducts the correct amount, rejects insufficient funds, and updates displayed statistics.

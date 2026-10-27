@@ -57,28 +57,113 @@ Exactly **100 existing blocks** are chosen randomly without replacement as gold 
 
 A saved campaign seed controls placement. Reloads retain deposit positions and damage; a new campaign creates a new arrangement. Cinder is solid and has no compaction or core-collapse mechanic. Clear every block for its 300-credit first-clear bonus.
 
+## Basalt — defended crust and liquid interior
+
+1,600 blocks. The outer **two radial block layers have 100 HP**; every interior block is **10 HP liquid**. There is no solid core. Destroying every liquid block triggers a 1.4-second inward collapse that clears the remaining crust and turret mounts. Collapsed blocks award their normal credits once, followed by the 350-credit first-clear bonus. The HUD tracks surviving liquid blocks; both the objective and an in-progress collapse survive reloads. Liquid settles inward into neighboring empty cells once per active second using Terra's compaction rules. Crust blocks pay 8 credits, liquid blocks pay 4, and the first-clear bonus is 350 credits; these rewards are initial balance choices.
+
+Exactly **30 laser point-defense turrets** are evenly distributed around the outer crust. Each is attached to a different existing crust block, without adding blocks to the planet count. Destroying that 100 HP mount disables its turret permanently; targeting a mount shows its label in the HUD. Turrets are drawn above the surface and fire red interception beams. The HUD displays remaining defenses.
+
+Each active turret neutralizes one attack within 150 world units, then recharges for 0.35 seconds. Surviving terrain obstructs its line of sight, except its own mount. Fast attacks are checked across their traveled path. Turrets can intercept double parallel shots, shotgun pellets, orbiting buzzsaws, mortar shells, yoyos, boomerangs, railgun beams, guided missile flurries, piercing nukes, and mining drones. Intercepted missiles and shells vanish without exploding; blocked railgun beams do no damage. Buzzsaws redeploy after one second. Shot-down mining drones disappear for three active seconds before rebuilding near the ship. These range, recharge, and recovery times are initial balance choices.
+
+Guided laser and chain lightning are not intercepted. They can destroy turret mounts, while volleys can also exhaust the finite interception capacity. Turrets do not attack the player ship. Turret mounts, block damage, liquid positions, and recharge progress survive saving. Earlier unfinished Basalt saves rebuild with the new geometry while retaining equipment and credits.
+
 ## Campaign roster
 
-Levels 4–10 retain their concentric layouts. Their HP scales from Cinder so the campaign remains progressively tougher. Round each Cinder layer's HP times the listed scale to the nearest integer; add the listed credit increment to its regular layer reward. These later planets have no gold or core-triggered collapse yet.
+Ironheart, Anvil, Turtle, and Chaos use the custom layouts described below. Levels 9–10 retain their concentric layouts. Their HP scales from Cinder. Round each Cinder layer's HP times the listed scale to the nearest integer; add the listed credit increment to its regular layer reward. These later planets have no gold or core-triggered collapse yet. Basalt uses the custom defense/material rules above.
 
 | Level | Planet | Exact blocks | Layer boundaries | HP scale | Credit increment | Bonus |
 | --- | --- | ---: | --- | ---: | ---: | ---: |
 | 1 | Terra | 1,000 | Custom materials | — | — | 200 |
 | 2 | Bedrock | 1,200 | Custom materials | — | — | 250 |
 | 3 | Cinder | 1,400 | .88 / .71 / .46 / .24 | 1.0 | 0 | 300 |
-| 4 | Basalt | 1,600 | .89 / .73 / .49 / .27 | 1.2 | 1 | 350 |
-| 5 | Ironheart | 1,800 | .90 / .75 / .52 / .30 | 1.4 | 2 | 400 |
-| 6 | Anvil | 2,000 | .91 / .77 / .55 / .33 | 1.6 | 3 | 450 |
-| 7 | Crucible | 2,250 | .92 / .79 / .58 / .36 | 1.8 | 4 | 500 |
-| 8 | Titan | 2,500 | .93 / .81 / .61 / .39 | 2.0 | 5 | 550 |
+| 4 | Basalt | 1,600 | Two-layer crust / liquid inside | Custom | Custom | 350 |
+| 5 | Ironheart | 1,800 | City crust / hex sector walls / contained liquid | Custom | Custom | 400 |
+| 6 | Anvil | 2,000 | Regenerating shell / reflective liquid / defended core | Custom | Custom | 450 |
+| 7 | Turtle | 1,990 | Five-layer shell / two-layer hollow / core | Custom | Custom | 500 |
+| 8 | Chaos | 2,500 | Random Turtle / liquid / gold mix | 1–250 by depth | Custom | 550 |
 | 9 | Obsidian | 2,750 | .94 / .83 / .64 / .42 | 2.2 | 6 | 600 |
 | 10 | Last Sun | 3,000 | .95 / .85 / .67 / .45 | 2.4 | 7 | 1,000 |
 
-Boundaries list crust / upper mantle / lower mantle / outer core inner edges. Initial total HP increases each level. Bedrock rewards attacking its poles instead of its armor. These new values need playtesting against weapon upgrades, especially on later planets.
+Boundaries list crust / upper mantle / lower mantle / outer core inner edges. Basalt's difficulty comes from point defense rather than increased total HP: its soft interior gives it less total HP than Cinder. Bedrock rewards attacking its poles instead of its armor. These values need playtesting against weapon upgrades, especially on later planets.
+
+## Ironheart — civilization to the center
+
+Exactly 1,800 destructible square blocks form a developed world with a honeycomb of **hexagonal sectors throughout the interior, including the central region**. The squares remain the damage/collision units; hexes are structural compartments built from those squares. City lights and teal industrial walls make the developed layers visible throughout its depth. There is no natural core that can trigger a planet-wide collapse: every block must be cleared.
+
+| Material | Layout | HP | Credits |
+| --- | --- | ---: | ---: |
+| City crust | Two outer radial block layers | 200 | 10 |
+| Hex sector walls | Very hard boundaries of interior hexagonal compartments | 250 | 12 |
+| Sector liquid | Contained inside each compartment | 15 | 5 |
+
+These HP/reward values and the two-cell crust are initial balance choices. Hexes use a 72-world-unit side length, with rasterized boundaries thick enough to separate adjacent liquid cells even diagonally. The crust seals sectors clipped by the circular surface. Full sectors cannot move while packed; after excavation, liquid settles inward once per active second, preserving HP and identity. Intact walls obstruct flow; breaking a wall can connect neighboring compartments. There is no automatic wall repair or liquid regeneration.
+
+Exactly **six point-defense turrets** are spaced around the outer crust on distinct city-crust mounts. Their interception range is **320 world units**, compared with Basalt's 150. Faint range rings show their larger coverage. They retain Basalt's 0.35-second recharge, terrain line-of-sight checks, interception list, and drone/buzzsaw recovery behavior. Guided laser and chain lightning bypass interception. Destroying the 200 HP mount disables the turret.
+
+The first-clear bonus is 400 credits. Saves retain sector damage, liquid positions, disabled mounts, and turret recharge. Older unfinished Ironheart saves rebuild the planet once with its new layout, retaining equipment and credits. Ironheart has more initial HP than Anvil; balance should compare defenses, regeneration, and clear times rather than require strictly increasing total HP.
+
+## Anvil — regeneration, reflective liquid, and core defenses
+
+Exactly 2,000 blocks. The three outer radial layers form a **10 HP shell that regenerates 10 HP per second**. Only surviving shell blocks heal, up to their 10 HP maximum; destroyed blocks never regrow. Regeneration runs in active simulation time and stops while paused or in the armory. Damage colors cool as HP recovers.
+
+| Material | Region | HP | Credits | Behavior |
+| --- | --- | ---: | ---: | --- |
+| Regenerative shell | Three outer radial block layers | 10 | 4 | Heals 10 HP/s while alive |
+| Reflective liquid | Between shell and core | 10 | 5 | Settles inward each second and deflects physical projectiles |
+| Fortified core | Inner 28% of the original radius | 80 | 10 | Solid; carries eight defense turrets |
+
+Mantle/core HP, core radius, and rewards are initial balance choices. Clear every block for a 450-credit first-clear bonus; destroying the core does not clear the shell automatically.
+
+### Reflective mantle
+
+Liquid reflects double shots, shotgun pellets, guided missiles, and piercing nukes at the contacted block face without impact damage. Reflected guided missiles continue along the reflected heading instead of immediately homing back. A reflected nuke's destination changes with its deflected heading; it keeps its remaining travel allowance and detonates at the new endpoint. Drilling cannot bypass the liquid, even after the nuke uses up its drill allowance.
+
+Mortars landing on liquid rebound outward as physical shells instead of detonating into it; a subsequent solid impact can explode. Yoyo and boomerang blades turn back on liquid contact. Beam weapons, lightning, and buzzsaw contact remain ways to excavate the mantle. Reflections preserve remaining range and are capped at six to prevent endless bouncing. These reflected player attacks do not damage the ship.
+
+### Eight core turrets
+
+Exactly eight turrets are evenly spaced around the core perimeter on distinct 80 HP core mounts. They have two independent systems:
+
+- **Interception laser:** destroys incoming projectile-based attacks using the existing point-defense rules, 600-unit range, 0.35-second recharge, and terrain line of sight. Guided laser and chain lightning bypass interception. Intercepted missiles/shells do not explode.
+- **Pushback wave:** fires only if the ship is within 600 units and the path to it is clear of surviving terrain, ignoring the turret's own mount. The visible violet wave travels at 260 units/s and has a 1.6-second firing cooldown. It does not home. Terrain blocks the traveling wave. Contact pushes the ship along the outgoing wave direction, moving it up to 84 units plus a velocity impulse; collision checks prevent pushing through blocks or outside the arena. A wave hits once, then disappears. It does not deal ship damage.
+
+Wave speed, cooldown, and push strength are initial balance choices. Turrets are initially buried behind mantle and shell; excavating sight lines exposes their offensive capability. Destroying a mount disables both systems. Existing fired waves finish traveling. Pause freezes waves and recharge.
+
+Saving preserves block HP, liquid positions, destroyed mounts, and both turret cooldowns. Reload does not grant offline healing; transient waves are cleared like other projectiles. Older unfinished Anvil saves rebuild once with the new materials while retaining credits and equipment.
+
+## Galaxy travel and replays
+
+The Galaxy selector lists all ten planets. Completed planets can be rebuilt and replayed; the next campaign planet unlocks after clearing its predecessor. Unfinished destinations resume their saved block damage, liquid positions, infection, regeneration timers, and turret cooldowns. Equipment and credits are shared across visits. Replays award normal block credits but never repeat the first-clear bonus. Finishing a replay offers the Galaxy selector to choose where to go next.
+
+## Chaos (formerly Titan)
+
+The eighth planet has 2,500 blocks randomly mixed throughout its circular footprint. Each block has a 40% chance of being a Turtle block, 40% liquid, and 20% gold. These proportions are initial balance choices. Generation uses the campaign seed, so reloading preserves material identities.
+
+All three materials start with HP increasing linearly by radial depth: 1 HP at the outermost block centers, up to 250 HP at the innermost block centers, rounded to whole HP. Turtle blocks reflect projectiles (railgun pierces) and regenerate 5 HP every 0.1 seconds, capped at their individual maximum. Liquid compacts toward the center once per second and retains its original HP cap when moving. Gold is solid and awards 10 credits; Turtle and liquid blocks award 8 and 5 respectively.
+
+Destroy all liquid and gold blocks to collapse Chaos: once only Turtle blocks remain, the standard 1.4-second collapse clears them and awards their block credits. Chaos has no turrets. The first-clear bonus is 550 credits, paid once even on Galaxy replays. The HUD tracks surviving liquid and gold blocks. Saves restore the objective from surviving materials and resume an interrupted collapse; existing Chaos saves already containing only Turtle blocks collapse on load. Old unfinished Titan saves rebuild as Chaos while preserving equipment and credits.
+
+## Turtle (formerly Crucible)
+
+The seventh planet is renamed **Turtle**. Its original 2,250-cell circular footprint now contains **1,990 destructible blocks and 260 genuinely empty cells** forming the hollow separation. Empty cells are absent from collision, rewards, progress counts, and plague contact.
+
+| Region | Depth inward from original surface | HP | Behavior |
+| --- | --- | ---: | --- |
+| Reflective shell | First five radial block layers | 50 | Heals exactly 5 HP every 0.1 seconds while alive; reflects physical projectiles |
+| Hollow gap | Next two radial block layers | — | Empty space; no blocks or infection bridge |
+| Core | Everything deeper than seven block widths | 10 | Solid, no regeneration; carries ten defense turrets |
+
+Healing is discrete, not a continuous 50 HP/s approximation. It caps at 50 HP and never recreates destroyed shell blocks. Pause freezes the tick timer; saves preserve its partial progress. Railgun rays pierce and damage shell blocks normally, while conventional shots, missiles, nukes, and thrown blades encounter the existing reflection rules. Core defenses can still intercept railgun attacks when the actual beam path enters their coverage.
+
+Exactly ten turrets are evenly spaced around the core perimeter, each mounted on a different 10 HP core block. Initial defense tuning uses the existing interception laser, 320-unit range, and 0.35-second recharge, with no pushback waves. Destroying a mount disables its turret. Turrets do not create block contacts across the gap.
+
+Plague can spread within either region, but cannot jump the hollow gap because shell and core blocks do not share edges. Independently delivered plague particles can still infect the core through a breached shell; this is direct infection, not spread across empty space.
+
+Destroy every core block to trigger the standard 1.4-second collapse, clearing the surviving shell and all turret mounts. Shell blocks pay 8 credits and core blocks pay 5; collapse awards remaining rewards and the 500-credit first-clear bonus once. Reward values and turret tuning are balance choices. Save/reload preserves damage, regeneration ticks, disabled turrets, and in-progress collapse. Existing unfinished Crucible saves rebuild as Turtle while retaining equipment and credits.
 
 ## Generation, progression, and saving
 
-- Generate the exact number of square cells by sorting opposite cell pairs by distance from center, with deterministic tie-breaking. The starting silhouette is connected and centrally symmetric.
+- Generate the circular footprint by sorting opposite cell pairs by distance from center, with deterministic tie-breaking. Starting silhouettes are centrally symmetric. Turtle then removes its two-layer hollow band, leaving a connected shell and a separate connected core.
 - Cell centers are `(i + 0.5, j + 0.5)` times 16 world units. Material is assigned at generation, never recalculated after liquid movement.
 - Larger planets expand the arena and fit the camera, keeping flight clearance around the body.
 - Credits, equipment, and upgrades carry forward. Clearing each planet unlocks the next; level 10 ends the campaign.
@@ -93,4 +178,8 @@ Boundaries list crust / upper mantle / lower mantle / outer core inner edges. In
 - Bedrock has a five-cell radial shell: 50 HP red material, 5 HP blue polar routes, and a 30 HP solid interior core.
 - Only destroying the entire core triggers collapse. It clears surviving material and pays rewards exactly once, including across reloads.
 - Cinder contains exactly 100 seeded gold deposits; each pays 10 credits exactly once.
-- All ten starting counts are exact and connected, and total initial HP increases. All twelve weapons continue using the common damage and collision paths.
+- Basalt has exactly 30 unique turret mounts, a two-layer 100 HP crust, and a 10 HP liquid interior. Every listed intercepted weapon is neutralized before damage, turrets recharge, destroyed mounts stay disabled, and drones cannot instantly bypass their rebuild delay.
+- Ironheart has 1,800 blocks, enclosed hex liquid sectors to the center, 200 HP city crust, 250 HP sector walls, 15 HP liquid, and six 320-unit defense turrets. Sector walls remain fixed; liquid positions and disabled mounts persist across reloads.
+- Anvil has a three-layer 10 HP shell healing at 10 HP/s without resurrection, reflective liquid, and eight core turrets. Waves require clear sight and 600-unit range, push without crossing solid terrain, and are consumed on impact. Projectile reflection causes no liquid impact damage; shot-down missiles never explode. Saves retain shell damage and both defense cooldowns.
+- Turtle has five reflective 50 HP shell layers healing 5 HP per 0.1-second tick, a real two-layer hollow gap, a non-regenerating 10 HP core, and ten core turrets. Plague cannot spread across the gap; railgun pierces the shell; destroying the whole core collapses the remainder exactly once.
+- Starting counts follow the roster; Turtle intentionally has two disconnected material regions. Total HP need not rise strictly between custom planet types. All thirteen weapons use the common damage and collision paths.
