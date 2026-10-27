@@ -6,6 +6,8 @@
   const defaultSave = {
     money: 0,
     timeSec: 0,
+    "ad movement unlocked": false,
+    "beautiful universe unlocked": false,
     "bomb unlocked": false,
     "bomb type": "none",   // "screen" | "smart"
     "boost unlocked": false,
@@ -115,33 +117,42 @@
   btnRight.addEventListener('mouseleave', press(v=>state.player.moveRight=v,false));
 
   // ---------- Keyboard controls ----------
+  const movementKeys = new Set();
+  const isMovementKey = (code) => code === 'ArrowLeft' || code === 'ArrowRight' ||
+    (state.save['ad movement unlocked'] && (code === 'KeyA' || code === 'KeyD'));
+
   document.addEventListener('keydown', (e) => {
-    if (e.code === 'ArrowLeft') {
+    if (!isMovementKey(e.code)) return;
+    movementKeys.add(e.code);
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
       state.player.moveLeft = true;
       e.preventDefault();
-    } else if (e.code === 'ArrowRight') {
+    } else if (e.code === 'ArrowRight' || e.code === 'KeyD') {
       state.player.moveRight = true;
       e.preventDefault();
     }
   });
   
   document.addEventListener('keyup', (e) => {
-    if (e.code === 'ArrowLeft') {
-      state.player.moveLeft = false;
+    if (!isMovementKey(e.code)) return;
+    movementKeys.delete(e.code);
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
+      state.player.moveLeft = movementKeys.has('ArrowLeft') || movementKeys.has('KeyA');
       e.preventDefault();
-    } else if (e.code === 'ArrowRight') {
-      state.player.moveRight = false;
+    } else if (e.code === 'ArrowRight' || e.code === 'KeyD') {
+      state.player.moveRight = movementKeys.has('ArrowRight') || movementKeys.has('KeyD');
       e.preventDefault();
     }
   });
 
   window.addEventListener('blur', () => {
+    movementKeys.clear();
     state.player.moveLeft = false;
     state.player.moveRight = false;
   });
 
   // ---------- Audio ----------
-  const music = new Audio('/match3/shooter/battle_music.mp3');
+  const music = new Audio('./battle_music.mp3');
   music.loop = true;
   
   // Setup iniziale volumi / mute da localStorage
@@ -185,6 +196,72 @@
     }
   }
   initStars();
+
+  // Cached nebula texture; stars remain sharp at the canvas device resolution.
+  let universe = null;
+  function createUniverse() {
+    const sky = document.createElement('canvas');
+    sky.width = sky.height = 768;
+    const skyCtx = sky.getContext('2d');
+    const clouds = [
+      [0.15, 0.2, 0.48, '65,55,145'],
+      [0.36, 0.36, 0.35, '95,40,115'],
+      [0.67, 0.54, 0.42, '20,80,115'],
+      [0.92, 0.73, 0.38, '35,45,110'],
+    ];
+    for (const [x, y, radius, rgb] of clouds) {
+      const glow = skyCtx.createRadialGradient(x * 768, y * 768, 0, x * 768, y * 768, radius * 768);
+      glow.addColorStop(0, `rgba(${rgb},0.28)`);
+      glow.addColorStop(0.45, `rgba(${rgb},0.12)`);
+      glow.addColorStop(1, `rgba(${rgb},0)`);
+      skyCtx.fillStyle = glow;
+      skyCtx.fillRect(0, 0, 768, 768);
+    }
+    const colors = ['#c5dcff', '#edf2ff', '#ffdfb6'];
+    const layers = [
+      { count: 135, radius: 0.45, speed: 3, parallax: 5, alpha: 0.32 },
+      { count: 65, radius: 0.75, speed: 9, parallax: 13, alpha: 0.52 },
+      { count: 22, radius: 1.15, speed: 21, parallax: 28, alpha: 0.76 },
+    ].map(layer => ({ ...layer, stars: Array.from({ length: layer.count }, () => ({
+      x: Math.random(), y: Math.random(),
+      radius: layer.radius * (0.65 + Math.random() * 0.7),
+      phase: Math.random() * Math.PI * 2,
+      color: colors[Math.floor(Math.random() * colors.length)],
+    })) }));
+    return { sky, layers };
+  }
+
+  function drawUniverse() {
+    if (!universe) universe = createUniverse();
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    const drift = state.player.x - 0.5;
+    ctx.save();
+    ctx.fillStyle = '#050914';
+    ctx.fillRect(0, 0, w, h);
+    // Overscan keeps the nebula edges outside the viewport as the ship moves.
+    ctx.drawImage(universe.sky, -30 - drift * 8, -30 + Math.sin(state.t * 0.025) * 10, w + 60, h + 60);
+    for (const layer of universe.layers) {
+      for (const star of layer.stars) {
+        const x = ((star.x * (w + 40) - drift * layer.parallax + w + 40) % (w + 40)) - 20;
+        const y = ((star.y * (h + 40) + state.t * layer.speed) % (h + 40)) - 20;
+        ctx.globalAlpha = layer.alpha * (0.82 + 0.18 * Math.sin(state.t * 0.7 + star.phase));
+        ctx.fillStyle = star.color;
+        if (star.radius > 1.1) {
+          // Soft halo on the few closest stars, without per-frame shadow blur.
+          ctx.globalAlpha *= 0.12;
+          ctx.beginPath();
+          ctx.arc(x, y, star.radius * 3.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha *= 1 / 0.12;
+        }
+        ctx.beginPath();
+        ctx.arc(x, y, star.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
 
   // ---------- Enemy spawn ----------
   function spawnEnemy() {
@@ -574,10 +651,14 @@
     ctx.clearRect(0,0,canvas.clientWidth, canvas.clientHeight);
 
     // bg + stars
-    ctx.fillStyle = '#0b0e13';
-    ctx.fillRect(0,0,canvas.clientWidth, canvas.clientHeight);
-    ctx.fillStyle = 'rgba(255,255,255,0.9)';
-    for (const s of state.stars) ctx.fillRect(s.x, s.y, s.s, s.s);
+    if (state.save['beautiful universe unlocked']) {
+      drawUniverse();
+    } else {
+      ctx.fillStyle = '#0b0e13';
+      ctx.fillRect(0,0,canvas.clientWidth, canvas.clientHeight);
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      for (const s of state.stars) ctx.fillRect(s.x, s.y, s.s, s.s);
+    }
 
     // player
     const px = state.player.x * canvas.clientWidth;

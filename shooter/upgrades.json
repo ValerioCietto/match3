@@ -1,6 +1,30 @@
 {
   "upgrades": [
     {
+      "id": "beautiful_universe",
+      "name": "Universo più bello",
+      "description": "Esplora uno spazio più profondo: nebulose colorate, tre livelli di stelle in parallasse e bagliori lontani. Finalmente niente forfora cosmica.",
+      "type": "toggle",
+      "cost": 50,
+      "storage": { "flag": "beautiful universe unlocked" }
+    },
+    {
+      "id": "sort_shop",
+      "name": "Riordina il negozio",
+      "description": "Aggiunge il bottone \"riordina prezzo crescente\" per riordinare i prodotti in vendita in base al prezzo.",
+      "type": "toggle",
+      "cost": 10,
+      "storage": { "flag": "shop sorting unlocked" }
+    },
+    {
+      "id": "ad_movement",
+      "name": "Movimento con AD",
+      "description": "Abilita uso tasti A-D su PC per muoversi a destra e sinistra",
+      "type": "toggle",
+      "cost": 1,
+      "storage": { "flag": "ad movement unlocked" }
+    },
+    {
       "id": "critical_ability",
       "name": "Abilità colpi critici",
       "description": "Ogni proiettile ha il 20% di probabilità di infliggere il 100% di danno in più. I proiettili critici sono rossi.",

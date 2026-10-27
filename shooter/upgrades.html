@@ -24,6 +24,7 @@
     color:var(--ink); font-weight:600; text-decoration:none; user-select:none; cursor:pointer;
   }
   .btn:disabled{opacity:.5; cursor:not-allowed}
+  .btn[hidden]{display:none}
   main{max-width:900px; margin:0 auto; padding:16px 12px 32px}
   .money{ margin:12px 0 8px; font-size:14px; color:var(--muted); }
   .grid{ display:grid; gap:10px; grid-template-columns:1fr; }
@@ -46,13 +47,14 @@
 <body>
   <header>
     <div class="title">Potenziamenti</div>
-    <a class="btn" href="/match3/shooter/shooter_upgrade_complete.html">Ritorna al gioco ↩</a>
+    <a class="btn" href="./shooter_upgrade_complete.html">Ritorna al gioco ↩</a>
   </header>
 
   <main>
     <div class="money" id="money">Soldi: §0</div>
 
     <div id="loadStatus" class="note"></div>
+    <button class="btn small" id="sortByPrice" type="button" hidden aria-pressed="false" style="margin-bottom:10px">riordina prezzo crescente</button>
     <section class="grid" id="upgradesGrid"></section>
 
     <footer class="note" style="margin-top:16px">
@@ -108,6 +110,13 @@
   const grid = document.getElementById('upgradesGrid');
   const moneyEl = document.getElementById('money');
   const statusEl = document.getElementById('loadStatus');
+  const sortBtn = document.getElementById('sortByPrice');
+  let sortByPrice = false;
+  sortBtn.onclick = () => {
+    if (!getKey('shop sorting unlocked', false)) return;
+    sortByPrice = true;
+    renderAll();
+  };
   const fmtMoney = (n)=>`§${Math.floor(n)}`;
   function refreshMoney(){ moneyEl.textContent = `Soldi: ${fmtMoney(save.money || 0)}`; }
 
@@ -158,20 +167,25 @@
   async function loadCatalog() {
     statusEl.textContent = 'Caricamento catalogo...';
     try {
-      const res = await fetch('/match3/shooter/upgrades.json', { cache: 'no-store' });
+      const res = await fetch('./upgrades.json', { cache: 'no-store' });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       catalog = await res.json();
       statusEl.textContent = '';
     } catch (e) {
-      statusEl.innerHTML = `<div class="error">Errore nel caricamento di /match3/shooter/upgrades.json<br>${e.message}</div>`;
+      statusEl.innerHTML = `<div class="error">Errore nel caricamento di upgrades.json<br>${e.message}</div>`;
       catalog = { upgrades: [] };
     }
   }
 
   function renderAll() {
     refreshMoney();
+    const canSort = !!getKey('shop sorting unlocked', false);
+    sortBtn.hidden = !canSort;
+    if (!canSort) sortByPrice = false;
+    sortBtn.setAttribute('aria-pressed', String(sortByPrice));
     grid.innerHTML = '';
-    const list = catalog?.upgrades || [];
+    const list = [...(catalog?.upgrades || [])];
+    if (sortByPrice) list.sort((a, b) => currentPrice(a) - currentPrice(b));
 
     for (const u of list) {
       if (u.type === 'linear') renderLinear(u);
@@ -179,6 +193,29 @@
       else if (u.type === 'multi') renderMulti(u);
       else if (u.type === 'special') renderSpecial(u);
     }
+  }
+
+  function currentPrice(u) {
+    if (u.type === 'toggle') {
+      return getKey(u.storage?.flag, false) ? Infinity : (u.cost || 0);
+    }
+    if (u.type === 'linear') {
+      const value = Number(getKey(u.storage?.value, u.baseValue));
+      const canIncrease =
+        (u.maxValue === undefined || value < u.maxValue) &&
+        (u.minValue === undefined || value > u.minValue || (u.increment || 0) > 0);
+      if (!canIncrease) return Infinity;
+      const level = linearLevelFromValue(u.baseValue, u.increment, value);
+      return linearPrice(u.cost?.base || 0, u.cost?.growth || 1, level);
+    }
+    if (u.type === 'multi') {
+      const owned = getKey(u.storage?.owned, {}) || {};
+      const prices = (u.options || [])
+        .filter(option => (option.cost || 0) > 0 && !owned[option.id])
+        .map(option => option.cost);
+      return Math.min(...prices);
+    }
+    return u.cost || 0;
   }
 
   // --- LINEAR ---
