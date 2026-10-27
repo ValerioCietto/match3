@@ -1,0 +1,822 @@
+{
+    "schemaVersion":  1,
+    "units":  {
+                  "angle":  "degrees",
+                  "time":  "seconds",
+                  "distance":  "world units"
+              },
+    "upgradeSemantics":  "Apply upgrades cumulatively in ascending level order; add first, then multiply.",
+    "weapons":  [
+                    {
+                        "id":  "double_parallel_shot",
+                        "name":  "Double parallel shot",
+                        "behavior":  "parallel_projectiles",
+                        "unlockCost":  0,
+                        "baseStats":  {
+                                          "projectileSpeed":  700,
+                                          "muzzleSpacing":  18,
+                                          "damage":  1,
+                                          "cooldown":  0.22,
+                                          "projectileCount":  2,
+                                          "range":  650
+                                      },
+                        "upgrades":  [
+                                         {
+                                             "level":  2,
+                                             "cost":  40,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  0.25
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cooldown":  0.92
+                                                                            }
+                                                           }
+                                         },
+                                         {
+                                             "level":  3,
+                                             "cost":  80,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  0.25,
+                                                                           "projectileSpeed":  105,
+                                                                           "range":  97.5
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cooldown":  0.92
+                                                                            }
+                                                           }
+                                         },
+                                         {
+                                             "level":  4,
+                                             "cost":  120,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  0.25
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cooldown":  0.92
+                                                                            }
+                                                           }
+                                         },
+                                         {
+                                             "level":  5,
+                                             "cost":  160,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  0.25,
+                                                                           "projectileSpeed":  105,
+                                                                           "range":  97.5
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cooldown":  0.92
+                                                                            }
+                                                           }
+                                         }
+                                     ]
+                    },
+                    {
+                        "id":  "shotgun",
+                        "name":  "Shotgun",
+                        "behavior":  "spread_projectiles",
+                        "unlockCost":  60,
+                        "baseStats":  {
+                                          "projectileSpeed":  600,
+                                          "pelletCount":  7,
+                                          "damage":  1,
+                                          "cooldown":  0.65,
+                                          "spreadDegrees":  36,
+                                          "range":  300
+                                      },
+                        "upgrades":  [
+                                         {
+                                             "level":  2,
+                                             "cost":  50,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  0.25
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cooldown":  0.92
+                                                                            }
+                                                           }
+                                         },
+                                         {
+                                             "level":  3,
+                                             "cost":  100,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  0.25,
+                                                                           "pelletCount":  2
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cooldown":  0.92
+                                                                            }
+                                                           }
+                                         },
+                                         {
+                                             "level":  4,
+                                             "cost":  150,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  0.25
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cooldown":  0.92
+                                                                            }
+                                                           }
+                                         },
+                                         {
+                                             "level":  5,
+                                             "cost":  200,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  0.25,
+                                                                           "pelletCount":  2
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cooldown":  0.92
+                                                                            }
+                                                           }
+                                         }
+                                     ]
+                    },
+                    {
+                        "id":  "chain_lightning",
+                        "name":  "Chain lightning",
+                        "behavior":  "chain_lightning",
+                        "unlockCost":  120,
+                        "baseStats":  {
+                                          "maxTargets":  5,
+                                          "damage":  2,
+                                          "cooldown":  0.65,
+                                          "aimConeDegrees":  60,
+                                          "jumpRange":  48,
+                                          "range":  500
+                                      },
+                        "upgrades":  [
+                                         {
+                                             "level":  2,
+                                             "cost":  70,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  0.5
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cooldown":  0.92
+                                                                            }
+                                                           }
+                                         },
+                                         {
+                                             "level":  3,
+                                             "cost":  140,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  0.5,
+                                                                           "maxTargets":  1
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cooldown":  0.92
+                                                                            }
+                                                           }
+                                         },
+                                         {
+                                             "level":  4,
+                                             "cost":  210,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  0.5
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cooldown":  0.92
+                                                                            }
+                                                           }
+                                         },
+                                         {
+                                             "level":  5,
+                                             "cost":  280,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  0.5,
+                                                                           "maxTargets":  1
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cooldown":  0.92
+                                                                            }
+                                                           }
+                                         }
+                                     ]
+                    },
+                    {
+                        "id":  "orbiting_buzzsaw",
+                        "name":  "Orbiting buzzsaw",
+                        "behavior":  "orbiting_blade",
+                        "unlockCost":  100,
+                        "baseStats":  {
+                                          "damage":  1,
+                                          "orbitSpeedDegrees":  240,
+                                          "bladeDiameter":  28,
+                                          "orbitRadius":  52,
+                                          "contactInterval":  0.12
+                                      },
+                        "upgrades":  [
+                                         {
+                                             "level":  2,
+                                             "cost":  60,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  0.25
+                                                                       },
+                                                               "multiply":  {
+                                                                                "contactInterval":  0.92
+                                                                            }
+                                                           }
+                                         },
+                                         {
+                                             "level":  3,
+                                             "cost":  120,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  0.25,
+                                                                           "bladeDiameter":  4.2
+                                                                       },
+                                                               "multiply":  {
+                                                                                "contactInterval":  0.92
+                                                                            }
+                                                           }
+                                         },
+                                         {
+                                             "level":  4,
+                                             "cost":  180,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  0.25
+                                                                       },
+                                                               "multiply":  {
+                                                                                "contactInterval":  0.92
+                                                                            }
+                                                           }
+                                         },
+                                         {
+                                             "level":  5,
+                                             "cost":  240,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  0.25,
+                                                                           "bladeDiameter":  4.2
+                                                                       },
+                                                               "multiply":  {
+                                                                                "contactInterval":  0.92
+                                                                            }
+                                                           }
+                                         }
+                                     ]
+                    },
+                    {
+                        "id":  "mortar",
+                        "name":  "Mortar",
+                        "behavior":  "lobbed_explosion",
+                        "unlockCost":  140,
+                        "baseStats":  {
+                                          "damage":  4,
+                                          "flightDuration":  0.75,
+                                          "cooldown":  1.2,
+                                          "blastRadius":  48,
+                                          "range":  600
+                                      },
+                        "upgrades":  [
+                                         {
+                                             "level":  2,
+                                             "cost":  80,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  1
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cooldown":  0.92
+                                                                            }
+                                                           }
+                                         },
+                                         {
+                                             "level":  3,
+                                             "cost":  160,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  1,
+                                                                           "blastRadius":  8
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cooldown":  0.92
+                                                                            }
+                                                           }
+                                         },
+                                         {
+                                             "level":  4,
+                                             "cost":  240,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  1
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cooldown":  0.92
+                                                                            }
+                                                           }
+                                         },
+                                         {
+                                             "level":  5,
+                                             "cost":  320,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  1,
+                                                                           "blastRadius":  8
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cooldown":  0.92
+                                                                            }
+                                                           }
+                                         }
+                                     ]
+                    },
+                    {
+                        "id":  "yoyo",
+                        "name":  "Yoyo",
+                        "behavior":  "tethered_blade",
+                        "unlockCost":  90,
+                        "baseStats":  {
+                                          "maxActive":  1,
+                                          "bladeDiameter":  24,
+                                          "maxLifetime":  3,
+                                          "damage":  2,
+                                          "range":  240,
+                                          "cycleDuration":  0.9
+                                      },
+                        "upgrades":  [
+                                         {
+                                             "level":  2,
+                                             "cost":  55,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  0.5
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cycleDuration":  0.92
+                                                                            }
+                                                           }
+                                         },
+                                         {
+                                             "level":  3,
+                                             "cost":  110,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  0.5,
+                                                                           "range":  40
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cycleDuration":  0.92
+                                                                            }
+                                                           }
+                                         },
+                                         {
+                                             "level":  4,
+                                             "cost":  165,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  0.5
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cycleDuration":  0.92
+                                                                            }
+                                                           }
+                                         },
+                                         {
+                                             "level":  5,
+                                             "cost":  220,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  0.5,
+                                                                           "range":  40
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cycleDuration":  0.92
+                                                                            }
+                                                           }
+                                         }
+                                     ]
+                    },
+                    {
+                        "id":  "boomerang",
+                        "name":  "Boomerang",
+                        "behavior":  "returning_blade",
+                        "unlockCost":  110,
+                        "baseStats":  {
+                                          "maxActive":  1,
+                                          "bladeDiameter":  24,
+                                          "maxLifetime":  4,
+                                          "damage":  2,
+                                          "range":  330,
+                                          "curveWidth":  100,
+                                          "cycleDuration":  1.1
+                                      },
+                        "upgrades":  [
+                                         {
+                                             "level":  2,
+                                             "cost":  65,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  0.5
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cycleDuration":  0.92
+                                                                            }
+                                                           }
+                                         },
+                                         {
+                                             "level":  3,
+                                             "cost":  130,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  0.5,
+                                                                           "range":  40
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cycleDuration":  0.92
+                                                                            }
+                                                           }
+                                         },
+                                         {
+                                             "level":  4,
+                                             "cost":  195,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  0.5
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cycleDuration":  0.92
+                                                                            }
+                                                           }
+                                         },
+                                         {
+                                             "level":  5,
+                                             "cost":  260,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  0.5,
+                                                                           "range":  40
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cycleDuration":  0.92
+                                                                            }
+                                                           }
+                                         }
+                                     ]
+                    },
+                    {
+                        "id":  "railgun",
+                        "name":  "Railgun",
+                        "behavior":  "piercing_beam",
+                        "unlockCost":  180,
+                        "baseStats":  {
+                                          "damage":  4,
+                                          "cooldown":  1.4,
+                                          "range":  1200,
+                                          "penetration":  12
+                                      },
+                        "upgrades":  [
+                                         {
+                                             "level":  2,
+                                             "cost":  100,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  1
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cooldown":  0.92
+                                                                            }
+                                                           }
+                                         },
+                                         {
+                                             "level":  3,
+                                             "cost":  200,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  1,
+                                                                           "penetration":  4
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cooldown":  0.92
+                                                                            }
+                                                           }
+                                         },
+                                         {
+                                             "level":  4,
+                                             "cost":  300,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  1
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cooldown":  0.92
+                                                                            }
+                                                           }
+                                         },
+                                         {
+                                             "level":  5,
+                                             "cost":  400,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  1,
+                                                                           "penetration":  4
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cooldown":  0.92
+                                                                            }
+                                                           }
+                                         }
+                                     ]
+                    },
+                    {
+                        "id":  "guided_missiles",
+                        "name":  "Guided missile flurry",
+                        "behavior":  "guided_missiles",
+                        "unlockCost":  200,
+                        "baseStats":  {
+                                          "damage":  3,
+                                          "cooldown":  1.4,
+                                          "missileCount":  6,
+                                          "burstInterval":  0.07,
+                                          "spreadDegrees":  50,
+                                          "projectileSpeed":  350,
+                                          "range":  1000,
+                                          "seekRange":  700,
+                                          "turnRateDegrees":  300,
+                                          "blastRadius":  24
+                                      },
+                        "upgrades":  [
+                                         {
+                                             "cost":  90,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  0.75
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cooldown":  0.92
+                                                                            }
+                                                           },
+                                             "level":  2
+                                         },
+                                         {
+                                             "cost":  180,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  0.75,
+                                                                           "missileCount":  2,
+                                                                           "turnRateDegrees":  45
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cooldown":  0.92
+                                                                            }
+                                                           },
+                                             "level":  3
+                                         },
+                                         {
+                                             "cost":  270,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  0.75
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cooldown":  0.92
+                                                                            }
+                                                           },
+                                             "level":  4
+                                         },
+                                         {
+                                             "cost":  360,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  0.75,
+                                                                           "missileCount":  2,
+                                                                           "turnRateDegrees":  45
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cooldown":  0.92
+                                                                            }
+                                                           },
+                                             "level":  5
+                                         }
+                                     ]
+                    },
+                    {
+                        "id":  "guided_laser",
+                        "name":  "Guided laser",
+                        "behavior":  "guided_laser",
+                        "unlockCost":  160,
+                        "baseStats":  {
+                                          "damage":  0.75,
+                                          "cooldown":  0.09,
+                                          "rayCount":  1,
+                                          "range":  600
+                                      },
+                        "upgrades":  [
+                                         {
+                                             "level":  2,
+                                             "cost":  80,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  0.1875,
+                                                                           "rayCount":  1
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cooldown":  0.92
+                                                                            }
+                                                           }
+                                         },
+                                         {
+                                             "level":  3,
+                                             "cost":  160,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  0.1875,
+                                                                           "rayCount":  1
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cooldown":  0.92
+                                                                            }
+                                                           }
+                                         },
+                                         {
+                                             "level":  4,
+                                             "cost":  240,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  0.1875,
+                                                                           "rayCount":  1
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cooldown":  0.92
+                                                                            }
+                                                           }
+                                         },
+                                         {
+                                             "level":  5,
+                                             "cost":  320,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  0.1875,
+                                                                           "rayCount":  1
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cooldown":  0.92
+                                                                            }
+                                                           }
+                                         }
+                                     ]
+                    },
+                    {
+                        "id":  "piercing_nuke",
+                        "name":  "Piercing nuke",
+                        "behavior":  "piercing_nuke",
+                        "unlockCost":  320,
+                        "baseStats":  {
+                                          "damage":  20,
+                                          "cooldown":  3.2,
+                                          "drillBlocks":  5,
+                                          "blastRadiusBlocks":  4,
+                                          "projectileSpeed":  300
+                                      },
+                        "upgrades":  [
+                                         {
+                                             "level":  2,
+                                             "cost":  140,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  5,
+                                                                           "drillBlocks":  5,
+                                                                           "blastRadiusBlocks":  4
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cooldown":  0.92
+                                                                            }
+                                                           }
+                                         },
+                                         {
+                                             "level":  3,
+                                             "cost":  280,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  5,
+                                                                           "drillBlocks":  5,
+                                                                           "blastRadiusBlocks":  4
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cooldown":  0.92
+                                                                            }
+                                                           }
+                                         },
+                                         {
+                                             "level":  4,
+                                             "cost":  420,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  5,
+                                                                           "drillBlocks":  5,
+                                                                           "blastRadiusBlocks":  4
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cooldown":  0.92
+                                                                            }
+                                                           }
+                                         },
+                                         {
+                                             "level":  5,
+                                             "cost":  560,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  5,
+                                                                           "drillBlocks":  5,
+                                                                           "blastRadiusBlocks":  4
+                                                                       },
+                                                               "multiply":  {
+                                                                                "cooldown":  0.92
+                                                                            }
+                                                           }
+                                         }
+                                     ]
+                    },
+                    {
+                        "id":  "mining_drones",
+                        "name":  "Mining drones",
+                        "behavior":  "mining_drones",
+                        "unlockCost":  240,
+                        "baseStats":  {
+                                          "damage":  1,
+                                          "droneCount":  3,
+                                          "penetration":  1,
+                                          "cooldown":  0.55,
+                                          "range":  450,
+                                          "moveSpeed":  85,
+                                          "roamRadius":  220,
+                                          "spawnMinRadius":  30,
+                                          "spawnMaxRadius":  70
+                                      },
+                        "upgrades":  [
+                                         {
+                                             "level":  2,
+                                             "cost":  100,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  1,
+                                                                           "droneCount":  3,
+                                                                           "penetration":  1
+                                                                       },
+                                                               "multiply":  {
+
+                                                                            }
+                                                           }
+                                         },
+                                         {
+                                             "level":  3,
+                                             "cost":  200,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  1,
+                                                                           "droneCount":  3,
+                                                                           "penetration":  1
+                                                                       },
+                                                               "multiply":  {
+
+                                                                            }
+                                                           }
+                                         },
+                                         {
+                                             "level":  4,
+                                             "cost":  300,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  1,
+                                                                           "droneCount":  3,
+                                                                           "penetration":  1
+                                                                       },
+                                                               "multiply":  {
+
+                                                                            }
+                                                           }
+                                         },
+                                         {
+                                             "level":  5,
+                                             "cost":  400,
+                                             "modifiers":  {
+                                                               "add":  {
+                                                                           "damage":  5,
+                                                                           "droneCount":  3,
+                                                                           "penetration":  1
+                                                                       },
+                                                               "multiply":  {
+
+                                                                            }
+                                                           }
+                                         }
+                                     ]
+                    }
+                ]
+}
