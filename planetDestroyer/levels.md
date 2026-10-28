@@ -69,7 +69,7 @@ Guided laser and chain lightning are not intercepted. They can destroy turret mo
 
 ## Campaign roster
 
-Ironheart, Anvil, Turtle, and Chaos use the custom layouts described below. Levels 9–10 retain their concentric layouts. Their HP scales from Cinder. Round each Cinder layer's HP times the listed scale to the nearest integer; add the listed credit increment to its regular layer reward. These later planets have no gold or core-triggered collapse yet. Basalt uses the custom defense/material rules above.
+The later planets use their custom material, defense, and objective rules below. Basalt uses the rules above; Obsidian has optional moons, and Last Sun has a growing liquid core.
 
 | Level | Planet | Exact blocks | Layer boundaries | HP scale | Credit increment | Bonus |
 | --- | --- | ---: | --- | ---: | ---: | ---: |
@@ -81,8 +81,8 @@ Ironheart, Anvil, Turtle, and Chaos use the custom layouts described below. Leve
 | 6 | Anvil | 2,000 | Regenerating shell / reflective liquid / defended core | Custom | Custom | 450 |
 | 7 | Turtle | 1,990 | Five-layer shell / two-layer hollow / core | Custom | Custom | 500 |
 | 8 | Chaos | 2,500 | Random Turtle / liquid / gold mix | 1–250 by depth | Custom | 550 |
-| 9 | Obsidian | 2,750 | .94 / .83 / .64 / .42 | 2.2 | 6 | 600 |
-| 10 | Last Sun | 3,000 | .95 / .85 / .67 / .45 | 2.4 | 7 | 1,000 |
+| 9 | Obsidian | 2,750 + 600 optional | Scattered liquid + two moons | 10–50 liquid / 50 moons | 8 | 600 |
+| 10 | Last Sun | 3,000 initially, grows | 300 liquid core + 2,700 liquid | 150 core / 50 liquid | 12 core / 6 liquid | 1,000 |
 
 Boundaries list crust / upper mantle / lower mantle / outer core inner edges. Basalt's difficulty comes from point defense rather than increased total HP: its soft interior gives it less total HP than Cinder. Bedrock rewards attacking its poles instead of its armor. These values need playtesting against weapon upgrades, especially on later planets.
 
@@ -130,6 +130,33 @@ Exactly eight turrets are evenly spaced around the core perimeter on distinct 80
 Wave speed, cooldown, and push strength are initial balance choices. Turrets are initially buried behind mantle and shell; excavating sight lines exposes their offensive capability. Destroying a mount disables both systems. Existing fired waves finish traveling. Pause freezes waves and recharge.
 
 Saving preserves block HP, liquid positions, destroyed mounts, and both turret cooldowns. Reload does not grant offline healing; transient waves are cleared like other projectiles. Older unfinished Anvil saves rebuild once with the new materials while retaining credits and equipment.
+
+## Last Sun
+
+The final planet is entirely liquid: **300 core blocks at the center and 2,700 ordinary liquid blocks** initially. Initial balance is 150 HP / 12 credits per core block and 50 HP / 6 credits per normal block. All blocks are immune to plague, including direct snow contact, spread, and restored infections.
+
+Energy hits heal the struck block by the damage they would otherwise deal, capped at its maximum HP; destroyed blocks never revive. Energy weapons are guided laser, chain lightning, mining-drone lasers, and Shockwave. Railgun, projectiles, explosions, and blades still deal damage normally. Shockwave still pushes liquid even when its energy heals it.
+
+Every second, each living core makes two independent rolls: **1% to spawn a core block**, **5% to spawn a normal liquid block**. Newly created cores start rolling the following second. Each successful roll picks a random outward grid direction, inserts the new block adjacent to the source, and pushes the entire occupied line one cell outward to create room. Growth stops at the arena boundary or a ship obstruction rather than overlapping blocks or the ship. Last Sun expands instead of compacting inward automatically.
+
+At most **1,000 living core blocks** may exist simultaneously; normal liquid growth can continue at the cap. Destroyed cores stop reproducing. Core and normal blocks both remain liquid. Clear every surviving block to finish; destroying the core alone stops growth but does not collapse the remaining liquid. The first-clear bonus is 1,000 credits.
+
+Saves and Galaxy visits preserve added blocks, displaced positions, damage, the fractional growth timer, and deterministic random state. The dynamic block count updates progress. Older Last Sun saves rebuild with the new materials and retain equipment and credits. HP, healing amount, credits, and bounded outward insertion are initial implementation choices.
+
+## Obsidian
+
+Obsidian has **2,750 violet liquid blocks**, randomly scattered with increasing density toward the center. Seeded weighted sampling favors inner cells while preserving the exact count; gaps are actual empty space. Each block has a seeded random integer maximum HP from **10 to 50**, regenerates **10% of its maximum HP per second** while alive, and pays 8 credits. Liquid settles inward once per second; its HP cap does not change when it moves.
+
+Two stationary, separate moons flank the main planet:
+
+| Moon | Blocks | Point-defense turrets |
+| --- | ---: | ---: |
+| Small | 200 | 4 |
+| Large | 400 | 6 |
+
+Moon blocks use Turtle material: 50 HP, reflection (railgun can pierce), and 5 HP regeneration every 0.1 seconds. They pay 8 credits. Turrets have 320-unit range and use the existing interception rules; destroying their mount disables them. Moons are optional and have no collapse objective. **Destroying all 2,750 liquid blocks wins immediately, even with both moons intact.** Progress measures the liquid body only. Surviving moons do not award free destruction credits; the first-clear bonus remains 600 credits.
+
+The 3,350-block layout, HP, damage, moon mounts, and settled liquid positions survive saves and Galaxy visits. Older Obsidian saves rebuild using the new design while preserving equipment and credits. Density curve, rewards, moon positions, and turret range are initial balance choices.
 
 ## Galaxy travel and replays
 

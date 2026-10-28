@@ -56,6 +56,10 @@ Opening menus or losing window focus pauses simulation and clears held inputs. S
 
 ## Planet construction
 
+Last Sun is an all-liquid growing planet with 300 initial central core blocks and 2,700 normal blocks. Energy attacks heal both materials, and plague cannot infect them. Each living core independently rolls every second for 1% core reproduction and 5% normal-liquid reproduction, inserting outward and displacing occupied blocks. Core population is capped at 1,000 living blocks; victory requires clearing all liquid. Dynamic topology, growth timing, and randomness persist in saves and Galaxy visits. See `levels.md` for weapon classification and initial balance.
+
+Obsidian has 2,750 seeded, randomly scattered violet liquid blocks with density increasing inward, random 10–50 maximum HP, and regeneration of 10% maximum HP per second. Two optional stationary Turtle-material moons have 200 blocks with four turrets and 400 blocks with six turrets. Destroying the liquid body completes the level regardless of surviving moons; progress and Galaxy completion use that objective. See `levels.md` for layout, regeneration, rewards, and save migration details.
+
 Level 8 is **Chaos**, replacing Titan: 2,500 seeded random blocks, mixing Turtle-style reflective regenerating solids, liquid, and gold. HP increases linearly from 1 at the surface to 250 at the center for every material. Turtle blocks heal 5 HP per 0.1 seconds; liquid settles once per second. See `levels.md` for mix probabilities, rewards, and save migration.
 
 Level 7 is now **Turtle**, replacing Crucible: five reflective shell layers with 50 HP and discrete 5 HP healing every 0.1 seconds, two genuinely empty radial layers, and a non-regenerating 10 HP core defended by ten turrets. Railgun pierces the shell. The gap prevents contact-based plague spread. Destroying the entire core triggers collapse. The former 2,250-cell footprint now contains 1,990 destructible blocks after removing the hollow band. See `levels.md` for rewards, turret tuning, migration, and regeneration timing.

@@ -19,7 +19,7 @@ const sandbox={console,Math,Map,Set,JSON,Number,Object,Array,String,Infinity,Err
   setTimeout:()=>0,clearTimeout(){},requestAnimationFrame(){},
 };
 let source=readFileSync(path.join(__dirname,'game.js'),'utf8');
-source=source.replace('  init();',`globalThis.test={shockwaveMultiplier,pushLiquid,updateShockwaves,visitLevel,openGalaxy,unlockedLevel,generatePlanet,rayBlocks,damage,stats,fire,update,save,load,draw,resize,renderShop,completeLevel,nextLevel,compactMantle,collides,guideMissile,advanceNuke,detonateNuke,syncDrones,assignDroneTargets,fireDroneLaser,updateDrones,interceptAttack,hexSector,regenerateBlocks,reflectProjectile,updateCoreWaves,pushShip,infectBlock,updateSnow,updatePlague,
+source=source.replace('  init();',`globalThis.test={sunMaterial,growSunBlock,updateSunGrowth,levelCleared,shockwaveMultiplier,pushLiquid,updateShockwaves,visitLevel,openGalaxy,unlockedLevel,generatePlanet,rayBlocks,damage,stats,fire,update,save,load,draw,resize,renderShop,completeLevel,nextLevel,compactMantle,collides,guideMissile,advanceNuke,detonateNuke,syncDrones,assignDroneTargets,fireDroneLaser,updateDrones,interceptAttack,hexSector,regenerateBlocks,reflectProjectile,updateCoreWaves,pushShip,infectBlock,updateSnow,updatePlague,
   setup(data,index=0){definitions=data.weapons;byId=Object.fromEntries(definitions.map(d=>[d.id,d]));state=freshState();state.level=index;planet=generatePlanet(index,state.seed);resetFlight();auto=false;mode='play';},
   get state(){return state;},get planet(){return planet;},get ship(){return ship;},get mode(){return mode;},get bullets(){return bullets;},get effects(){return effects;},get drones(){return drones;},get shells(){return shells;},get blades(){return blades;},get cooldowns(){return cooldowns;},get waves(){return waves;},get shockwaves(){return shockwaves;},get snow(){return snow;},get plagueContacts(){return plagueContacts;},
   equip(id){state.owned[id]=1;state.slots=[id,null,null];},fireOn(){auto=true;},stop(){auto=false;},
@@ -30,14 +30,14 @@ const game=sandbox.test;
 game.setup(data);
 let previousHP=0;
 for(let level=0;level<10;level++){
-  const p=game.generatePlanet(level),counts=[1000,1200,1400,1600,1800,2000,2250,2500,2750,3000];
+  const p=game.generatePlanet(level),counts=[1000,1200,1400,1600,1800,2000,2250,2500,3350,3000];
   if(level===6)assert.ok(p.total<counts[level],'Turtle hollow rows contain no blocks');else assert.equal(p.total,counts[level]);assert.equal(p.grid.size,p.total);
-  const total=p.blocks.reduce((sum,b)=>sum+b.max,0);if(![3,5].includes(level))assert.ok(total>previousHP);previousHP=total;
-  assert.ok(new Set(p.blocks.map(b=>b.name)).size>=([3,6].includes(level)?2:3));
-  for(const b of p.blocks)assert.ok(p.grid.has(`${-b.i-1},${-b.j-1}`),'Central symmetry');
+  const total=p.blocks.reduce((sum,b)=>sum+b.max,0);if(![3,5,8].includes(level))assert.ok(total>previousHP);previousHP=total;
+  assert.ok(new Set(p.blocks.map(b=>b.name)).size>=([3,6,8,9].includes(level)?2:3));
+  if(level!==8)for(const b of p.blocks)assert.ok(p.grid.has(`${-b.i-1},${-b.j-1}`),'Central symmetry');
   const visited=new Set(),queue=[p.blocks[0]];
   while(queue.length){const b=queue.pop();if(visited.has(b.id))continue;visited.add(b.id);for(const [di,dj]of[[1,0],[-1,0],[0,1],[0,-1]]){const neighbor=p.grid.get(`${b.i+di},${b.j+dj}`);if(neighbor&&!visited.has(neighbor.id))queue.push(neighbor);}}
-  assert.equal(visited.size,level===6?p.coreTotal:p.total,level===6?'Turtle core is separated from the shell':'Connected planet');
+  if(level!==8)assert.equal(visited.size,level===6?p.coreTotal:p.total,level===6?'Turtle core is separated from the shell':'Connected planet');
   console.log(`Level ${level+1}: ${p.total} blocks, ${level===6?'separate shell/core':'connected'}, ${total} total HP`);
 }
 const block=game.planet.blocks[0],before=game.state.credits;
@@ -487,4 +487,59 @@ game.setup(data,7);game.save();const onlyTurtle=JSON.parse(storage.get('planetDe
 onlyTurtle.hp=game.planet.blocks.map(b=>b.name==='Turtle blocks'?b.hp:0);delete onlyTurtle.collapse;
 storage.set('planetDestroyer.demo.v1',JSON.stringify(onlyTurtle));game.load();assert.equal(game.planet.collapse,0,'Older Turtle-only save starts collapse');
 console.log('Chaos collapse: final gold or liquid, objective reload, resumed collapse, remaining rewards, and older saves passed.');
+}
+
+{
+game.setup(data,8);const p=game.planet,main=p.blocks.filter(b=>!b.optional),moons=p.blocks.filter(b=>b.optional);
+assert.equal(main.length,2750);assert.equal(moons.length,600);assert.equal(p.grid.size,3350);
+assert.equal(moons.filter(b=>b.moon===0).length,200);assert.equal(moons.filter(b=>b.moon===1).length,400);
+assert.equal(p.turrets.filter(t=>t.moon===0).length,4);assert.equal(p.turrets.filter(t=>t.moon===1).length,6);
+for(const b of main){assert.equal(b.phase,'liquid');assert.ok(b.max>=10&&b.max<=50);assert.equal(b.regen,b.max*.1);}
+for(const b of moons){assert.equal(b.max,50);assert.ok(b.reflective);assert.equal(b.regenStep,5);}
+assert.deepEqual(p.blocks,game.generatePlanet(8,game.state.seed).blocks,'Seeded Obsidian layout and HP');
+const inner=main.filter(b=>Math.hypot(b.x,b.y)<300).length,outer=main.length-inner;
+assert.ok(inner/(Math.PI*300**2)>outer/(Math.PI*(600**2-300**2)),'Density increases toward center');
+const b=main[0];game.damage(b,b.max*.5);game.regenerateBlocks(1);assert.ok(Math.abs(b.hp-b.max*.6)<1e-9);
+game.damage(moons[0],10);game.regenerateBlocks(.1);assert.equal(moons[0].hp,45);
+game.compactMantle();game.save();const positions=JSON.stringify(game.planet.blocks.map(b=>[b.i,b.j,b.hp]));game.load();
+assert.equal(JSON.stringify(game.planet.blocks.map(b=>[b.i,b.j,b.hp])),positions,'Moons and liquid positions persist');
+const last=game.planet.blocks.find(b=>!b.optional);game.planet.blocks.filter(b=>!b.optional&&b!==last).forEach(b=>game.damage(b,999));
+assert.equal(game.levelCleared(),false);game.damage(last,999);assert.equal(game.levelCleared(),true);
+const credits=game.state.credits;game.update(.01);assert.equal(game.mode,'complete');assert.equal(game.planet.remaining,600);assert.equal(game.state.credits,credits+600);
+game.save();game.load();assert.equal(game.levelCleared(),true);assert.equal(game.planet.remaining,600,'Optional moons survive completed save');
+game.nextLevel();assert.equal(game.state.level,9);
+game.setup(data,8);game.planet.blocks.filter(b=>b.optional).forEach(b=>game.damage(b,999));assert.equal(game.levelCleared(),false,'Moons alone cannot win');
+game.save();const old=JSON.parse(storage.get('planetDestroyer.demo.v1'));delete old.obsidianRevision;old.hp=[0];storage.set('planetDestroyer.demo.v1',JSON.stringify(old));game.load();assert.equal(game.planet.remaining,3350);
+console.log('Obsidian: seeded density/HP, exact moon sizes/turrets, regeneration, liquid save, optional-moon victory, and migration passed.');
+}
+
+{
+game.setup(data,9);let p=game.planet;
+assert.equal(p.blocks.length,3000);assert.equal(p.coreRemaining,300);assert.ok(p.blocks.every(b=>b.phase==='liquid'&&b.plagueImmune&&b.energyHealing));
+assert.ok(Math.max(...p.blocks.filter(b=>b.core).map(b=>Math.hypot(b.x,b.y)))<=Math.min(...p.blocks.filter(b=>!b.core).map(b=>Math.hypot(b.x,b.y))));
+const source=p.blocks[0];game.damage(source,40);game.damage(source,10,'energy');assert.equal(source.hp,120);game.damage(source,999,'energy');assert.equal(source.hp,150);
+game.infectBlock(source);assert.ok(!source.plagued);game.damage(source,150);game.damage(source,30,'energy');assert.equal(source.hp,0,'Energy cannot resurrect');
+const growing=p.blocks[1],neighbor=p.grid.get(`${growing.i+1},${growing.j}`),oldX=neighbor.x;
+assert.ok(game.growSunBlock(growing,true,1,0));assert.equal(neighbor.x,oldX+16);assert.equal(p.coreRemaining,300);assert.equal(p.blocks.length,3001);
+assert.equal(new Set(p.blocks.filter(b=>b.hp>0).map(b=>`${b.i},${b.j}`)).size,p.remaining,'Growth never overlaps live blocks');
+game.updateSunGrowth(.9);const before=p.blocks.length;assert.equal(before,3001);game.updateSunGrowth(.1);assert.ok(p.blocks.length>before,'Growth occurs on second boundaries');
+game.updateSunGrowth(.37);game.save();const snapshot=JSON.stringify(p.blocks.map(b=>[b.i,b.j,b.hp,b.core]));game.load();
+assert.equal(JSON.stringify(game.planet.blocks.map(b=>[b.i,b.j,b.hp,b.core])),snapshot);assert.equal(game.planet.growthTimer,.37);
+game.updateSunGrowth(.63);const continued=JSON.stringify(game.planet.blocks.map(b=>[b.i,b.j,b.hp,b.core]));game.load();game.updateSunGrowth(.63);assert.equal(JSON.stringify(game.planet.blocks.map(b=>[b.i,b.j,b.hp,b.core])),continued,'Growth randomness survives reload');
+game.state.paid=[0,1,2,3,4,5,6,7,8];game.visitLevel(0);game.visitLevel(9);assert.equal(JSON.stringify(game.planet.blocks.map(b=>[b.i,b.j,b.hp,b.core])),continued,'Galaxy preserves growing planet');
+p=game.planet;for(const b of p.blocks.filter(b=>!b.core&&b.hp>0).slice(0,1000-p.coreRemaining))Object.assign(b,game.sunMaterial(true));p.coreRemaining=1000;
+assert.equal(game.growSunBlock(p.blocks.find(b=>b.core&&b.hp>0),true,1,0),false,'Live core cap enforced');
+game.setup(data,9);game.planet.blocks.filter(b=>b.core).forEach(b=>game.damage(b,999));const count=game.planet.blocks.length;game.updateSunGrowth(4);assert.equal(game.planet.blocks.length,count,'No growth from dead cores');assert.equal(game.levelCleared(),false);
+game.planet.blocks.forEach(b=>game.damage(b,999));game.update(.01);assert.equal(game.mode,'complete');
+console.log('Last Sun: all-liquid central core, energy healing, immunity, outward growth, one-second rolls, core cap, dynamic save/Galaxy, and full-clear victory passed.');
+for(const id of ['guided_laser','chain_lightning','shockwave','mining_drones']){
+  game.setup(data,9);game.equip(id);const target=game.planet.blocks[0];
+  game.planet.blocks.forEach(b=>{b.hp=b===target?70:0;});game.ship.x=target.x-60;game.ship.y=target.y;game.aimAt(target.x,target.y);
+  if(id==='mining_drones')game.fireDroneLaser({x:game.ship.x,y:game.ship.y,respawn:0,targetId:target.id},game.stats(id));
+  else {game.fire(id);if(id==='shockwave')game.updateShockwaves(.5);}
+  assert.ok(target.hp>70,`${id} heals Last Sun through its actual firing path`);
+}
+game.setup(data,9);game.equip('plague');game.infectBlock(game.planet.blocks[0]);game.save();
+const infected=JSON.parse(storage.get('planetDestroyer.demo.v1'));infected.plagued=[0];infected.plagueLevel=9;storage.set('planetDestroyer.demo.v1',JSON.stringify(infected));game.load();
+assert.ok(game.planet.blocks.every(b=>!b.plagued),'Restored infections cannot bypass Last Sun immunity');
 }

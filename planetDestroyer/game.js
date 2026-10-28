@@ -50,6 +50,7 @@
       return material('Fortified core',80,10,[107,78,130],'solid',true);
     }
     if(index===6)return depth<5?{...material('Reflective shell',50,8,[55,104,62]),reflective:true,regenStep:5,regenInterval:.1}:material('Turtle core',10,5,[113,92,55],'solid',true);
+    if(index===9)return sunMaterial(false);
     // Later planets retain their radial layout and scale beyond Cinder's new HP.
     const scale=index===2?1:1+(index-2)*.2;
     return material(layerNames[layer],Math.round(cinderHP[layer]*scale),cinderCredits[layer]+Math.max(0,index-2),index===2?[68,70,76]:[26,30,42]);
@@ -87,6 +88,7 @@
   const key=(i,j)=>`${i},${j}`;
 
   function generatePlanet(index,seed=12345+index*997) {
+    if(index===8)return generateObsidian(seed);
     const spec=levels[index], extent=Math.ceil(Math.sqrt(spec[1]))+2, groups=[];
     // One representative per opposite pair guarantees an exact, symmetric disk.
     for(let i=0;i<extent;i++) for(let j=-extent;j<extent;j++) {
@@ -122,6 +124,7 @@
         else Object.assign(b,material('Gold',hp,10,[175,127,20]),{gold:true});
       }
     }
+    if(index===9)for(const b of blocks.slice(0,300))Object.assign(b,sunMaterial(true));
     const chaosTotal=index===7?blocks.filter(b=>b.phase==='liquid'||b.gold).length:0;
     const coreTotal=blocks.filter(b=>b.core).length;
     const liquidTotal=blocks.filter(b=>b.phase==='liquid').length;
@@ -137,9 +140,64 @@
         turrets.push({blockId:anchor.id,x:anchor.x+anchor.x/r*13,y:anchor.y+anchor.y/r*13,cooldown:0,angle,range:turretRange,wave:index===5,waveCooldown:0});
       }
     }
-    return {blocks,grid,radius,turrets,remaining:blocks.length,total:blocks.length,coreTotal,coreRemaining:coreTotal,liquidTotal,liquidRemaining:liquidTotal,chaosTotal,chaosRemaining:chaosTotal,collapseOnTurtleOnly:index===7,collapseOnLiquid:index===3,collapseOnCore:index<2||index===6,collapse:null,compaction:0,regenAccumulator:0,halfW:Math.max(600,radius+220),halfH:Math.max(450,radius+170)};
+    return {blocks,grid,radius,turrets,remaining:blocks.length,total:blocks.length,coreTotal,coreRemaining:coreTotal,liquidTotal,liquidRemaining:liquidTotal,chaosTotal,chaosRemaining:chaosTotal,collapseOnTurtleOnly:index===7,collapseOnLiquid:index===3,collapseOnCore:index<2||index===6,collapse:null,compaction:0,regenAccumulator:0,growthTimer:0,growthSeed:seed>>>0,halfW:index===9?1200:Math.max(600,radius+220),halfH:index===9?1000:Math.max(450,radius+170)};
+  }
+  function sunMaterial(core){return {...material(core?'Solar core':'Solar liquid',core?150:50,core?12:6,core?[200,100,20]:[150,55,18],'liquid',core),energyHealing:true,plagueImmune:true};}
+  function growSunBlock(source,core,di,dj){
+    if(source.hp<=0||!source.core||(core&&planet.coreRemaining>=1000)||(!di&&!dj))return false;
+    const chain=[];let i=source.i+di,j=source.j+dj;
+    while(planet.grid.get(key(i,j))?.hp>0){chain.push(planet.grid.get(key(i,j)));i+=di;j+=dj;}
+    const x=(i+.5)*CELL,y=(j+.5)*CELL;
+    if(Math.abs(x)>planet.halfW-32||Math.abs(y)>planet.halfH-32)return false;
+    for(const b of chain)if(Math.hypot(ship.x-(b.x+di*CELL),ship.y-(b.y+dj*CELL))<24)return false;
+    if(Math.hypot(ship.x-(source.x+di*CELL),ship.y-(source.y+dj*CELL))<24)return false;
+    for(const b of chain.reverse()){planet.grid.delete(key(b.i,b.j));b.i+=di;b.j+=dj;b.x=(b.i+.5)*CELL;b.y=(b.j+.5)*CELL;planet.grid.set(key(b.i,b.j),b);}
+    const b={id:planet.blocks.length,i:source.i+di,j:source.j+dj,x:source.x+di*CELL,y:source.y+dj*CELL,layer:0,...sunMaterial(core)};
+    planet.blocks.push(b);planet.grid.set(key(b.i,b.j),b);planet.total++;planet.remaining++;planet.liquidTotal++;planet.liquidRemaining++;if(core){planet.coreTotal++;planet.coreRemaining++;}return true;
+  }
+  function updateSunGrowth(dt){
+    if(state.level!==9)return;planet.growthTimer+=dt;
+    const random=()=>{planet.growthSeed=(Math.imul(planet.growthSeed,1664525)+1013904223)>>>0;return planet.growthSeed/4294967296;};
+    while(planet.growthTimer>=1){planet.growthTimer-=1;
+      const sources=planet.blocks.filter(b=>b.hp>0&&b.core);
+      for(const source of sources){
+        const coreRoll=random(),liquidRoll=random();
+        for(const [core,roll,chance] of [[true,coreRoll,.01],[false,liquidRoll,.05]])if(roll<chance){
+          const directions=[];for(let di=-1;di<=1;di++)for(let dj=-1;dj<=1;dj++)if((di||dj)&&source.x*di+source.y*dj>=0)directions.push([di,dj]);
+          const [di,dj]=directions[Math.floor(random()*directions.length)];growSunBlock(source,core,di,dj);
+        }
+      }
+    }
   }
   function freshState(){return {version:2,seed:Math.floor(Math.random()*4294967296),level:0,credits:0,owned:{double_parallel_shot:1},slots:['double_parallel_shot',null,null],paid:[],auto:false,reduced:false,time:0};}
+  function generateObsidian(seed){
+    let randomState=seed>>>0;
+    const random=()=>{randomState=(Math.imul(randomState,1664525)+1013904223)>>>0;return (randomState+.5)/4294967296;};
+    const radius=600,blocks=[],grid=new Map(),turrets=[],moons=[];
+    const add=(i,j,m)=>{const b={id:blocks.length,i,j,x:(i+.5)*CELL,y:(j+.5)*CELL,layer:0,...m};blocks.push(b);grid.set(key(i,j),b);return b;};
+    const candidates=[];
+    for(let i=-38;i<38;i++)for(let j=-38;j<38;j++){
+      const r=Math.hypot(i+.5,j+.5)*CELL/radius;if(r>1)continue;
+      candidates.push({i,j,score:-Math.log(random())/(.12+.88*(1-r)**2)});
+    }
+    candidates.sort((a,b)=>a.score-b.score);
+    for(const cell of candidates.slice(0,2750)){const hp=10+Math.floor(random()*41);add(cell.i,cell.j,{...material('Violet liquid',hp,8,[90,35,145],'liquid'),regen:hp*.1});}
+    for(const [moonIndex,count,turretCount,offset] of [[0,200,4,-54],[1,400,6,56]]){
+      const cells=[];for(let i=-16;i<16;i++)for(let j=-16;j<16;j++)cells.push({i,j,d:Math.hypot(i+.5,j+.5)});
+      cells.sort((a,b)=>a.d-b.d||a.i-b.i||a.j-b.j);
+      const moon={x:offset*CELL,y:0,radius:cells[count-1].d*CELL,count,turretCount};moons.push(moon);
+      const members=cells.slice(0,count).map(c=>add(c.i+offset,c.j,{...material('Moon Turtle blocks',50,8,[55,104,62]),optional:true,moon:moonIndex,reflective:true,regenStep:5,regenInterval:.1}));
+      const used=new Set();
+      for(let n=0;n<turretCount;n++){
+        const angle=n/turretCount*TAU,target={x:moon.x+Math.cos(angle)*moon.radius,y:moon.y+Math.sin(angle)*moon.radius};
+        const anchor=members.filter(b=>!used.has(b.id)).sort((a,b)=>distance(a,target)-distance(b,target))[0];used.add(anchor.id);anchor.turret=true;
+        const r=distance(anchor,moon),dx=(anchor.x-moon.x)/r,dy=(anchor.y-moon.y)/r;
+        turrets.push({blockId:anchor.id,x:anchor.x+dx*13,y:anchor.y+dy*13,cooldown:0,angle,range:320,wave:false,waveCooldown:0,moon:moonIndex});
+      }
+    }
+    return {blocks,grid,radius,turrets,moons,total:blocks.length,remaining:blocks.length,coreTotal:0,coreRemaining:0,liquidTotal:2750,liquidRemaining:2750,chaosTotal:0,chaosRemaining:0,collapse:null,compaction:0,regenAccumulator:0,halfW:1200,halfH:770};
+  }
+  function levelCleared(){return state.level===8?planet.liquidRemaining===0:planet.remaining===0;}
   function load(incoming) {
     state=freshState();
     try {
@@ -157,6 +215,7 @@
         if(s.level===5&&s.anvilRevision!==1){delete state.hp;delete state.positions;delete state.ship;delete state.turretCooldowns;delete state.waveCooldowns;toast('Anvil updated. Equipment and credits kept; this planet has been rebuilt.');}
         if(s.level===6&&s.turtleRevision!==1){delete state.hp;delete state.positions;delete state.ship;delete state.plagued;delete state.plagueContacts;delete state.collapse;delete state.turretCooldowns;delete state.regenAccumulator;toast('Crucible is now Turtle. Equipment and credits kept; the planet has been rebuilt.');}
         if(s.level===7&&s.chaosRevision!==1){for(const field of ['hp','positions','ship','plagued','plagueContacts','collapse','compaction','regenAccumulator'])delete state[field];toast('Titan is now Chaos. Equipment and credits kept; the planet has been rebuilt.');}
+        if(s.level===8&&s.obsidianRevision!==1){for(const field of ['hp','positions','ship','plagued','plagueContacts','collapse','compaction','regenAccumulator','turretCooldowns'])delete state[field];toast('Obsidian and its moons updated. Equipment and credits kept.');}
         if(s.version===1){delete state.hp;delete state.positions;delete state.ship;state.version=2;toast('Planet materials updated. Equipment and credits kept; the current planet has been rebuilt.');}
         if(!Number.isInteger(state.seed))state.seed=12345;
         $('welcomeNote').textContent='Flight log found. Resume your damaged planet with all equipment and credits intact.';
@@ -166,6 +225,16 @@
       else {storageOK=false; $('saveStatus').textContent='Session only · storage unavailable';}
     }
     planet=generatePlanet(state.level,state.seed);
+    if(state.level===9){
+      if(state.sunRevision!==1){for(const field of ['hp','positions','ship','plagued','plagueContacts','collapse'])delete state[field];}
+      else if(Array.isArray(state.sunBlocks)&&state.sunBlocks.length>=3000){
+        const occupied=new Set();let cores=0;
+        const valid=state.sunBlocks.every(b=>{if(!Array.isArray(b)||b.length!==4)return false;const [i,j,core,hp]=b;if(!Number.isInteger(i)||!Number.isInteger(j)||typeof core!=='boolean'||!Number.isFinite(hp)||hp<0||hp>(core?150:50)||Math.abs((i+.5)*CELL)>planet.halfW-16||Math.abs((j+.5)*CELL)>planet.halfH-16)return false;if(hp>0){if(occupied.has(key(i,j)))return false;occupied.add(key(i,j));if(core)cores++;}return true;});
+        if(valid&&cores<=1000){planet.blocks=state.sunBlocks.map(([i,j,core,hp],id)=>({id,i,j,x:(i+.5)*CELL,y:(j+.5)*CELL,layer:0,...sunMaterial(core),hp}));planet.total=planet.blocks.length;planet.coreTotal=planet.blocks.filter(b=>b.core).length;planet.liquidTotal=planet.total;}
+        delete state.hp;delete state.positions;
+      }
+      planet.growthTimer=Number.isFinite(state.sunTimer)?clamp(state.sunTimer,0,.999999):0;planet.growthSeed=Number.isInteger(state.sunSeed)?state.sunSeed>>>0:state.seed>>>0;
+    }
     if(Array.isArray(state.hp)&&state.hp.length===planet.total&&state.hp.every((hp,i)=>Number.isFinite(hp)&&hp>=0&&hp<=planet.blocks[i].max)){
       planet.blocks.forEach((b,i)=>b.hp=state.hp[i]); planet.remaining=planet.blocks.filter(b=>b.hp>0).length;
     }
@@ -173,13 +242,13 @@
       const occupied=new Set();
       const valid=state.positions.every((p,i)=>{
         const b=planet.blocks[i];
-        if(!Array.isArray(p)||p.length!==2||!p.every(Number.isInteger)||Math.hypot(p[0]+.5,p[1]+.5)*CELL>planet.radius+(b.phase==='liquid'?96:.01))return false;
+        if(!Array.isArray(p)||p.length!==2||!p.every(Number.isInteger)||(!b.optional&&Math.hypot(p[0]+.5,p[1]+.5)*CELL>planet.radius+(b.phase==='liquid'?96:.01)))return false;
         if(b.phase!=='liquid'&&(p[0]!==b.i||p[1]!==b.j))return false;
         if(b.hp>0){const k=key(...p);if(occupied.has(k))return false;occupied.add(k);}return true;
       });
       if(valid)planet.blocks.forEach((b,i)=>{[b.i,b.j]=state.positions[i];b.x=(b.i+.5)*CELL;b.y=(b.j+.5)*CELL;});
     }
-    if(state.paid.includes(state.level)&&!state.replaying)planet.blocks.forEach(b=>b.hp=0);
+    if(state.paid.includes(state.level)&&!state.replaying)planet.blocks.forEach(b=>{if(!b.optional)b.hp=0;});
     rebuildGrid();
     planet.coreRemaining=planet.blocks.filter(b=>b.core&&b.hp>0).length;
     planet.liquidRemaining=planet.blocks.filter(b=>b.phase==='liquid'&&b.hp>0).length;
@@ -187,7 +256,7 @@
     planet.remaining=planet.blocks.filter(b=>b.hp>0).length;
     plagueContacts=new Map();
     if(state.owned.plague&&Array.isArray(state.plagued)&&state.plagueLevel===state.level){
-      for(const id of state.plagued)if(Number.isInteger(id)&&planet.blocks[id]?.hp>0)planet.blocks[id].plagued=true;
+      for(const id of state.plagued)if(Number.isInteger(id)&&planet.blocks[id]?.hp>0&&!planet.blocks[id].plagueImmune)planet.blocks[id].plagued=true;
       if(Array.isArray(state.plagueContacts))for(const contact of state.plagueContacts){
         if(!Array.isArray(contact)||contact.length!==3)continue;
         const [sourceId,targetId,elapsed]=contact,source=planet.blocks[sourceId],target=planet.blocks[targetId];
@@ -212,11 +281,12 @@
   function save(){
     if(!state||!planet)return;
     state.hp=planet.blocks.map(b=>b.hp);state.ship={x:ship.x,y:ship.y};state.auto=auto;
+    if(state.level===9){state.sunRevision=1;state.sunBlocks=planet.blocks.map(b=>[b.i,b.j,!!b.core,b.hp]);state.sunTimer=planet.growthTimer;state.sunSeed=planet.growthSeed;}
     state.positions=planet.blocks.map(b=>[b.i,b.j]);state.collapse=planet.collapse;state.compaction=planet.compaction;
     state.basaltRevision=1;state.turretCooldowns=planet.turrets.map(t=>t.cooldown);
     state.ironheartRevision=1;
     state.anvilRevision=1;state.waveCooldowns=planet.turrets.map(t=>t.waveCooldown);
-    state.turtleRevision=1;state.chaosRevision=1;state.regenAccumulator=planet.regenAccumulator;
+    state.turtleRevision=1;state.chaosRevision=1;state.obsidianRevision=1;state.regenAccumulator=planet.regenAccumulator;
     state.plagueLevel=state.level;state.plagued=planet.blocks.filter(b=>b.hp>0&&b.plagued).map(b=>b.id);
     state.plagueContacts=[...plagueContacts].map(([key,elapsed])=>[...key.split(':').map(Number),elapsed]);
     try{localStorage.setItem(SAVE_KEY,JSON.stringify(state));}
@@ -240,14 +310,16 @@
   }
   function updateHUD(){
     if(!planet)return;
-    const spec=levels[state.level], percentage=(1-planet.remaining/planet.total)*100;
+    const spec=levels[state.level], objectiveRemaining=state.level===8?planet.liquidRemaining:planet.remaining,objectiveTotal=state.level===8?planet.liquidTotal:planet.total,percentage=(1-objectiveRemaining/objectiveTotal)*100;
     $('credits').textContent=format(state.credits);$('planetName').textContent=spec[0];
     $('planetLabel').textContent=`${spec[0]} · ${format(planet.total)} destructible blocks`;
     $('levelLabel').textContent=`Sector ${String(state.level+1).padStart(2,'0')} / 10`;
     $('progress').style.width=`${percentage}%`;$('percent').textContent=`${percentage.toFixed(1)}% cleared`;
-    $('remaining').textContent=`${format(planet.remaining)} blocks`;
+    $('remaining').textContent=`${format(objectiveRemaining)} blocks`;
     $('planetObjective').textContent=planet.collapseOnCore?`Destroy the core: ${planet.coreRemaining} / ${planet.coreTotal} blocks left${planet.collapse!==null?' · COLLAPSING':''}`:state.level===2?`Gold remaining: ${planet.blocks.filter(b=>b.gold&&b.hp>0).length} / 100 · 10 credits each`:planet.turrets.length?`Point defense: ${planet.turrets.filter(t=>planet.blocks[t.blockId].hp>0).length} / ${planet.turrets.length} · ${state.level===5?'Core waves · Shell regenerates 10 HP/s':state.level===4?'Long-range sector defenses':'Destroy their crust mounts'}`:'Destroy every block to advance';
     if(planet.collapseOnTurtleOnly)$('planetObjective').textContent=`Liquid + gold: ${planet.chaosRemaining} / ${planet.chaosTotal} · ${planet.collapse!==null?'COLLAPSING':'Destroy both to collapse Chaos'}`;
+    if(state.level===8)$('planetObjective').textContent=`Violet liquid: ${planet.liquidRemaining} / ${planet.liquidTotal} · Regen 10% max HP/s · Moons optional · Defenses: ${planet.turrets.filter(t=>planet.blocks[t.blockId].hp>0).length} / 10`;
+    if(state.level===9)$('planetObjective').textContent=`Growing core: ${planet.coreRemaining} / 1,000 · Energy heals · Plague immune · Clear all liquid`;
     const plagueCount=planet.blocks.filter(b=>b.hp>0&&b.plagued).length;if(plagueCount)$('planetObjective').textContent+=` · ${plagueCount} plagued`;
     if(planet.collapseOnLiquid)$('planetObjective').textContent=`Liquid: ${planet.liquidRemaining} / ${planet.liquidTotal} · ${planet.collapse!==null?'COLLAPSING · ':''}`+$('planetObjective').textContent;
     if(state.level===6)$('planetObjective').textContent+=` · Defense: ${planet.turrets.filter(t=>planet.blocks[t.blockId].hp>0).length} / 10 · Shell +5 HP / 0.1s`;
@@ -261,7 +333,7 @@
       return `<div class="slot"><small>0${i+1} / LEVEL ${state.owned[id]}${s.droneCount?' · AUTONOMOUS':''}</small><div>${byId[id].name}</div><div class="bar"><i style="width:${ready}%"></i></div></div>`;
     }).join('');
   }
-  function openShop(){if(!state||mode==='welcome')return;shopReturn=planet.remaining===0?'complete':'play';selectedSlot=Math.max(0,state.slots.indexOf(null));setMode('shop');renderShop();}
+  function openShop(){if(!state||mode==='welcome')return;shopReturn=levelCleared()?'complete':'play';selectedSlot=Math.max(0,state.slots.indexOf(null));setMode('shop');renderShop();}
   function renderShop(){
     $('shopCredits').textContent=format(state.credits);
     $('shopSlots').innerHTML=state.slots.map((id,i)=>`<button class="shop-slot ${selectedSlot===i?'selected':''}" data-slot="${i}"><small>SLOT 0${i+1}${selectedSlot===i?' · SELECTED':''}</small>${id?byId[id].name:'Empty slot'}</button>`).join('');
@@ -329,8 +401,10 @@
     for(let n=0;n<count&&particles.length<650;n++){const a=Math.random()*TAU,speed=25+Math.random()*110;particles.push({x,y,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,life:.2+Math.random()*.35,max:.55,color});}
   }
   function collapseReady(){return (planet.collapseOnCore&&planet.coreRemaining===0)||(planet.collapseOnLiquid&&planet.liquidRemaining===0)||(planet.collapseOnTurtleOnly&&planet.chaosRemaining===0);}
-  function damage(b,amount){
-    if(!b||b.hp<=0)return;b.hp=Math.max(0,b.hp-amount);
+  function damage(b,amount,type='physical'){
+    if(!b||b.hp<=0)return;
+    if(type==='energy'&&b.energyHealing){b.hp=Math.min(b.max,b.hp+amount);spark(b.x,b.y,'#ffef8a',1);return;}
+    b.hp=Math.max(0,b.hp-amount);
     if(b.hp===0){planet.remaining--;state.credits+=b.reward;if(b.core)planet.coreRemaining--;if(b.phase==='liquid')planet.liquidRemaining--;effects.push({type:'flash',x:b.x,y:b.y,life:.16,max:.16});spark(b.x,b.y,'#ffe080',4);
       if(planet.collapseOnTurtleOnly&&(b.phase==='liquid'||b.gold))planet.chaosRemaining--;
       if(collapseReady()&&planet.collapse===null){planet.collapse=0;bullets=[];shells=[];blades=[];shockwaves=[];toast(planet.collapseOnTurtleOnly?'Only Turtle blocks remain. Chaos is collapsing!':planet.collapseOnLiquid?'Liquid interior destroyed. Basalt is collapsing!':`Core destroyed. ${levels[state.level][0]} is collapsing!`);}
@@ -361,7 +435,7 @@
         for(const [ray,block] of targets.entries()){
           const angle=Math.atan2(block.y-ship.y,block.x-ship.x),offset=(ray-(targets.length-1)/2)*5;
           lineEffect([{x:ship.x-Math.sin(angle)*offset,y:ship.y+Math.cos(angle)*offset},{x:block.x,y:block.y}],color,Math.min(.06,s.cooldown*.7));
-          damage(block,s.damage);
+          damage(block,s.damage,'energy');
         }
         break;
       }
@@ -380,7 +454,7 @@
         const candidates=planet.blocks.filter(b=>b.hp>0&&distance(b,ship)<=s.range&&Math.abs(Math.atan2(Math.sin(Math.atan2(b.y-ship.y,b.x-ship.x)-a),Math.cos(Math.atan2(b.y-ship.y,b.x-ship.x)-a)))<=s.aimConeDegrees*Math.PI/360).sort((b,c)=>distance(b,ship)-distance(c,ship));
         let b=candidates.find(b=>rayBlocks(ship.x,ship.y,b.x,b.y)[0]===b);
         const visited=new Set(),points=[{x:ship.x,y:ship.y}];
-        while(b&&visited.size<s.maxTargets){points.push({x:b.x,y:b.y});visited.add(b.id);damage(b,s.damage);const previous=b;b=nearby(b.x,b.y,s.jumpRange).filter(c=>!visited.has(c.id)&&distance(c,previous)<=s.jumpRange).sort((c,e)=>distance(c,previous)-distance(e,previous))[0];}
+        while(b&&visited.size<s.maxTargets){points.push({x:b.x,y:b.y});visited.add(b.id);damage(b,s.damage,'energy');const previous=b;b=nearby(b.x,b.y,s.jumpRange).filter(c=>!visited.has(c.id)&&distance(c,previous)<=s.jumpRange).sort((c,e)=>distance(c,previous)-distance(e,previous))[0];}
         if(points.length>1)lineEffect(points,color,.23);
         else lineEffect([{x:ship.x,y:ship.y},{x:ship.x+direction.x*45,y:ship.y+direction.y*45}],color,.08);
         break;
@@ -431,12 +505,12 @@
         const far=Math.hypot(Math.abs(wave.x-b.x)+8,Math.abs(wave.y-b.y)+8);
         return near<=wave.radius&&far>=previous;
       });
-      for(const b of touched){wave.hits.add(b.id);damage(b,wave.s.damage*shockwaveMultiplier(wave,b));}
+      for(const b of touched){wave.hits.add(b.id);damage(b,wave.s.damage*shockwaveMultiplier(wave,b),'energy');}
       touched.sort((a,b)=>distance(b,wave)-distance(a,wave)).forEach(b=>pushLiquid(b,wave,wave.s.pushCells));
     }
     shockwaves=shockwaves.filter(w=>w.radius<w.s.range);
   }
-  function infectBlock(b){if(b&&b.hp>0)b.plagued=true;}
+  function infectBlock(b){if(b&&b.hp>0&&!b.plagueImmune)b.plagued=true;}
   function updateSnow(dt){
     for(const flake of snow){
       flake.life-=dt;if(flake.life<=0)continue;
@@ -450,12 +524,12 @@
   }
   function updatePlague(dt){
     if(!state.owned.plague)return;
-    const s=stats('plague'),infected=planet.blocks.filter(b=>b.hp>0&&b.plagued),nextContacts=new Map(),newInfections=new Set();
+    const s=stats('plague'),infected=planet.blocks.filter(b=>b.hp>0&&b.plagued&&!b.plagueImmune),nextContacts=new Map(),newInfections=new Set();
     // Snapshot sources so a newly infected block cannot spread again in the same step.
     for(const source of infected){
       const activeTime=Math.min(dt,source.hp/s.damage);
       for(const [di,dj] of [[1,0],[-1,0],[0,1],[0,-1]]){
-        const target=planet.grid.get(key(source.i+di,source.j+dj));if(!target||target.hp<=0||target.plagued)continue;
+        const target=planet.grid.get(key(source.i+di,source.j+dj));if(!target||target.hp<=0||target.plagued||target.plagueImmune)continue;
         const pair=`${source.id}:${target.id}`,elapsed=(plagueContacts.get(pair)||0)+activeTime;
         if(elapsed+1e-9>=s.spreadSeconds)newInfections.add(target.id);else if(source.hp>s.damage*dt)nextContacts.set(pair,elapsed);
       }
@@ -565,7 +639,7 @@
     const hits=rayBlocks(drone.x,drone.y,end.x,end.y).slice(0,s.penetration);
     if(hits[0]!==target)return false;
     drone.angle=angle;
-    for(const b of hits)damage(b,s.damage);
+    for(const b of hits)damage(b,s.damage,'energy');
     const lastHit=hits.at(-1);lineEffect([{x:drone.x,y:drone.y},{x:lastHit.x,y:lastHit.y}],'#65caff',.12);
     return true;
   }
@@ -651,7 +725,8 @@
     }
     for(const turret of planet.turrets)turret.cooldown=Math.max(0,turret.cooldown-dt);
     regenerateBlocks(dt);
-    if([0,3,4,5,7].includes(state.level)){planet.compaction+=dt;if(planet.compaction>=1){planet.compaction-=1;compactMantle();}}
+    updateSunGrowth(dt);
+    if([0,3,4,5,7,8].includes(state.level)){planet.compaction+=dt;if(planet.compaction>=1){planet.compaction-=1;compactMantle();}}
     updateSnow(dt);updatePlague(dt);updateShockwaves(dt);
     const ax=(keys.has('KeyD')?1:0)-(keys.has('KeyA')?1:0),ay=(keys.has('KeyS')?1:0)-(keys.has('KeyW')?1:0),length=Math.hypot(ax,ay)||1;
     ship.vx+=ax/length*850*dt;ship.vy+=ay/length*850*dt;
@@ -721,7 +796,7 @@
     saveTimer+=dt;hudTimer+=dt;
     if(saveTimer>3){saveTimer=0;save();}
     if(hudTimer>.1){hudTimer=0;updateHUD();}
-    if(planet.remaining===0)completeLevel();
+    if(levelCleared())completeLevel();
   }
   function sweepBlade(b,old){
     if(interceptAttack(old,b)){b.done=true;return;}
@@ -734,13 +809,13 @@
     }
   }
   let galaxyReturn='play';
-  const visitFields=['hp','positions','ship','collapse','compaction','turretCooldowns','waveCooldowns','regenAccumulator','plagueLevel','plagued','plagueContacts','replaying'];
+  const visitFields=['hp','positions','ship','collapse','compaction','turretCooldowns','waveCooldowns','regenAccumulator','plagueLevel','plagued','plagueContacts','replaying','obsidianRevision','sunRevision','sunBlocks','sunTimer','sunSeed'];
   function unlockedLevel(index){return Number.isInteger(index)&&index>=0&&index<levels.length&&(index===0||index===state.level||state.paid.includes(index)||state.paid.includes(index-1));}
   function openGalaxy(){
     if(!state||mode==='welcome'||mode==='galaxy')return;
     galaxyReturn=mode;setMode('galaxy');
     $('galaxyGrid').innerHTML=levels.map((spec,index)=>{
-      const current=index===state.level,active=current&&planet.remaining>0,visited=state.visits?.[index],cleared=state.paid.includes(index),unlocked=unlockedLevel(index);
+      const current=index===state.level,active=current&&!levelCleared(),visited=state.visits?.[index],cleared=state.paid.includes(index),unlocked=unlockedLevel(index);
       const action=active||visited?'Resume':cleared?'Replay':'Launch';
       return `<article class="weapon-card"><div class="eyebrow">Sector ${String(index+1).padStart(2,'0')}</div><h3>${spec[0]}</h3><div class="badge">${current?'Current destination':cleared?'Completed':unlocked?'Available':'Locked'}</div><button data-planet="${index}" ${unlocked?'':'disabled'}>${unlocked?action:'Clear previous planet'}</button></article>`;
     }).join('');
@@ -748,10 +823,10 @@
   }
   function visitLevel(index){
     if(!unlockedLevel(index))return;
-    if(index===state.level&&planet.remaining>0){setMode('play');return;}
+    if(index===state.level&&!levelCleared()){setMode('play');return;}
     save();
     if(!state.visits||typeof state.visits!=='object'||Array.isArray(state.visits))state.visits={};
-    if(planet.remaining>0)state.visits[state.level]=Object.fromEntries(visitFields.filter(k=>state[k]!==undefined).map(k=>[k,state[k]]));
+    if(!levelCleared())state.visits[state.level]=Object.fromEntries(visitFields.filter(k=>state[k]!==undefined).map(k=>[k,state[k]]));
     else delete state.visits[state.level];
     const destination=state.visits[index];
     for(const field of visitFields)delete state[field];
@@ -766,8 +841,8 @@
     $('completeEyebrow').textContent=state.level===9?'All ten planets cleared':'Demolition complete';
     $('completeTitle').textContent=state.level===9?'A quieter universe.':`${spec[0]} dismantled.`;
     $('bonus').textContent=state.replaying?'Replay complete':`+${format(spec[3])} ◈`;
-    $('completeText').textContent=`${format(planet.total)} blocks cleared. First-clear bonus recorded. ${state.level===9?'Campaign complete! Start again to try a new arsenal.':`Next destination: ${levels[state.level+1][0]}. Your equipment travels with you.`}`;
-    if(state.replaying)$('completeText').textContent=`${format(planet.total)} blocks cleared. Block credits earned; the first-clear bonus was already collected. Choose another destination in Galaxy.`;
+    $('completeText').textContent=`${format(state.level===8?planet.liquidTotal:planet.total)} blocks cleared. First-clear bonus recorded. ${state.level===9?'Campaign complete! Start again to try a new arsenal.':`Next destination: ${levels[state.level+1][0]}. Your equipment travels with you.`}`;
+    if(state.replaying)$('completeText').textContent=`${format(state.level===8?planet.liquidTotal:planet.total)} blocks cleared. Block credits earned; the first-clear bonus was already collected. Choose another destination in Galaxy.`;
     $('nextBtn').textContent=state.replaying?'Choose planet':state.level===9?'New campaign':'Next planet →';updateHUD();setMode('complete');
   }
   function nextLevel(){
@@ -792,6 +867,7 @@
     ctx.translate(ox,oy);ctx.scale(scale,scale);
     ctx.strokeStyle='#172337';ctx.lineWidth=1/scale;ctx.setLineDash([3,12]);ctx.beginPath();ctx.arc(0,0,planet.radius+55,0,TAU);ctx.stroke();ctx.setLineDash([]);
     ctx.strokeStyle='#18273b';ctx.strokeRect(-planet.halfW+12,-planet.halfH+12,planet.halfW*2-24,planet.halfH*2-24);
+    for(const moon of planet.moons||[]){ctx.strokeStyle='#355448';ctx.beginPath();ctx.arc(moon.x,moon.y,moon.radius+24,0,TAU);ctx.stroke();ctx.fillStyle='#8e9db5';ctx.font=`${11/scale}px monospace`;ctx.textAlign='center';ctx.fillText(`OPTIONAL MOON · ${moon.count} BLOCKS`,moon.x,moon.y+moon.radius+55);ctx.textAlign='left';}
     ctx.save();
     const collapseFraction=planet.collapse===null?0:clamp(planet.collapse/1.4,0,1);
     if(collapseFraction){const shrink=state.reduced?1:Math.max(.02,1-collapseFraction*collapseFraction);ctx.scale(shrink,shrink);ctx.globalAlpha=1-collapseFraction;}
@@ -873,7 +949,7 @@
   window.addEventListener('blur',()=>{keys.clear();if(mode==='play')setMode('pause');});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){keys.clear();if(mode==='play')setMode('pause');save();}});
   window.addEventListener('pagehide',save);window.addEventListener('resize',resize);
-  $('startBtn').onclick=()=>{if(planet.remaining===0)completeLevel();else setMode('play');};
+  $('startBtn').onclick=()=>{if(levelCleared())completeLevel();else setMode('play');};
   $('pauseBtn').onclick=togglePause;$('resumeBtn').onclick=()=>setMode('play');$('shopBtn').onclick=openShop;
   $('closeShop').onclick=()=>setMode(shopReturn);$('autoBtn').onclick=toggleAuto;$('restartBtn').onclick=newCampaign;
   $('completeShop').onclick=openShop;$('nextBtn').onclick=nextLevel;

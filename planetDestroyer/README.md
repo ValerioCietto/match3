@@ -48,6 +48,10 @@ Use **Galaxy** in the header, pause screen, or completion screen to replay compl
 
 **Shockwave:** an expanding electric ring that cannot be deflected or intercepted. Damage scales smoothly with direction: 2× away from the planet center, 1× perpendicular, 0.5× toward the center. Surviving liquid blocks are pushed up to two cells away from the wave origin when space is free. Upgrades extend range from 240 to 560 units.
 
+**Obsidian:** 2,750 scattered violet liquid blocks become denser toward the center, with random 10–50 HP and regeneration of 10% maximum HP/s. Two optional Turtle-block moons have 200 blocks / 4 turrets and 400 blocks / 6 turrets. Clear the liquid planet to win; the moons can remain intact.
+
+**Last Sun:** all-liquid body with 300 initial core blocks. Lasers, lightning, and Shockwave heal blocks instead of damaging them; plague has no effect. Each core rolls every second to grow a core (1%) and normal liquid (5%), pushing occupied lines outward. Living core blocks are capped at 1,000. Growth and displacement persist across saves and Galaxy visits.
+
 ## Checks
 
 ```powershell

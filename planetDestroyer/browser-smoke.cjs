@@ -152,6 +152,29 @@ let browser,ws;
       }
     }
   }
+  const obsidianSave={...saved,level:8,paid:[],auto:false,slots:['double_parallel_shot',null,null]};
+  for(const key of ['hp','positions','ship','collapse','compaction','visits','replaying'])delete obsidianSave[key];
+  await reloadWithSave(obsidianSave);await evaluate("document.getElementById('startBtn').click();document.getElementById('pauseBtn').click()");
+  assert.ok(await evaluate("document.getElementById('composition').textContent.includes('Violet liquid') && document.getElementById('planetObjective').textContent.includes('Moons optional')"));
+  await evaluate("document.getElementById('resumeBtn').click()");
+  const obsidianShot=await send('Page.captureScreenshot');fs.writeFileSync(path.join(screenshotDir,'obsidian.png'),Buffer.from(obsidianShot.data,'base64'));
+  await evaluate("document.getElementById('pauseBtn').click()");
+  const clearedObsidian=await evaluate("JSON.parse(localStorage.getItem('planetDestroyer.demo.v1'))");
+  assert.equal(clearedObsidian.hp.length,3350);clearedObsidian.hp=clearedObsidian.hp.map((hp,i)=>i<2750?0:hp);
+  await reloadWithSave(clearedObsidian);await evaluate("document.getElementById('startBtn').click()");
+  assert.ok(await evaluate("!document.getElementById('complete').hidden"));
+  assert.equal(await evaluate("document.getElementById('percent').textContent"),'100.0% cleared');
+  await evaluate("document.getElementById('nextBtn').click()");assert.equal(await evaluate("document.getElementById('planetName').textContent"),'Last Sun');
+  console.log('Obsidian browser checks passed: violet liquid, optional moons, main-body progress, victory and advance.');
+  assert.ok(await evaluate("document.getElementById('planetObjective').textContent.includes('Energy heals')"));
+  await sleep(1200);await evaluate("document.getElementById('pauseBtn').click()");
+  const growingSun=await evaluate("JSON.parse(localStorage.getItem('planetDestroyer.demo.v1'))");
+  assert.ok(growingSun.sunBlocks.length>3000);assert.ok(growingSun.sunBlocks.filter(b=>b[2]&&b[3]>0).length<=1000);
+  await reloadWithSave(growingSun);await evaluate("document.getElementById('startBtn').click();document.getElementById('pauseBtn').click()");
+  assert.equal(await evaluate("JSON.parse(localStorage.getItem('planetDestroyer.demo.v1')).sunBlocks.length"),growingSun.sunBlocks.length);
+  await evaluate("document.getElementById('resumeBtn').click()");
+  const sunShot=await send('Page.captureScreenshot');fs.writeFileSync(path.join(screenshotDir,'last-sun.png'),Buffer.from(sunShot.data,'base64'));
+  console.log('Last Sun browser checks passed: energy/immunity objective, core growth, and dynamic save/reload.');
   const shockSave={...saved,level:0,paid:[],auto:false,credits:20000,slots:['shockwave',null,null]};
   for(const key of ['hp','positions','ship','collapse','compaction','visits','replaying'])delete shockSave[key];
   await reloadWithSave(shockSave);await evaluate("document.getElementById('startBtn').click();document.getElementById('shopBtn').click()");
