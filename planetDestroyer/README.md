@@ -54,6 +54,16 @@ Use **Galaxy** in the header, pause screen, or completion screen to replay compl
 
 Mobile entry point: **`game-mobile.html`**, with its own `game-mobile.js` and separate save. Use the left thumbstick to move, touch the arena to aim/fire, or use HOLD FIRE and Auto. Portrait and landscape are supported. See [MOBILE.md](MOBILE.md) for controls, maintenance notes, and alternative-control proposals. Run `node planetDestroyer/browser-mobile-smoke.cjs` for the mobile browser checks.
 
+**Buzzsaw upgrades:** unlock for 200 credits; each level adds another saw on a separate, alternating-direction orbit. Successive saws are 10% larger, slower, and stronger. Upgrade prices scale with total sustained-contact DPS. See [BUZZSAW.md](BUZZSAW.md) for the formulas and price table. Implemented on desktop and mobile.
+
+**Yoyo:** automatically performs Surface Dance along exposed edges or String Storm in cavities. Hold fire or Auto to repeat; upgrades extend contour routes and add figure-eight passes. See [YOYO.md](YOYO.md) for details. Available on desktop and mobile.
+
+**Chain lightning:** branches into a tree on impact. Upgrades add fork tiers and longer randomized branches, with each block hit at most once per discharge. See [LIGHTNING.md](LIGHTNING.md) for the level table. Available on desktop and mobile.
+
+**Mortar:** upgraded shells scatter secondary mortars, with three-way and five-way midair splits at levels 4 and 5. Secondary shots explode once without further branching. Prices scale with theoretical total blast DPS. See [MORTAR.md](MORTAR.md) for counts, angles, and prices. Available on desktop and mobile.
+
+**Charged shot:** distance controls charge duration and physical piercing damage. Upgrades raise the charge limit to 1 / 2 / 4 / 6 / 10 seconds. Shots over 50 damage ignore point defense; all shots bypass reflection. A rising glow, charge meter, and lightning trail show its state. See [CHARGED-SHOT.md](CHARGED-SHOT.md) for exact scaling and controls. Available on desktop and mobile.
+
 ## Checks
 
 ```powershell

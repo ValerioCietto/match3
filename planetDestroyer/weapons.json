@@ -142,267 +142,248 @@
                                      ]
                     },
                     {
-                        "id":  "chain_lightning",
-                        "name":  "Chain lightning",
-                        "behavior":  "chain_lightning",
-                        "unlockCost":  120,
-                        "baseStats":  {
-                                          "maxTargets":  5,
-                                          "damage":  2,
-                                          "cooldown":  0.65,
-                                          "aimConeDegrees":  60,
-                                          "jumpRange":  48,
-                                          "range":  500
-                                      },
-                        "upgrades":  [
-                                         {
-                                             "level":  2,
-                                             "cost":  70,
-                                             "modifiers":  {
-                                                               "add":  {
-                                                                           "damage":  0.5
-                                                                       },
-                                                               "multiply":  {
-                                                                                "cooldown":  0.92
-                                                                            }
-                                                           }
-                                         },
-                                         {
-                                             "level":  3,
-                                             "cost":  140,
-                                             "modifiers":  {
-                                                               "add":  {
-                                                                           "damage":  0.5,
-                                                                           "maxTargets":  1
-                                                                       },
-                                                               "multiply":  {
-                                                                                "cooldown":  0.92
-                                                                            }
-                                                           }
-                                         },
-                                         {
-                                             "level":  4,
-                                             "cost":  210,
-                                             "modifiers":  {
-                                                               "add":  {
-                                                                           "damage":  0.5
-                                                                       },
-                                                               "multiply":  {
-                                                                                "cooldown":  0.92
-                                                                            }
-                                                           }
-                                         },
-                                         {
-                                             "level":  5,
-                                             "cost":  280,
-                                             "modifiers":  {
-                                                               "add":  {
-                                                                           "damage":  0.5,
-                                                                           "maxTargets":  1
-                                                                       },
-                                                               "multiply":  {
-                                                                                "cooldown":  0.92
-                                                                            }
-                                                           }
-                                         }
-                                     ]
+    "id":  "chain_lightning",
+    "name":  "Chain lightning",
+    "behavior":  "chain_lightning",
+    "unlockCost":  120,
+    "baseStats":  {
+                      "damage":  2,
+                      "cooldown":  0.65,
+                      "aimConeDegrees":  60,
+                      "jumpRange":  48,
+                      "range":  500,
+                      "tier3Min":  1,
+                      "branchDepth":  1,
+                      "tier2Max":  6,
+                      "tier1Max":  5,
+                      "tier1Min":  3,
+                      "tier2Min":  4,
+                      "rootBranches":  1,
+                      "tier3Max":  3
+                  },
+    "upgrades":  [
+                     {
+                         "level":  2,
+                         "cost":  70,
+                         "modifiers":  {
+                                           "add":  {
+                                                       "damage":  0.5,
+                                                       "rootBranches":  1,
+                                                       "tier1Min":  3,
+                                                       "tier1Max":  3
+                                                   },
+                                           "multiply":  {
+                                                            "cooldown":  0.92
+                                                        }
+                                       }
+                     },
+                     {
+                         "level":  3,
+                         "cost":  140,
+                         "modifiers":  {
+                                           "add":  {
+                                                       "damage":  0.5,
+                                                       "branchDepth":  1
+                                                   },
+                                           "multiply":  {
+                                                            "cooldown":  0.92
+                                                        }
+                                       }
+                     },
+                     {
+                         "level":  4,
+                         "cost":  210,
+                         "modifiers":  {
+                                           "add":  {
+                                                       "damage":  0.5,
+                                                       "branchDepth":  1
+                                                   },
+                                           "multiply":  {
+                                                            "cooldown":  0.92
+                                                        }
+                                       }
+                     },
+                     {
+                         "level":  5,
+                         "cost":  280,
+                         "modifiers":  {
+                                           "add":  {
+                                                       "damage":  0.5,
+                                                       "tier1Min":  1,
+                                                       "tier1Max":  5,
+                                                       "tier2Min":  1,
+                                                       "tier2Max":  5,
+                                                       "tier3Min":  1,
+                                                       "tier3Max":  5
+                                                   },
+                                           "multiply":  {
+                                                            "cooldown":  0.92
+                                                        }
+                                       }
+                     }
+                 ]
+},
+                    {
+                        "id": "orbiting_buzzsaw",
+                        "name": "Orbiting buzzsaw",
+                        "behavior": "orbiting_blade",
+                        "unlockCost": 200,
+                        "baseStats": { "damage": 1, "orbitSpeedDegrees": 240, "bladeDiameter": 28, "orbitRadius": 52, "contactInterval": 0.12, "sawCount": 1, "sizeMultiplier": 1.1, "speedMultiplier": 0.9, "damageMultiplier": 1.1, "orbitGap": 4 },
+                        "upgrades": [
+                            { "level": 2, "cost": 420, "modifiers": { "add": { "sawCount": 1 }, "multiply": {} } },
+                            { "level": 3, "cost": 662, "modifiers": { "add": { "sawCount": 1 }, "multiply": {} } },
+                            { "level": 4, "cost": 928, "modifiers": { "add": { "sawCount": 1 }, "multiply": {} } },
+                            { "level": 5, "cost": 1221, "modifiers": { "add": { "sawCount": 1 }, "multiply": {} } }
+                        ]
                     },
                     {
-                        "id":  "orbiting_buzzsaw",
-                        "name":  "Orbiting buzzsaw",
-                        "behavior":  "orbiting_blade",
-                        "unlockCost":  100,
-                        "baseStats":  {
-                                          "damage":  1,
-                                          "orbitSpeedDegrees":  240,
-                                          "bladeDiameter":  28,
-                                          "orbitRadius":  52,
-                                          "contactInterval":  0.12
-                                      },
-                        "upgrades":  [
-                                         {
-                                             "level":  2,
-                                             "cost":  60,
-                                             "modifiers":  {
-                                                               "add":  {
-                                                                           "damage":  0.25
-                                                                       },
-                                                               "multiply":  {
-                                                                                "contactInterval":  0.92
-                                                                            }
-                                                           }
-                                         },
-                                         {
-                                             "level":  3,
-                                             "cost":  120,
-                                             "modifiers":  {
-                                                               "add":  {
-                                                                           "damage":  0.25,
-                                                                           "bladeDiameter":  4.2
-                                                                       },
-                                                               "multiply":  {
-                                                                                "contactInterval":  0.92
-                                                                            }
-                                                           }
-                                         },
-                                         {
-                                             "level":  4,
-                                             "cost":  180,
-                                             "modifiers":  {
-                                                               "add":  {
-                                                                           "damage":  0.25
-                                                                       },
-                                                               "multiply":  {
-                                                                                "contactInterval":  0.92
-                                                                            }
-                                                           }
-                                         },
-                                         {
-                                             "level":  5,
-                                             "cost":  240,
-                                             "modifiers":  {
-                                                               "add":  {
-                                                                           "damage":  0.25,
-                                                                           "bladeDiameter":  4.2
-                                                                       },
-                                                               "multiply":  {
-                                                                                "contactInterval":  0.92
-                                                                            }
-                                                           }
-                                         }
-                                     ]
-                    },
+    "id":  "mortar",
+    "name":  "Mortar",
+    "behavior":  "lobbed_explosion",
+    "unlockCost":  140,
+    "baseStats":  {
+                      "damage":  4,
+                      "flightDuration":  0.75,
+                      "cooldown":  1.2,
+                      "blastRadius":  48,
+                      "range":  600,
+                      "secondaryFlightDuration":  0.5,
+                      "blastCount":  1,
+                      "secondaryRange":  50,
+                      "splitAngleDegrees":  15,
+                      "splitCount":  1
+                  },
+    "upgrades":  [
+                     {
+                         "cost":  420,
+                         "modifiers":  {
+                                           "add":  {
+                                                       "blastCount":  2
+                                                   },
+                                           "multiply":  {
+
+                                                        }
+                                       },
+                         "level":  2
+                     },
+                     {
+                         "cost":  840,
+                         "modifiers":  {
+                                           "add":  {
+                                                       "blastCount":  3,
+                                                       "secondaryRange":  50
+                                                   },
+                                           "multiply":  {
+
+                                                        }
+                                       },
+                         "level":  3
+                     },
+                     {
+                         "cost":  3360,
+                         "modifiers":  {
+                                           "add":  {
+                                                       "blastCount":  2,
+                                                       "secondaryRange":  50,
+                                                       "splitCount":  2
+                                                   },
+                                           "multiply":  {
+
+                                                        }
+                                       },
+                         "level":  4
+                     },
+                     {
+                         "cost":  7000,
+                         "modifiers":  {
+                                           "add":  {
+                                                       "blastCount":  2,
+                                                       "secondaryRange":  50,
+                                                       "splitCount":  2
+                                                   },
+                                           "multiply":  {
+
+                                                        }
+                                       },
+                         "level":  5
+                     }
+                 ]
+},
                     {
-                        "id":  "mortar",
-                        "name":  "Mortar",
-                        "behavior":  "lobbed_explosion",
-                        "unlockCost":  140,
-                        "baseStats":  {
-                                          "damage":  4,
-                                          "flightDuration":  0.75,
-                                          "cooldown":  1.2,
-                                          "blastRadius":  48,
-                                          "range":  600
-                                      },
-                        "upgrades":  [
-                                         {
-                                             "level":  2,
-                                             "cost":  80,
-                                             "modifiers":  {
-                                                               "add":  {
-                                                                           "damage":  1
-                                                                       },
-                                                               "multiply":  {
-                                                                                "cooldown":  0.92
-                                                                            }
-                                                           }
-                                         },
-                                         {
-                                             "level":  3,
-                                             "cost":  160,
-                                             "modifiers":  {
-                                                               "add":  {
-                                                                           "damage":  1,
-                                                                           "blastRadius":  8
-                                                                       },
-                                                               "multiply":  {
-                                                                                "cooldown":  0.92
-                                                                            }
-                                                           }
-                                         },
-                                         {
-                                             "level":  4,
-                                             "cost":  240,
-                                             "modifiers":  {
-                                                               "add":  {
-                                                                           "damage":  1
-                                                                       },
-                                                               "multiply":  {
-                                                                                "cooldown":  0.92
-                                                                            }
-                                                           }
-                                         },
-                                         {
-                                             "level":  5,
-                                             "cost":  320,
-                                             "modifiers":  {
-                                                               "add":  {
-                                                                           "damage":  1,
-                                                                           "blastRadius":  8
-                                                                       },
-                                                               "multiply":  {
-                                                                                "cooldown":  0.92
-                                                                            }
-                                                           }
-                                         }
-                                     ]
-                    },
-                    {
-                        "id":  "yoyo",
-                        "name":  "Yoyo",
-                        "behavior":  "tethered_blade",
-                        "unlockCost":  90,
-                        "baseStats":  {
-                                          "maxActive":  1,
-                                          "bladeDiameter":  24,
-                                          "maxLifetime":  3,
-                                          "damage":  2,
-                                          "range":  240,
-                                          "cycleDuration":  0.9
-                                      },
-                        "upgrades":  [
-                                         {
-                                             "level":  2,
-                                             "cost":  55,
-                                             "modifiers":  {
-                                                               "add":  {
-                                                                           "damage":  0.5
-                                                                       },
-                                                               "multiply":  {
-                                                                                "cycleDuration":  0.92
-                                                                            }
-                                                           }
-                                         },
-                                         {
-                                             "level":  3,
-                                             "cost":  110,
-                                             "modifiers":  {
-                                                               "add":  {
-                                                                           "damage":  0.5,
-                                                                           "range":  40
-                                                                       },
-                                                               "multiply":  {
-                                                                                "cycleDuration":  0.92
-                                                                            }
-                                                           }
-                                         },
-                                         {
-                                             "level":  4,
-                                             "cost":  165,
-                                             "modifiers":  {
-                                                               "add":  {
-                                                                           "damage":  0.5
-                                                                       },
-                                                               "multiply":  {
-                                                                                "cycleDuration":  0.92
-                                                                            }
-                                                           }
-                                         },
-                                         {
-                                             "level":  5,
-                                             "cost":  220,
-                                             "modifiers":  {
-                                                               "add":  {
-                                                                           "damage":  0.5,
-                                                                           "range":  40
-                                                                       },
-                                                               "multiply":  {
-                                                                                "cycleDuration":  0.92
-                                                                            }
-                                                           }
-                                         }
-                                     ]
-                    },
+    "id":  "yoyo",
+    "name":  "Yoyo",
+    "behavior":  "tethered_blade",
+    "unlockCost":  90,
+    "baseStats":  {
+                      "maxActive":  1,
+                      "bladeDiameter":  24,
+                      "maxLifetime":  6,
+                      "damage":  2,
+                      "range":  240,
+                      "cycleDuration":  0.9,
+                      "contourSteps":  10,
+                      "loopRadius":  55,
+                      "loopCount":  1
+                  },
+    "upgrades":  [
+                     {
+                         "level":  2,
+                         "cost":  55,
+                         "modifiers":  {
+                                           "add":  {
+                                                       "damage":  0.5,
+                                                       "contourSteps":  4
+                                                   },
+                                           "multiply":  {
+                                                            "cycleDuration":  0.92
+                                                        }
+                                       }
+                     },
+                     {
+                         "level":  3,
+                         "cost":  110,
+                         "modifiers":  {
+                                           "add":  {
+                                                       "damage":  0.5,
+                                                       "range":  40,
+                                                       "contourSteps":  4,
+                                                       "loopCount":  1
+                                                   },
+                                           "multiply":  {
+                                                            "cycleDuration":  0.92
+                                                        }
+                                       }
+                     },
+                     {
+                         "level":  4,
+                         "cost":  165,
+                         "modifiers":  {
+                                           "add":  {
+                                                       "damage":  0.5,
+                                                       "contourSteps":  4
+                                                   },
+                                           "multiply":  {
+                                                            "cycleDuration":  0.92
+                                                        }
+                                       }
+                     },
+                     {
+                         "level":  5,
+                         "cost":  220,
+                         "modifiers":  {
+                                           "add":  {
+                                                       "damage":  0.5,
+                                                       "range":  40,
+                                                       "contourSteps":  4,
+                                                       "loopCount":  1
+                                                   },
+                                           "multiply":  {
+                                                            "cycleDuration":  0.92
+                                                        }
+                                       }
+                     }
+                 ]
+},
                     {
                         "id":  "boomerang",
                         "name":  "Boomerang",
@@ -893,6 +874,16 @@
                             { "level": 3, "cost": 2500, "modifiers": { "add": { "range": 80 }, "multiply": {} } },
                             { "level": 4, "cost": 5000, "modifiers": { "add": { "range": 80 }, "multiply": {} } },
                             { "level": 5, "cost": 10000, "modifiers": { "add": { "range": 80 }, "multiply": {} } }
+                        ]
+                    },
+                    {
+                        "id": "charged_shot", "name": "Charged shot", "behavior": "charged_shot", "unlockCost": 500,
+                        "baseStats": { "damage": 20, "cooldown": 1, "range": 400, "chargeRange": 400, "maxCharge": 1, "minDamage": 1, "minCooldown": 0.1, "interceptThreshold": 50 },
+                        "upgrades": [
+                            { "level": 2, "cost": 750, "modifiers": { "add": { "maxCharge": 1, "range": 400 }, "multiply": {} } },
+                            { "level": 3, "cost": 1500, "modifiers": { "add": { "maxCharge": 2, "range": 800 }, "multiply": {} } },
+                            { "level": 4, "cost": 2200, "modifiers": { "add": { "maxCharge": 2, "range": 800 }, "multiply": {} } },
+                            { "level": 5, "cost": 4000, "modifiers": { "add": { "maxCharge": 4, "range": 1600 }, "multiply": {} } }
                         ]
                     }
                 ]

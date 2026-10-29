@@ -55,15 +55,15 @@
     const scale=index===2?1:1+(index-2)*.2;
     return material(layerNames[layer],Math.round(cinderHP[layer]*scale),cinderCredits[layer]+Math.max(0,index-2),index===2?[68,70,76]:[26,30,42]);
   }
-  const colors=['#7afce1','#ffb76b','#c19aff','#f58bbe','#b2baff','#79dbff','#ffe080','#e6faff','#ff7dce','#adff73','#ff963e','#65caff','#e8fff1','#99ecff'];
-  const icons=['Ⅱ','⋰','ϟ','◉','⌒','↕','◔','⟶','⋙','⌖','☢','✥','❄','◎'];
+  const colors=['#7afce1','#ffb76b','#c19aff','#f58bbe','#b2baff','#79dbff','#ffe080','#e6faff','#ff7dce','#adff73','#ff963e','#65caff','#e8fff1','#99ecff','#fff4b4'];
+  const icons=['Ⅱ','⋰','ϟ','◉','⌒','↕','◔','⟶','⋙','⌖','☢','✥','❄','◎','✦'];
   const descriptions={
     parallel_projectiles:'Two straight shots. A dependable tool for carving tunnels.',
     spread_projectiles:'A wide pellet fan that shreds crust and opens up the surface.',
-    chain_lightning:'Jumps through five nearby blocks. Great for dense clusters.',
-    orbiting_blade:'A close-orbit blade. Fly alongside an edge to chew through it.',
-    lobbed_explosion:'Lobs over the surface and detonates at your cursor.',
-    tethered_blade:'A tethered blade cuts outward, then hits again on its return.',
+    chain_lightning:'Hits exposed terrain, then grows a branching lightning tree. Upgrades add forks and longer branches. Each block is hit once per discharge.',
+    orbiting_blade:'Upgrades add alternating-direction saws on separate orbits. Each successive saw is 10% larger, 10% slower, and deals 10% more damage.',
+    lobbed_explosion:'Lobs to your aim point. Upgrades add scattered secondary mortars and midair splits. Secondary shots explode once without further branching.',
+    tethered_blade:'Automatic tricks: Surface Dance follows exposed edges; String Storm performs figure eights inside cavities. Every combo ends with a snap return.',
     returning_blade:'A curved cutting pass, followed by a return to your ship.',
     piercing_beam:'An instant beam that drills through multiple layers.',
     guided_missiles:'A rapid flurry of homing missiles. Seeks exposed blocks near your aim and explodes on impact.',
@@ -71,6 +71,7 @@
     piercing_nuke:'Flies to your mouse position and detonates there. Drills up to 5 × level blocks on the way; blast radius is 4 × level block widths.',
     mining_drones:'Autonomous miners roam near the ship and reserve different nearest blocks. Each level adds a drone, one pierced block, and one laser damage.',
     plague:'Infectious snow falls toward the planet center. Infected blocks take damage every second and spread infection through sustained edge contact.',
+    charged_shot:'Hold fire to charge toward your focus. Farther aim means more damage and a longer charge. Pierces without bouncing; shots over 50 damage ignore point defense.',
     shockwave:'Expanding thunder ring. Deals 2× outward, 1× sideways, and 0.5× inward damage, smoothly by angle. Pushes liquid; cannot be deflected. Upgrades increase range.'
   };
   let definitions=[], byId={}, state, planet, ship, mode='welcome', auto=false;
@@ -199,6 +200,7 @@
   }
   function levelCleared(){return state.level===8?planet.liquidRemaining===0:planet.remaining===0;}
   function load(incoming) {
+    chargedShot=null;
     state=freshState();
     try {
       const raw=incoming?JSON.stringify(incoming):localStorage.getItem(SAVE_KEY);
@@ -301,6 +303,7 @@
   }
   function toast(message){$('toast').textContent=message;$('toast').style.opacity=1;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').style.opacity=0,3200);}
   function setMode(next){
+    if(next!=='play')chargedShot=null;
     const previous=mode;mode=next;keys.clear();
     if(previous==='play'&&next!=='play')lastFocus=document.activeElement;
     for(const id of ['welcome','shop','pause','complete','galaxy'])$(id).hidden=next!==id;
@@ -329,7 +332,7 @@
     $('loadout').innerHTML=state.slots.map((id,i)=>{
       if(!id)return `<div class="slot"><small>0${i+1} / EMPTY SLOT</small><div>Visit the armory</div></div>`;
       const s=stats(id),period=s.cooldown||s.cycleDuration||s.contactInterval;
-      const ready=clamp(1-(cooldowns[id]||0)/period,0,1)*100;
+      const ready=s.maxCharge?(chargedShot?.id===id&&chargedShot.shot?clamp(chargedShot.elapsed/chargedShot.shot.duration,0,1)*100:0):clamp(1-(cooldowns[id]||0)/period,0,1)*100;
       return `<div class="slot"><small>0${i+1} / LEVEL ${state.owned[id]}${s.droneCount?' · AUTONOMOUS':''}</small><div>${byId[id].name}</div><div class="bar"><i style="width:${ready}%"></i></div></div>`;
     }).join('');
   }
@@ -340,7 +343,7 @@
     $('weaponGrid').innerHTML=definitions.map((d,i)=>{
       const owned=state.owned[d.id]||0,s=stats(d.id),next=d.upgrades.find(u=>u.level===owned+1),equipped=state.slots.includes(d.id);
       const timing=s.cooldown||s.cycleDuration||s.contactInterval;
-      const special=s.spreadSeconds?`${s.damage} damage/s · ${Number(s.spreadSeconds.toFixed(2))}s contact to spread`:s.droneCount?`${s.droneCount} drones · ${s.penetration} blocks pierced · autonomous`:s.drillBlocks?`${s.drillBlocks} blocks drilled · ${s.blastRadiusBlocks}-block blast radius`:s.rayCount?`${s.rayCount} ${s.rayCount===1?'ray':'rays'} on different blocks · ${(1/s.cooldown).toFixed(1)} pulses/s`:s.missileCount?`${s.missileCount} guided missiles · ${s.blastRadius} blast radius`:s.pelletCount?`${s.pelletCount} pellets`:s.maxTargets?`${s.maxTargets} targets`:s.penetration?`${s.penetration} blocks pierced`:s.blastRadius?`${s.blastRadius} blast radius`:s.orbitRadius?`${s.orbitRadius} orbit radius`:`${Math.round(s.range)} range`;
+      const special=s.maxCharge?`1–${s.damage*s.maxCharge} damage · ${s.minCooldown}–${s.maxCharge}s charge<br>${s.range} max range · physical piercing`:s.blastCount?`${s.splitCount} primary ${s.splitCount===1?"shot":"shots"} · ${s.blastCount-1} secondaries each<br>${s.blastCount>1?s.secondaryRange+" scatter range":"No secondary explosions"}`:s.rootBranches?`${s.rootBranches} initial ${s.rootBranches===1?"branch":"branches"} · ${s.branchDepth} tiers<br>${Array.from({length:s.branchDepth},(_,i)=>`T${i+1}: ${s[`tier${i+1}Min`]}–${s[`tier${i+1}Max`]} blocks`).join(" · ")}`:s.contourSteps?`2 automatic combos · ${s.contourSteps} contour steps · ${s.loopCount} figure-eight ${s.loopCount===1?"pass":"passes"}`:s.sawCount?`${s.sawCount} saws · ${buzzsawDPS(s).toFixed(1)} contact DPS · alternating orbits`:s.spreadSeconds?`${s.damage} damage/s · ${Number(s.spreadSeconds.toFixed(2))}s contact to spread`:s.droneCount?`${s.droneCount} drones · ${s.penetration} blocks pierced · autonomous`:s.drillBlocks?`${s.drillBlocks} blocks drilled · ${s.blastRadiusBlocks}-block blast radius`:s.rayCount?`${s.rayCount} ${s.rayCount===1?'ray':'rays'} on different blocks · ${(1/s.cooldown).toFixed(1)} pulses/s`:s.missileCount?`${s.missileCount} guided missiles · ${s.blastRadius} blast radius`:s.pelletCount?`${s.pelletCount} pellets`:s.maxTargets?`${s.maxTargets} targets`:s.penetration?`${s.penetration} blocks pierced`:s.blastRadius?`${s.blastRadius} blast radius`:s.orbitRadius?`${s.orbitRadius} orbit radius`:`${Math.round(s.range)} range`;
       let preview='';
       if(next)preview=Object.entries(next.modifiers.add).map(([k,v])=>`+${Number(v.toFixed(2))} ${k.replace(/([A-Z])/g,' $1').toLowerCase()}`).join(' · ')+(Object.values(next.modifiers.multiply||{}).some(v=>v===.92)?' · 8% faster':'')+(next.modifiers.multiply?.spreadSeconds?` · ${(s.spreadSeconds*next.modifiers.multiply.spreadSeconds).toFixed(2)}s spread`:'');
       return `<article class="weapon-card"><div class="weapon-icon" style="color:${colors[i]}">${icons[i]}</div><div><h3>${d.name}</h3><div class="badge">${owned?`LEVEL ${owned} / 5${equipped?' · EQUIPPED':''}`:'LOCKED'}</div></div><p>${descriptions[d.behavior]}</p><div class="numbers">${Number(s.damage.toFixed(2))} ${s.spreadSeconds ? "damage/s" : "damage"} · ${timing.toFixed(2)}s<br>${special}</div><div class="actions">${!owned?`<button class="primary" data-buy="${d.id}" ${state.credits<d.unlockCost?'disabled':''}>Unlock · ${d.unlockCost} ◈</button>`:`<button data-upgrade="${d.id}" ${!next||state.credits<next.cost?'disabled':''}>${next?`Upgrade · ${next.cost} ◈`:'Maximum level'}</button><button data-equip="${d.id}">${equipped?'Unequip':`Equip in slot ${selectedSlot+1}`}</button>`}</div>${owned&&next?`<small class="eyebrow" style="letter-spacing:0;text-transform:none">Next: ${preview}</small>`:''}</article>`;
@@ -353,7 +356,7 @@
     const {buy,upgrade,equip}=button.dataset;
     if(buy){const d=byId[buy];if(state.owned[buy]||state.credits<d.unlockCost)return;state.credits-=d.unlockCost;state.owned[buy]=1;toast(`${d.name} unlocked. Equip it in a slot.`);}
     if(upgrade){const next=byId[upgrade].upgrades.find(u=>u.level===state.owned[upgrade]+1);if(!next||state.credits<next.cost)return;state.credits-=next.cost;state.owned[upgrade]=next.level;}
-    if(equip&&state.owned[equip]){const existing=state.slots.indexOf(equip);if(existing>=0)state.slots[existing]=null;else state.slots[selectedSlot]=equip;blades=[];cooldowns[equip]=.2;}
+    if(equip&&state.owned[equip]){const existing=state.slots.indexOf(equip);if(existing>=0)state.slots[existing]=null;else state.slots[selectedSlot]=equip;blades=[];chargedShot=null;cooldowns[equip]=.2;}
     if(buy||upgrade||equip){syncDrones();save();renderShop();updateHUD();}
   });
 
@@ -417,6 +420,7 @@
     const d=byId[id],s=stats(id),a=ship.angle,color=colors[definitions.indexOf(d)],target=aim();
     const direction={x:Math.cos(a),y:Math.sin(a)};
     switch(d.behavior){
+      case 'charged_shot':if(!chargedShot)chargedShot={id,elapsed:0};return;
       case 'shockwave':shockwaves.push({x:ship.x,y:ship.y,radius:0,s,color,hits:new Set()});break;
       case 'plague':
         for(let n=0;n<s.particleCount&&snow.length<400;n++){
@@ -452,16 +456,20 @@
       }
       case 'chain_lightning':{
         const candidates=planet.blocks.filter(b=>b.hp>0&&distance(b,ship)<=s.range&&Math.abs(Math.atan2(Math.sin(Math.atan2(b.y-ship.y,b.x-ship.x)-a),Math.cos(Math.atan2(b.y-ship.y,b.x-ship.x)-a)))<=s.aimConeDegrees*Math.PI/360).sort((b,c)=>distance(b,ship)-distance(c,ship));
-        let b=candidates.find(b=>rayBlocks(ship.x,ship.y,b.x,b.y)[0]===b);
-        const visited=new Set(),points=[{x:ship.x,y:ship.y}];
-        while(b&&visited.size<s.maxTargets){points.push({x:b.x,y:b.y});visited.add(b.id);damage(b,s.damage,'energy');const previous=b;b=nearby(b.x,b.y,s.jumpRange).filter(c=>!visited.has(c.id)&&distance(c,previous)<=s.jumpRange).sort((c,e)=>distance(c,previous)-distance(e,previous))[0];}
-        if(points.length>1)lineEffect(points,color,.23);
-        else lineEffect([{x:ship.x,y:ship.y},{x:ship.x+direction.x*45,y:ship.y+direction.y*45}],color,.08);
+        const root=candidates.find(b=>rayBlocks(ship.x,ship.y,b.x,b.y)[0]===b);
+        if(root){
+          const tree=lightningTree(root,s);
+          lightningEffect([{x:ship.x,y:ship.y},{x:root.x,y:root.y}],color);
+          for(const branch of tree){
+            const points=[{x:branch.start.x,y:branch.start.y},...branch.targets.map(b=>({x:b.x,y:b.y}))];
+            lightningEffect(points,color,branch.tier);for(const b of branch.targets)damage(b,s.damage,'energy');
+          }
+        }else lineEffect([{x:ship.x,y:ship.y},{x:ship.x+direction.x*45,y:ship.y+direction.y*45}],color,.08);
         break;
       }
       case 'lobbed_explosion':{
         const dist=Math.min(distance(target,ship),s.range);
-        shells.push({x:ship.x,y:ship.y,tx:ship.x+direction.x*dist,ty:ship.y+direction.y*dist,age:0,duration:s.flightDuration,s,color});break;
+        shells.push({x:ship.x,y:ship.y,tx:ship.x+direction.x*dist,ty:ship.y+direction.y*dist,age:0,duration:s.flightDuration,canSplit:true,secondary:false,s,color});break;
       }
       case 'piercing_beam':{
         const end={x:ship.x+direction.x*s.range,y:ship.y+direction.y*s.range},hits=rayBlocks(ship.x,ship.y,end.x,end.y).slice(0,s.penetration);
@@ -471,13 +479,156 @@
         const lastHit=hits.length===s.penetration?hits.at(-1):end;
         lineEffect([{x:ship.x,y:ship.y},{x:lastHit.x,y:lastHit.y}],color,.24);break;
       }
-      case 'tethered_blade':case 'returning_blade':
+      case 'tethered_blade':
+        if(blades.some(b=>b.id===id))return;
+        blades.push({id,x:ship.x,y:ship.y,age:0,returning:false,hits:new Set(),s,color,behavior:d.behavior,...planYoyo(s)});break;
+      case 'returning_blade':
         if(blades.some(b=>b.id===id))return;
         blades.push({id,x:ship.x,y:ship.y,ox:ship.x,oy:ship.y,angle:a,age:0,returning:false,hits:new Set(),s,color,behavior:d.behavior});break;
       case 'orbiting_blade': return;
     }
     cooldowns[id]=s.cooldown||s.cycleDuration||.1;
   }
+  let chargedShot=null;
+  function chargedShotStats(s,focus=aim()){
+    const range=Math.min(distance(ship,focus),s.range),seconds=range/s.chargeRange;
+    return {range,duration:Math.max(s.minCooldown,Math.min(s.maxCharge,seconds)),damage:Math.max(s.minDamage,s.damage*Math.min(s.maxCharge,seconds)),width:1+Math.floor(Math.log2(Math.max(1,seconds)))};
+  }
+  function dischargeChargedShot(s,shot,focus=aim()){
+    const angle=Math.atan2(focus.y-ship.y,focus.x-ship.x),end={x:ship.x+Math.cos(angle)*shot.range,y:ship.y+Math.sin(angle)*shot.range};
+    if(shot.damage<=s.interceptThreshold&&interceptAttack(ship,end))return;
+    const hits=new Map();
+    for(const offset of [-shot.width/2,0,shot.width/2]){
+      const dx=-Math.sin(angle)*offset,dy=Math.cos(angle)*offset;
+      for(const b of rayBlocks(ship.x+dx,ship.y+dy,end.x+dx,end.y+dy))hits.set(b.id,b);
+    }
+    for(const b of hits.values())damage(b,shot.damage);
+    effects.push({type:'line',points:[{x:ship.x,y:ship.y},end],color:'#fff4b4',width:shot.width,life:.25,max:.25});
+    const points=[{x:ship.x,y:ship.y}],segments=Math.max(2,Math.ceil(shot.range/35));
+    for(let n=1;n<segments;n++){const t=n/segments,jitter=(Math.random()-.5)*14;points.push({x:ship.x+(end.x-ship.x)*t-Math.sin(angle)*jitter,y:ship.y+(end.y-ship.y)*t+Math.cos(angle)*jitter});}points.push(end);
+    effects.push({type:'line',points,color:'#a5dfff',width:1,life:.4,max:.4});spark(ship.x,ship.y,'#fff4b4',8);
+  }
+  function updateChargedShot(id,dt,firing){
+    if(!firing){chargedShot=null;return;}
+    const s=stats(id),shot=chargedShotStats(s);
+    if(!chargedShot||chargedShot.id!==id)chargedShot={id,elapsed:0};
+    chargedShot.elapsed+=dt;chargedShot.shot=shot;
+    if(chargedShot.elapsed+1e-9>=shot.duration){dischargeChargedShot(s,shot);chargedShot=null;}
+  }
+  function mortarPosition(shell,t){return {x:shell.x+(shell.tx-shell.x)*t,y:shell.y+(shell.ty-shell.y)*t-Math.sin(t*Math.PI)*(shell.arcHeight??60)};}
+  function updateMortars(dt){
+    const queue=shells.map(shell=>({shell,dt})),survivors=[];
+    for(const item of queue){
+      const shell=item.shell,s=shell.s,split=shell.canSplit&&s.splitCount>1;
+      const eventAge=split?shell.duration*.5:shell.duration,advance=Math.min(item.dt,Math.max(0,eventAge-shell.age));
+      const from=mortarPosition(shell,clamp(shell.age/shell.duration,0,1));shell.age+=advance;
+      const to=mortarPosition(shell,clamp(shell.age/shell.duration,0,1));
+      if(interceptAttack(from,to))continue;
+      if(shell.age<eventAge-1e-9){survivors.push(shell);continue;}
+      const remaining=Math.max(0,item.dt-advance);
+      if(split){
+        const heading=Math.atan2(shell.ty-to.y,shell.tx-to.x),reach=Math.hypot(shell.tx-to.x,shell.ty-to.y);
+        for(let n=0;n<s.splitCount;n++){
+          const a=heading+(n-(s.splitCount-1)/2)*s.splitAngleDegrees*Math.PI/180;
+          queue.push({shell:{x:to.x,y:to.y,tx:to.x+Math.cos(a)*reach,ty:to.y+Math.sin(a)*reach,age:0,duration:shell.duration*.5,arcHeight:25,canSplit:false,secondary:false,s,color:shell.color},dt:remaining});
+        }
+        spark(to.x,to.y,shell.color,6);continue;
+      }
+      const landing=blockAt(shell.tx,shell.ty);
+      if(landing?.hp>0&&landing.reflective){
+        const norm=Math.hypot(shell.tx,shell.ty)||1,vx=shell.tx/norm*260,vy=shell.ty/norm*260;
+        bullets.push({x:shell.tx+vx/260*18,y:shell.ty+vy/260*18,vx,vy,left:600,damage:s.damage,color:shell.color,guided:false,reflected:true,bounces:1,blastRadius:s.blastRadius});spark(shell.tx,shell.ty,'#78edff',5);continue;
+      }
+      for(const b of nearby(shell.tx,shell.ty,s.blastRadius))if(distance(b,{x:shell.tx,y:shell.ty})<=s.blastRadius)damage(b,s.damage);
+      effects.push({type:'blast',x:shell.tx,y:shell.ty,r:s.blastRadius,color:shell.color,life:.38,max:.38});spark(shell.tx,shell.ty,shell.color,8);
+      if(!shell.secondary)for(let n=1;n<(s.blastCount||1);n++){
+        const a=Math.random()*TAU,r=Math.sqrt(Math.random())*s.secondaryRange;
+        queue.push({shell:{x:shell.tx,y:shell.ty,tx:shell.tx+Math.cos(a)*r,ty:shell.ty+Math.sin(a)*r,age:0,duration:s.secondaryFlightDuration,arcHeight:35,canSplit:false,secondary:true,s,color:shell.color},dt:remaining});
+      }
+    }
+    shells=planet.collapse===null?survivors:[];
+  }
+  function lightningTree(root,s,random=Math.random){
+    const visited=new Set(),branches=[],heading=Math.atan2(root.y-ship.y,root.x-ship.x);
+    let frontier=Array.from({length:s.rootBranches},(_,n)=>({start:root,angle:heading+(n-(s.rootBranches-1)/2)*1.2,parent:null}));
+    for(let tier=1;tier<=s.branchDepth;tier++){
+      const children=[];
+      for(const fork of frontier){
+        const min=s[`tier${tier}Min`],max=s[`tier${tier}Max`],length=min+Math.floor(random()*(max-min+1));
+        const branch={tier,parent:fork.parent,start:fork.start,angle:fork.angle,length,targets:[]};let previous=fork.start;
+        for(let n=0;n<length;n++){
+          let target;
+          if(tier===1&&branches.length===0&&n===0)target=root;
+          else target=nearby(previous.x,previous.y,s.jumpRange).filter(b=>b.hp>0&&!visited.has(b.id)&&distance(b,previous)<=s.jumpRange).sort((b,c)=>{
+            const score=v=>{const d=distance(v,previous)||1;return ((v.x-previous.x)*Math.cos(fork.angle)+(v.y-previous.y)*Math.sin(fork.angle))/d*2-d/s.jumpRange;};
+            return score(c)-score(b)||b.id-c.id;
+          })[0];
+          if(!target)break;visited.add(target.id);branch.targets.push(target);previous=target;
+        }
+        if(!branch.targets.length)continue;
+        const parent=branches.length;branches.push(branch);
+        if(tier<s.branchDepth)for(const side of [-1,1])children.push({start:previous,angle:fork.angle+side*.7,parent});
+      }
+      frontier=children;
+    }
+    return branches;
+  }
+  function lightningEffect(points,color,tier=0){
+    const jagged=[points[0]];
+    for(let i=1;i<points.length;i++){
+      const a=points[i-1],b=points[i],dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1,offset=(Math.random()-.5)*Math.min(12,d*.35);
+      jagged.push({x:(a.x+b.x)/2-dy/d*offset,y:(a.y+b.y)/2+dx/d*offset},b);
+    }
+    lineEffect(jagged,color,.32-tier*.035);
+  }
+  function planYoyo(s){
+    const origin={x:ship.x,y:ship.y},directions=8;
+    let occupied=0;for(let n=0;n<directions;n++){const a=n/directions*TAU;if(rayBlocks(ship.x,ship.y,ship.x+Math.cos(a)*s.range,ship.y+Math.sin(a)*s.range).length)occupied++;}
+    const nearbyBlocks=planet.blocks.filter(b=>b.hp>0&&distance(b,ship)<=s.range).sort((a,b)=>distance(a,ship)-distance(b,ship)||a.id-b.id);
+    const exposed=b=>[[1,0],[-1,0],[0,1],[0,-1]].some(([di,dj])=>!(planet.grid.get(key(b.i+di,b.j+dj))?.hp>0));
+    const target=nearbyBlocks.find(exposed)||nearbyBlocks[0];
+    const angle=target?Math.atan2(target.y-ship.y,target.x-ship.x):ship.angle;
+    const reach=target?distance(target,ship):s.range*.6;
+    const anchor={x:ship.x+Math.cos(angle)*Math.min(reach*.55,s.range*.4),y:ship.y+Math.sin(angle)*Math.min(reach*.55,s.range*.4)};
+    const path=[target?{x:target.x,y:target.y,id:target.id}:{x:ship.x+Math.cos(angle)*reach,y:ship.y+Math.sin(angle)*reach}];
+    const visited=new Set(target?[target.id]:[]);
+    for(let n=1;target&&n<s.contourSteps;n++){
+      const last=path.at(-1),normal=Math.atan2(last.y,last.x),tangent={x:-Math.sin(normal),y:Math.cos(normal)};
+      const next=nearbyBlocks.filter(b=>!visited.has(b.id)&&exposed(b)&&distance(b,last)<=CELL*1.5).sort((a,b)=>((b.x-last.x)*tangent.x+(b.y-last.y)*tangent.y)-((a.x-last.x)*tangent.x+(a.y-last.y)*tangent.y)||a.id-b.id)[0];
+      if(!next)break;visited.add(next.id);path.push({x:next.x,y:next.y,id:next.id});
+    }
+    const end=path.at(-1),normal=Math.atan2(end.y,end.x);
+    return {combo:occupied>=5?'String Storm':'Surface Dance',origin,anchor,path,angle,loopRadius:Math.min(s.range*.4,Math.max(s.loopRadius,reach*.6)),control:{x:end.x+Math.cos(normal)*s.loopRadius*2,y:end.y+Math.sin(normal)*s.loopRadius*2},phase:'',duration:s.cycleDuration*3};
+  }
+  function updateYoyo(b,dt){
+    const old={x:b.x,y:b.y};b.age+=dt;
+    const t=b.age/b.duration,lerp=(a,c,u)=>({x:a.x+(c.x-a.x)*u,y:a.y+(c.y-a.y)*u});let next,phase;
+    if(b.returning||t>=1){
+      phase='Snap Return';const d=distance(b,ship),step=b.s.range*3*dt;next=lerp(b,ship,Math.min(1,step/Math.max(d,.001)));if(d<=step+5)b.done=true;
+    }else if(b.combo==='Surface Dance'){
+      if(t<.2){phase='Sleeper';next=lerp(b.origin,b.path[0],t/.2);}
+      else if(t<.35){phase='Sleeper';next=b.path[0];}
+      else if(t<.75){phase='Walk the Dog';const progress=(t-.35)/.4*(b.path.length-1),index=Math.floor(progress);next=lerp(b.path[index],b.path[Math.min(index+1,b.path.length-1)],progress-index);}
+      else {phase='Around the World';const u=(t-.75)/.25,start=b.path.at(-1);next={x:(1-u)**2*start.x+2*(1-u)*u*b.control.x+u*u*b.origin.x,y:(1-u)**2*start.y+2*(1-u)*u*b.control.y+u*u*b.origin.y};}
+    }else{
+      if(t<.25){phase='Trapeze';next=lerp(b.origin,b.anchor,t/.25);}
+      else {const turn=(t-.25)/.75*b.s.loopCount,theta=turn*TAU;phase=`Figure Eight ${Math.floor(turn)+1}`;const x=Math.sin(theta)*b.loopRadius,y=Math.sin(theta*2)*b.loopRadius*.6;next={x:b.anchor.x+Math.cos(b.angle)*x-Math.sin(b.angle)*y,y:b.anchor.y+Math.sin(b.angle)*x+Math.cos(b.angle)*y};}
+    }
+    if(phase!==b.phase){b.hits.clear();b.phase=phase;}
+    b.x=next.x;b.y=next.y;sweepBlade(b,old);
+    if(b.age>b.s.maxLifetime)b.done=true;
+  }
+  function buzzsaws(s,time=simTime){
+    const result=[];
+    for(let index=0;index<s.sawCount;index++){
+      const size=s.bladeDiameter/2*s.sizeMultiplier**index,direction=index%2?-1:1,speed=s.speedMultiplier**index;
+      const radius=index?result[index-1].radius+result[index-1].size+size+s.orbitGap:s.orbitRadius;
+      const angle=time*s.orbitSpeedDegrees*Math.PI/180*speed*direction;
+      result.push({index,size,radius,direction,speed,angle,x:ship.x+Math.cos(angle)*radius,y:ship.y+Math.sin(angle)*radius,damage:s.damage*s.damageMultiplier**index});
+    }
+    return result;
+  }
+  function buzzsawDPS(s){return buzzsaws(s,0).reduce((sum,saw)=>sum+saw.damage/s.contactInterval,0);}
   const sawHits=new Map();
   function shockwaveMultiplier(origin,block){
     const dx=block.x-origin.x,dy=block.y-origin.y;
@@ -741,14 +892,19 @@
     const firing=keys.has('Space')||auto;
     for(const id of state.slots.filter(Boolean)){
       cooldowns[id]=Math.max(0,(cooldowns[id]||0)-dt);
+      if(byId[id].behavior==='charged_shot'){updateChargedShot(id,dt,firing);continue;}
       if(!firing)continue;
       const d=byId[id],s=stats(id);
       if(d.behavior==='mining_drones')continue;
       if(d.behavior==='orbiting_blade'){
         if(cooldowns[id]>0)continue;
-        const angle=simTime*s.orbitSpeedDegrees*Math.PI/180,bx=ship.x+Math.cos(angle)*s.orbitRadius,by=ship.y+Math.sin(angle)*s.orbitRadius;
-        if(interceptAttack({x:bx,y:by})){cooldowns[id]=1;continue;}
-        for(const b of nearby(bx,by,s.bladeDiameter/2+8))if(distance(b,{x:bx,y:by})<s.bladeDiameter/2+8&&(sawHits.get(b.id)||0)<=simTime){damage(b,s.damage);sawHits.set(b.id,simTime+s.contactInterval);}
+        for(const saw of buzzsaws(s)){
+          if(interceptAttack(saw)){cooldowns[id]=1;break;}
+          for(const b of nearby(saw.x,saw.y,saw.size+8)){
+            const hitKey=`${saw.index}:${b.id}`;
+            if(distance(b,saw)<saw.size+8&&(sawHits.get(hitKey)||0)<=simTime){damage(b,saw.damage);sawHits.set(hitKey,simTime+s.contactInterval);}
+          }
+        }
       }else if(cooldowns[id]<=0)fire(id);
     }
     for(const b of bullets){
@@ -764,20 +920,9 @@
       }else b.left-=travel;
       b.x=nx;b.y=ny;
     }bullets=bullets.filter(b=>b.left>0);
-    for(const shell of shells){
-      const t=clamp(shell.age/shell.duration,0,1),nextT=clamp((shell.age+dt)/shell.duration,0,1);
-      const at=v=>({x:shell.x+(shell.tx-shell.x)*v,y:shell.y+(shell.ty-shell.y)*v-Math.sin(v*Math.PI)*60});
-      if(interceptAttack(at(t),at(nextT))){shell.age=shell.duration;continue;}
-      shell.age+=dt;if(shell.age>=shell.duration){
-      const landing=blockAt(shell.tx,shell.ty);
-      if(landing?.hp>0&&landing.reflective){
-        const norm=Math.hypot(shell.tx,shell.ty)||1,vx=shell.tx/norm*260,vy=shell.ty/norm*260;
-        bullets.push({x:shell.tx+vx/260*18,y:shell.ty+vy/260*18,vx,vy,left:600,damage:shell.s.damage,color:shell.color,guided:false,reflected:true,bounces:1,blastRadius:shell.s.blastRadius});spark(shell.tx,shell.ty,'#78edff',5);continue;
-      }
-      for(const b of nearby(shell.tx,shell.ty,shell.s.blastRadius))if(distance(b,{x:shell.tx,y:shell.ty})<=shell.s.blastRadius)damage(b,shell.s.damage);
-      effects.push({type:'blast',x:shell.tx,y:shell.ty,r:shell.s.blastRadius,color:shell.color,life:.38,max:.38});spark(shell.tx,shell.ty,shell.color,15);
-    }}shells=shells.filter(s=>s.age<s.duration);
+    updateMortars(dt);
     for(const b of blades){
+      if(b.behavior==='tethered_blade'){updateYoyo(b,dt);continue;}
       const old={x:b.x,y:b.y};b.age+=dt;
       if(!b.returning){
         const t=clamp(b.age/(b.s.cycleDuration*.5),0,1),curve=b.behavior==='returning_blade'?Math.sin(t*Math.PI)*(b.s.curveWidth||0):0;
@@ -850,15 +995,15 @@
     if(state.level===9){newCampaign();return;}
     visitLevel(state.level+1);
   }
-  function resetFlight(){ship={x:0,y:-planet.radius-90,vx:0,vy:0,angle:Math.PI/2};bullets=[];blades=[];shells=[];effects=[];particles=[];cooldowns={};drones=[];waves=[];snow=[];shockwaves=[];plagueContacts=new Map();sawHits.clear();pointer.moved=false;syncDrones();}
+  function resetFlight(){chargedShot=null;ship={x:0,y:-planet.radius-90,vx:0,vy:0,angle:Math.PI/2};bullets=[];blades=[];shells=[];effects=[];particles=[];cooldowns={};drones=[];waves=[];snow=[];shockwaves=[];plagueContacts=new Map();sawHits.clear();pointer.moved=false;syncDrones();}
   function newCampaign(){if(!window.confirm('Start a new campaign? This resets all planets, credits, and weapon upgrades.'))return;state=freshState();auto=false;planet=generatePlanet(0);resetFlight();save();$('reducedMotion').checked=false;setMode('play');resize();updateHUD();}
 
   const stops=[[5,5,8],[89,16,24],[212,58,18],[255,149,0],[255,243,106]];
   function blockColor(b){const t=clamp((1-b.hp/b.max)*4,0,3.999),i=Math.floor(t),f=t-i,start=i===0?b.tint:stops[i];return `rgb(${start.map((v,k)=>Math.round(v+(stops[i+1][k]-v)*f)).join(',')})`;}
   const stars=Array.from({length:190},(_,i)=>({x:((i*7919)%1009)/1009,y:((i*3571)%1013)/1013,r:i%11===0?1.5:.65}));
   function resize(){const rect=canvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2);canvas.width=Math.round(rect.width*dpr);canvas.height=Math.round(rect.height*dpr);view.w=rect.width;view.h=rect.height;view.dpr=dpr;view.scale=planet?Math.min(view.w/(planet.halfW*2),view.h/(planet.halfH*2)):1;view.ox=view.w/2;view.oy=view.h/2;}
-  function drawBlade(x,y,r,color){
-    ctx.save();ctx.translate(x,y);ctx.rotate(simTime*9);ctx.beginPath();for(let n=0;n<24;n++){const a=n/24*TAU,rr=n%2?r*.7:r;const px=Math.cos(a)*rr,py=Math.sin(a)*rr;n?ctx.lineTo(px,py):ctx.moveTo(px,py);}ctx.closePath();ctx.fillStyle='#15222c';ctx.fill();ctx.strokeStyle=color;ctx.lineWidth=2;ctx.stroke();ctx.beginPath();ctx.arc(0,0,r*.3,0,TAU);ctx.stroke();ctx.restore();
+  function drawBlade(x,y,r,color,rotation=simTime*9){
+    ctx.save();ctx.translate(x,y);ctx.rotate(rotation);ctx.beginPath();for(let n=0;n<24;n++){const a=n/24*TAU,rr=n%2?r*.7:r;const px=Math.cos(a)*rr,py=Math.sin(a)*rr;n?ctx.lineTo(px,py):ctx.moveTo(px,py);}ctx.closePath();ctx.fillStyle='#15222c';ctx.fill();ctx.strokeStyle=color;ctx.lineWidth=2;ctx.stroke();ctx.beginPath();ctx.arc(0,0,r*.3,0,TAU);ctx.stroke();ctx.restore();
   }
   function draw(){
     const {w,h,dpr,scale,ox,oy}=view;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#080c17';ctx.fillRect(0,0,w,h);
@@ -883,7 +1028,7 @@
       }
     }
     for(const e of effects){ctx.globalAlpha=e.life/e.max;if(e.type==='flash'){ctx.fillStyle='#fff36a';ctx.fillRect(e.x-8,e.y-8,16,16);}else if(e.type==='blast'){ctx.strokeStyle=e.color;ctx.lineWidth=3;ctx.beginPath();ctx.arc(e.x,e.y,e.r*(1.3-e.life/e.max*.3),0,TAU);ctx.stroke();}else{
-      ctx.strokeStyle=e.color;ctx.lineWidth=e.points.length>2?2:3;ctx.shadowColor=e.color;ctx.shadowBlur=state.reduced?0:12;ctx.beginPath();ctx.moveTo(e.points[0].x,e.points[0].y);
+      ctx.strokeStyle=e.color;ctx.lineWidth=e.width??(e.points.length>2?2:3);ctx.shadowColor=e.color;ctx.shadowBlur=state.reduced?0:12;ctx.beginPath();ctx.moveTo(e.points[0].x,e.points[0].y);
       for(let i=1;i<e.points.length;i++){const p=e.points[i-1],q=e.points[i];if(e.points.length>2){ctx.lineTo((p.x+q.x)/2+Math.sin(i*17+e.life*90)*9,(p.y+q.y)/2+Math.cos(i*11+e.life*60)*9);}ctx.lineTo(q.x,q.y);}ctx.stroke();ctx.shadowBlur=0;
     }}ctx.globalAlpha=1;
     for(const b of bullets){
@@ -906,9 +1051,9 @@
         for(let n=0;n<=segments;n++){const a=n/segments*TAU,r=wave.radius+Math.sin(n*17+Math.floor(simTime*18))*6,x=wave.x+Math.cos(a)*r,y=wave.y+Math.sin(a)*r;n?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.closePath();ctx.stroke();}
       ctx.restore();
     }
-    for(const s of shells){const t=s.age/s.duration,x=s.x+(s.tx-s.x)*t,y=s.y+(s.ty-s.y)*t-Math.sin(t*Math.PI)*60;ctx.strokeStyle=s.color;ctx.globalAlpha=.35;ctx.beginPath();ctx.arc(s.tx,s.ty,s.s.blastRadius,0,TAU);ctx.stroke();ctx.globalAlpha=1;ctx.fillStyle=s.color;ctx.beginPath();ctx.arc(x,y,5+Math.sin(t*Math.PI)*3,0,TAU);ctx.fill();}
-    for(const b of blades){if(b.behavior==='tethered_blade'){ctx.strokeStyle='#79dbff66';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(ship.x,ship.y);ctx.lineTo(b.x,b.y);ctx.stroke();}drawBlade(b.x,b.y,b.s.bladeDiameter/2,b.color);}
-    if(mode==='play'&&(auto||keys.has('Space')))for(const id of state.slots.filter(Boolean)){if(byId[id].behavior==='orbiting_blade'&&!(cooldowns[id]>0)){const s=stats(id),a=simTime*s.orbitSpeedDegrees*Math.PI/180;ctx.strokeStyle='#f58bbe22';ctx.beginPath();ctx.arc(ship.x,ship.y,s.orbitRadius,0,TAU);ctx.stroke();drawBlade(ship.x+Math.cos(a)*s.orbitRadius,ship.y+Math.sin(a)*s.orbitRadius,s.bladeDiameter/2,'#f58bbe');}}
+    for(const s of shells){const t=s.age/s.duration,x=s.x+(s.tx-s.x)*t,y=s.y+(s.ty-s.y)*t-Math.sin(t*Math.PI)*(s.arcHeight??60);ctx.strokeStyle=s.color;ctx.globalAlpha=.35;ctx.beginPath();ctx.arc(s.tx,s.ty,s.s.blastRadius,0,TAU);ctx.stroke();ctx.globalAlpha=1;ctx.fillStyle=s.color;ctx.beginPath();ctx.arc(x,y,5+Math.sin(t*Math.PI)*3,0,TAU);ctx.fill();}
+    for(const b of blades){if(b.behavior==='tethered_blade'){ctx.strokeStyle='#79dbffaa';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(ship.x,ship.y);if(b.combo==='String Storm'&&!b.returning)ctx.lineTo(b.anchor.x,b.anchor.y);ctx.lineTo(b.x,b.y);if(b.combo==='String Storm'&&!b.returning)ctx.lineTo(ship.x,ship.y);ctx.stroke();ctx.strokeStyle=b.color;ctx.fillStyle='#173449';ctx.beginPath();ctx.arc(b.x,b.y,b.s.bladeDiameter/2,0,TAU);ctx.fill();ctx.stroke();ctx.beginPath();ctx.arc(b.x,b.y,4,0,TAU);ctx.stroke();}else drawBlade(b.x,b.y,b.s.bladeDiameter/2,b.color);}
+    if(mode==='play'&&(auto||keys.has('Space')))for(const id of state.slots.filter(Boolean)){if(byId[id].behavior==='orbiting_blade'&&!(cooldowns[id]>0)){const s=stats(id);for(const saw of buzzsaws(s)){ctx.strokeStyle='#f58bbe22';ctx.beginPath();ctx.arc(ship.x,ship.y,saw.radius,0,TAU);ctx.stroke();drawBlade(saw.x,saw.y,saw.size,'#f58bbe',simTime*9*saw.speed*saw.direction);}}}
     for(const p of particles){ctx.globalAlpha=clamp(p.life/p.max,0,1);ctx.fillStyle=p.color;ctx.fillRect(p.x-1,p.y-1,2.5,2.5);}ctx.globalAlpha=1;
     for(const drone of drones){
       if(drone.respawn>0)continue;
@@ -925,6 +1070,11 @@
     for(const wave of waves){ctx.save();ctx.translate(wave.x,wave.y);ctx.rotate(Math.atan2(wave.vy,wave.vx));ctx.strokeStyle='#d6a2ff';ctx.lineWidth=3;ctx.beginPath();ctx.arc(-8,0,22,-Math.PI/3,Math.PI/3);ctx.stroke();ctx.globalAlpha=.4;ctx.beginPath();ctx.arc(-15,0,22,-Math.PI/3,Math.PI/3);ctx.stroke();ctx.restore();}
     const target=aim();
     if(mode==='play'){ctx.strokeStyle='#7afce144';ctx.lineWidth=1;ctx.beginPath();ctx.arc(target.x,target.y,9,0,TAU);ctx.moveTo(target.x-14,target.y);ctx.lineTo(target.x-6,target.y);ctx.moveTo(target.x+6,target.y);ctx.lineTo(target.x+14,target.y);ctx.moveTo(target.x,target.y-14);ctx.lineTo(target.x,target.y-6);ctx.moveTo(target.x,target.y+6);ctx.lineTo(target.x,target.y+14);ctx.stroke();}
+    if(mode==='play'&&chargedShot?.shot){
+      const progress=clamp(chargedShot.elapsed/chargedShot.shot.duration,0,1);
+      ctx.save();ctx.strokeStyle='#fff4b4';ctx.fillStyle='#fff4b4';ctx.globalAlpha=.15+progress*.65;ctx.shadowColor='#ffe080';ctx.shadowBlur=state.reduced?0:8+progress*30;ctx.lineWidth=1+progress*3;
+      ctx.beginPath();ctx.arc(ship.x,ship.y,17+progress*15,0,TAU);ctx.stroke();ctx.globalAlpha=.1+progress*.35;ctx.beginPath();ctx.arc(ship.x,ship.y,8+progress*10,0,TAU);ctx.fill();ctx.restore();
+    }
     ctx.save();ctx.translate(ship.x,ship.y);ctx.rotate(ship.angle);
     if(Math.hypot(ship.vx,ship.vy)>20){ctx.fillStyle='#7afce1';ctx.globalAlpha=.7;ctx.beginPath();ctx.moveTo(-8,-4);ctx.lineTo(-18-(state.reduced?0:Math.sin(simTime*55)*5),0);ctx.lineTo(-8,4);ctx.fill();ctx.globalAlpha=1;}
     ctx.shadowColor='#7afce1';ctx.shadowBlur=state.reduced?0:12;ctx.strokeStyle='#9affea';ctx.fillStyle='#142e35';ctx.lineWidth=1.8;ctx.beginPath();ctx.moveTo(16,0);ctx.lineTo(-10,-10);ctx.lineTo(-5,0);ctx.lineTo(-10,10);ctx.closePath();ctx.fill();ctx.stroke();ctx.shadowBlur=0;ctx.restore();

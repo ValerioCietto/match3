@@ -19,9 +19,9 @@ const sandbox={console,Math,Map,Set,JSON,Number,Object,Array,String,Infinity,Err
   setTimeout:()=>0,clearTimeout(){},requestAnimationFrame(){},
 };
 let source=readFileSync(path.join(__dirname,'game.js'),'utf8');
-source=source.replace('  init();',`globalThis.test={sunMaterial,growSunBlock,updateSunGrowth,levelCleared,shockwaveMultiplier,pushLiquid,updateShockwaves,visitLevel,openGalaxy,unlockedLevel,generatePlanet,rayBlocks,damage,stats,fire,update,save,load,draw,resize,renderShop,completeLevel,nextLevel,compactMantle,collides,guideMissile,advanceNuke,detonateNuke,syncDrones,assignDroneTargets,fireDroneLaser,updateDrones,interceptAttack,hexSector,regenerateBlocks,reflectProjectile,updateCoreWaves,pushShip,infectBlock,updateSnow,updatePlague,
+source=source.replace('  init();',`globalThis.test={chargedShotStats,dischargeChargedShot,updateChargedShot,updateMortars,mortarPosition,lightningTree,planYoyo,updateYoyo,buzzsaws,buzzsawDPS,sunMaterial,growSunBlock,updateSunGrowth,levelCleared,shockwaveMultiplier,pushLiquid,updateShockwaves,visitLevel,openGalaxy,unlockedLevel,generatePlanet,rayBlocks,damage,stats,fire,update,save,load,draw,resize,renderShop,completeLevel,nextLevel,compactMantle,collides,guideMissile,advanceNuke,detonateNuke,syncDrones,assignDroneTargets,fireDroneLaser,updateDrones,interceptAttack,hexSector,regenerateBlocks,reflectProjectile,updateCoreWaves,pushShip,infectBlock,updateSnow,updatePlague,
   setup(data,index=0){definitions=data.weapons;byId=Object.fromEntries(definitions.map(d=>[d.id,d]));state=freshState();state.level=index;planet=generatePlanet(index,state.seed);resetFlight();auto=false;mode='play';},
-  get state(){return state;},get planet(){return planet;},get ship(){return ship;},get mode(){return mode;},get bullets(){return bullets;},get effects(){return effects;},get drones(){return drones;},get shells(){return shells;},get blades(){return blades;},get cooldowns(){return cooldowns;},get waves(){return waves;},get shockwaves(){return shockwaves;},get snow(){return snow;},get plagueContacts(){return plagueContacts;},
+  get state(){return state;},get planet(){return planet;},get ship(){return ship;},get mode(){return mode;},get bullets(){return bullets;},get effects(){return effects;},get drones(){return drones;},get shells(){return shells;},get blades(){return blades;},get cooldowns(){return cooldowns;},get waves(){return waves;},get shockwaves(){return shockwaves;},get chargedShot(){return chargedShot;},get snow(){return snow;},get plagueContacts(){return plagueContacts;},
   equip(id){state.owned[id]=1;state.slots=[id,null,null];},fireOn(){auto=true;},stop(){auto=false;},
   aimAt(x,y){pointer={x,y,moved:true};ship.angle=Math.atan2(y-ship.y,x-ship.x);}
 };`);
@@ -51,9 +51,9 @@ for(const d of data.weapons){
   for(let frame=0;frame<240;frame++)game.update(1/60);
   assert.ok(game.planet.blocks.some(b=>b.hp<b.max),`${d.name} deals damage`);
   game.stop();game.state.owned[d.id]=5;
-  const s=game.stats(d.id);assert.equal(s.damage,d.behavior==='mining_drones'?configuredDrone(5,'damage'):d.behavior==='plague'?5:d.behavior==='shockwave'?d.baseStats.damage:d.baseStats.damage*2);
+  const s=game.stats(d.id);assert.equal(s.damage,d.behavior==='mining_drones'?configuredDrone(5,'damage'):d.behavior==='plague'?5:['shockwave','orbiting_blade','lobbed_explosion','charged_shot'].includes(d.behavior)?d.baseStats.damage:d.baseStats.damage*2);
   const timing=d.baseStats.cooldown?'cooldown':d.baseStats.cycleDuration?'cycleDuration':'contactInterval';
-  assert.ok(Math.abs(s[timing]-d.baseStats[timing]*(['mining_drones','plague','shockwave'].includes(d.behavior)?1:.92**4))<1e-9);
+  assert.ok(Math.abs(s[timing]-d.baseStats[timing]*(['mining_drones','plague','shockwave','orbiting_blade','lobbed_explosion','charged_shot'].includes(d.behavior)?1:.92**4))<1e-9);
   game.resize();game.draw();game.renderShop();
   console.log(`${d.name}: damage, upgrades, and render paths passed`);
 }
@@ -542,4 +542,114 @@ for(const id of ['guided_laser','chain_lightning','shockwave','mining_drones']){
 game.setup(data,9);game.equip('plague');game.infectBlock(game.planet.blocks[0]);game.save();
 const infected=JSON.parse(storage.get('planetDestroyer.demo.v1'));infected.plagued=[0];infected.plagueLevel=9;storage.set('planetDestroyer.demo.v1',JSON.stringify(infected));game.load();
 assert.ok(game.planet.blocks.every(b=>!b.plagued),'Restored infections cannot bypass Last Sun immunity');
+}
+
+{
+game.setup(data);game.equip('orbiting_buzzsaw');const definition=data.weapons.find(w=>w.id==='orbiting_buzzsaw');assert.equal(definition.unlockCost,200);
+const baseDPS=definition.baseStats.damage/definition.baseStats.contactInterval;
+for(let level=1;level<=5;level++){
+  game.state.owned.orbiting_buzzsaw=level;const s=game.stats('orbiting_buzzsaw'),saws=game.buzzsaws(s,3.4);assert.equal(saws.length,level);
+  for(const [i,saw]of saws.entries()){
+    assert.ok(Math.abs(saw.size-14*1.1**i)<1e-9);assert.equal(saw.damage,1.1**i);assert.equal(saw.speed,.9**i);assert.equal(saw.direction,i%2?-1:1);
+    for(const earlier of saws.slice(0,i))assert.ok(saw.radius-earlier.radius>=saw.size+earlier.size+3.999,'Disjoint orbit bands guarantee no overlap at any angle');
+  }
+  if(level>1)assert.equal(definition.upgrades[level-2].cost,Math.round(200*game.buzzsawDPS(s)/baseDPS));
+}
+const s=game.stats('orbiting_buzzsaw');const targets=game.buzzsaws(s).map((saw,id)=>({id,x:saw.x,y:saw.y,i:Math.floor(saw.x/16),j:Math.floor(saw.y/16),hp:100,max:100,reward:1,phase:'solid'}));
+game.planet.blocks=targets;game.planet.grid.clear();targets.forEach(b=>game.planet.grid.set(`${b.i},${b.j}`,b));game.planet.total=5;game.planet.remaining=5;
+game.fireOn();game.update(.016);targets.forEach((b,i)=>assert.ok(Math.abs(b.hp-(100-1.1**i))<1e-9,`Saw ${i+1} independently damages its target`));
+game.update(.016);targets.forEach((b,i)=>assert.ok(Math.abs(b.hp-(100-1.1**i))<1e-9,'Contact cooldown prevents per-frame damage'));game.stop();
+console.log('Buzzsaw: five alternating orbits, compounded size/speed/damage, non-overlap, independent damage timing, and DPS-scaled pricing passed.');
+}
+
+{
+game.setup(data);game.equip('yoyo');game.fire('yoyo');
+let yoyo=game.blades[0];assert.equal(yoyo.combo,'Surface Dance');assert.ok(yoyo.path.length>1,'Surface combo follows exposed adjacent cells');
+for(let i=1;i<yoyo.path.length;i++)assert.ok(Math.hypot(yoyo.path[i].x-yoyo.path[i-1].x,yoyo.path[i].y-yoyo.path[i-1].y)<=16*1.5);
+game.fire('yoyo');assert.equal(game.blades.length,1,'One combo at a time');
+const phases=new Set();for(let i=0;i<400&&!yoyo.done;i++){game.updateYoyo(yoyo,.016);phases.add(yoyo.phase);}
+for(const phase of ['Sleeper','Walk the Dog','Around the World','Snap Return'])assert.ok(phases.has(phase));assert.ok(yoyo.done);assert.ok(game.planet.blocks.some(b=>b.hp<b.max));
+game.setup(data);game.equip('yoyo');game.ship.x=0;game.ship.y=0;
+game.planet.blocks.filter(b=>Math.hypot(b.x,b.y)<80).forEach(b=>game.damage(b,999));
+game.fire('yoyo');yoyo=game.blades[0];assert.equal(yoyo.combo,'String Storm');
+const before=game.planet.blocks.reduce((sum,b)=>sum+b.hp,0),stormPhases=new Set();
+for(let i=0;i<400&&!yoyo.done;i++){game.updateYoyo(yoyo,.016);stormPhases.add(yoyo.phase);}
+assert.ok(stormPhases.has('Trapeze'));assert.ok(stormPhases.has('Figure Eight 1'));assert.ok(stormPhases.has('Snap Return'));assert.ok(yoyo.done);
+assert.ok(game.planet.blocks.reduce((sum,b)=>sum+b.hp,0)<before,'Figure-eight sweeps damage cavity walls');
+game.state.owned.yoyo=5;const upgraded=game.stats('yoyo');assert.equal(upgraded.loopCount,3);assert.equal(upgraded.contourSteps,26);
+const locked=game.planYoyo(upgraded);game.ship.y=-game.planet.radius-90;assert.equal(locked.combo,'String Storm');assert.equal(game.planYoyo(upgraded).combo,'Surface Dance','Next combo re-evaluates terrain');
+game.setup(data);game.equip('yoyo');game.fire('yoyo');yoyo=game.blades[0];yoyo.returning=true;game.updateYoyo(yoyo,.016);assert.equal(yoyo.phase,'Snap Return','Reflection interrupts into return');
+console.log('Yoyo: automatic terrain selection, surface contour sequence, cavity figure-eight damage, combo lock, one active yoyo, upgrade passes, and reflection return passed.');
+}
+
+{
+game.setup(data);game.equip('chain_lightning');game.planet.blocks=[];game.planet.grid.clear();game.ship.x=-80;game.ship.y=0;
+for(let i=-50;i<=50;i++)for(let j=-50;j<=50;j++){const b={id:game.planet.blocks.length,i,j,x:(i+.5)*16,y:(j+.5)*16,hp:100,max:100};game.planet.blocks.push(b);game.planet.grid.set(`${i},${j}`,b);}
+const root=game.planet.grid.get('0,0');
+for(let level=1;level<=5;level++){
+  game.state.owned.chain_lightning=level;const s=game.stats('chain_lightning');
+  const counts=level===1?[1]:level===2?[2]:level===3?[2,4]:[2,4,8];
+  const lengths=level===1?[[3,5]]:level===2?[[6,8]]:level===3?[[6,8],[4,6]]:level===4?[[6,8],[4,6],[1,3]]:[[7,13],[5,11],[2,8]];
+  for(const [roll,end]of [[0,0],[.999999,1]]){
+    const tree=game.lightningTree(root,s,()=>roll),hits=tree.flatMap(b=>b.targets.map(b=>b.id));
+    assert.equal(tree.length,counts.reduce((a,b)=>a+b,0));assert.equal(new Set(hits).size,hits.length,'No shared damage targets');
+    counts.forEach((count,index)=>assert.equal(tree.filter(b=>b.tier===index+1).length,count));
+    for(const branch of tree){assert.equal(branch.length,lengths[branch.tier-1][end]);assert.equal(branch.targets.length,branch.length);if(branch.parent!==null)assert.equal(branch.start.id,tree[branch.parent].targets.at(-1).id,'Child starts at parent endpoint');
+      let last=branch.start;for(const target of branch.targets){assert.ok(Math.hypot(target.x-last.x,target.y-last.y)<=s.jumpRange);last=target;}
+    }
+  }
+}
+game.planet.blocks=[root];game.planet.grid.clear();game.planet.grid.set('0,0',root);
+const sparse=game.lightningTree(root,game.stats('chain_lightning'),()=>.99);assert.equal(sparse.flatMap(b=>b.targets).length,1,'Sparse terrain truncates branches without duplicate hits');
+game.setup(data);game.equip('chain_lightning');game.state.owned.chain_lightning=5;
+const before=game.planet.blocks.map(b=>b.hp),s=game.stats('chain_lightning');game.aimAt(0,0);game.fire('chain_lightning');
+assert.ok(game.effects.length>3,'Trunk and multiple visible branch paths');for(const b of game.planet.blocks)assert.ok(before[b.id]-b.hp<=s.damage+1e-9,'Actual discharge damages each block once');
+console.log('Lightning tree: all five tiers/ranges, random endpoints, fork topology, no repeat hits, sparse termination, rendering paths and actual damage passed.');
+}
+
+{
+const counts=[0,2,5,7,9],ranges=[50,50,100,150,200],splits=[1,1,1,3,5],costs=[140,420,840,3360,7000];
+const definition=data.weapons.find(w=>w.id==='mortar');
+for(let level=1;level<=5;level++){
+  game.setup(data,2);game.equip('mortar');game.state.owned.mortar=level;game.ship.x=0;game.ship.y=-800;game.aimAt(0,-600);
+  const s=game.stats('mortar');assert.equal(s.blastCount-1,counts[level-1]);assert.equal(s.secondaryRange,ranges[level-1]);assert.equal(s.splitCount,splits[level-1]);
+  assert.equal(level===1?definition.unlockCost:definition.upgrades[level-2].cost,costs[level-1]);
+  assert.equal(costs[level-1],Math.round(definition.unlockCost*(s.damage*s.splitCount*s.blastCount/s.cooldown)/(definition.baseStats.damage/definition.baseStats.cooldown)));
+  game.fire('mortar');assert.equal(game.shells.length,1);const launch=game.shells[0];const midpoint=game.mortarPosition(launch,.5);
+  game.updateMortars(.375);assert.equal(game.shells.length,splits[level-1]);
+  if(level>=4){
+    const center=Math.atan2(launch.ty-midpoint.y,launch.tx-midpoint.x);
+    game.shells.forEach((shell,i)=>{assert.equal(shell.x,midpoint.x);assert.equal(shell.y,midpoint.y);assert.ok(Math.abs(Math.atan2(shell.ty-shell.y,shell.tx-shell.x)-center-(i-(s.splitCount-1)/2)*Math.PI/12)<1e-9);assert.equal(shell.canSplit,false);});
+  }
+  const primaries=game.shells.map(shell=>({x:shell.tx,y:shell.ty}));game.updateMortars(.375);
+  assert.equal(game.effects.filter(e=>e.type==='blast').length,splits[level-1]);assert.equal(game.shells.length,splits[level-1]*counts[level-1]);
+  for(const child of game.shells){assert.equal(child.secondary,true);assert.equal(child.canSplit,false);assert.ok(primaries.some(p=>Math.hypot(child.x-p.x,child.y-p.y)<1e-9));assert.ok(Math.hypot(child.tx-child.x,child.ty-child.y)<=ranges[level-1]+1e-9);}
+  game.updateMortars(.5);assert.equal(game.shells.length,0,'Secondary shells do not recurse');assert.equal(game.effects.filter(e=>e.type==='blast').length,s.splitCount*s.blastCount);
+}
+game.setup(data,2);game.equip('mortar');game.state.owned.mortar=5;game.aimAt(0,0);game.fire('mortar');game.updateMortars(2);assert.equal(game.shells.length,0);assert.equal(game.effects.filter(e=>e.type==='blast').length,50,'Large time steps resolve all events once');
+console.log('Mortar clusters: level counts/ranges, midair fan angles, secondary flight, no recursion, large-step timing and DPS prices passed.');
+}
+
+{
+game.setup(data,2);game.equip('charged_shot');game.state.owned.charged_shot=5;game.ship.x=0;game.ship.y=0;
+let s=game.stats('charged_shot');
+for(const [range,damage,seconds,width]of [[400,20,1,1],[800,40,2,2],[1600,80,4,3],[3200,160,8,4]]){
+  const shot=game.chargedShotStats(s,{x:range,y:0});assert.equal(shot.damage,damage);assert.equal(shot.duration,seconds);assert.equal(shot.width,width);assert.equal(shot.range,range);
+}
+const minimum=game.chargedShotStats(s,{x:1,y:0});assert.equal(minimum.damage,1);assert.equal(minimum.duration,.1);
+for(const [level,cap]of [1,2,4,6,10].entries()){game.state.owned.charged_shot=level+1;s=game.stats('charged_shot');const shot=game.chargedShotStats(s,{x:10000,y:0});assert.equal(shot.duration,cap);assert.equal(shot.damage,cap*20);assert.equal(shot.range,cap*400);}
+game.setup(data,2);game.equip('charged_shot');game.aimAt(0,0);s=game.stats('charged_shot');const shot=game.chargedShotStats(s),before=game.planet.blocks.reduce((sum,b)=>sum+b.hp,0);
+game.updateChargedShot('charged_shot',shot.duration-.01,true);assert.ok(game.chargedShot);assert.equal(game.planet.blocks.reduce((sum,b)=>sum+b.hp,0),before);
+game.updateChargedShot('charged_shot',.01,true);assert.equal(game.chargedShot,null);assert.ok(game.planet.blocks.reduce((sum,b)=>sum+b.hp,0)<before,'Discharges automatically at threshold');
+assert.ok(game.effects.some(e=>e.width===1&&e.points.length===2));assert.ok(game.effects.some(e=>e.points?.length>2),'Lightning trail');
+game.updateChargedShot('charged_shot',.2,true);game.updateChargedShot('charged_shot',.01,false);assert.equal(game.chargedShot,null,'Release cancels charge');
+game.updateChargedShot('charged_shot',.2,true);game.openGalaxy();assert.equal(game.chargedShot,null,'Menu cancels charge');
+game.setup(data,3);game.equip('charged_shot');s=game.stats('charged_shot');const turret=game.planet.turrets[0],mount=game.planet.blocks[turret.blockId];
+game.ship.x=turret.x+(turret.x-mount.x)*3;game.ship.y=turret.y+(turret.y-mount.y)*3;const focus={x:mount.x,y:mount.y};
+const hp=mount.hp;game.dischargeChargedShot(s,{range:Math.hypot(focus.x-game.ship.x,focus.y-game.ship.y),damage:50,width:2},focus);assert.equal(mount.hp,hp,'50 damage still interceptable');assert.ok(turret.cooldown>0);
+turret.cooldown=0;game.dischargeChargedShot(s,{range:Math.hypot(focus.x-game.ship.x,focus.y-game.ship.y),damage:51,width:2},focus);assert.equal(mount.hp,hp-51,'Above 50 bypasses interception');assert.equal(turret.cooldown,0);
+game.setup(data,6);game.equip('charged_shot');game.state.owned.charged_shot=5;game.aimAt(0,0);const shell=game.planet.blocks.find(b=>b.reflective&&b.x===8&&b.y<0);
+game.ship.x=8;game.ship.y=-game.planet.radius-30;const shellHP=shell.hp;game.dischargeChargedShot(game.stats('charged_shot'),{range:1200,damage:80,width:3},{x:8,y:500});assert.ok(shell.hp<shellHP,'Pierces reflective Turtle shell');
+game.setup(data,9);game.equip('charged_shot');const target=game.planet.blocks[0];game.ship.x=target.x;game.ship.y=target.y-40;const solarHP=target.hp;game.dischargeChargedShot(game.stats('charged_shot'),{range:80,damage:20,width:1},{x:target.x,y:target.y+40});assert.equal(target.hp,solarHP-20,'Physical shot damages Last Sun');
+console.log('Charged shot: distance/damage/time/width, charge caps, automatic discharge, cancellation, physical piercing, lightning trail, and strict defense threshold passed.');
 }
