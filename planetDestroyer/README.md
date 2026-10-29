@@ -52,6 +52,8 @@ Use **Galaxy** in the header, pause screen, or completion screen to replay compl
 
 **Last Sun:** all-liquid body with 300 initial core blocks. Lasers, lightning, and Shockwave heal blocks instead of damaging them; plague has no effect. Each core rolls every second to grow a core (1%) and normal liquid (5%), pushing occupied lines outward. Living core blocks are capped at 1,000. Growth and displacement persist across saves and Galaxy visits.
 
+Mobile entry point: **`game-mobile.html`**, with its own `game-mobile.js` and separate save. Use the left thumbstick to move, touch the arena to aim/fire, or use HOLD FIRE and Auto. Portrait and landscape are supported. See [MOBILE.md](MOBILE.md) for controls, maintenance notes, and alternative-control proposals. Run `node planetDestroyer/browser-mobile-smoke.cjs` for the mobile browser checks.
+
 ## Checks
 
 ```powershell
