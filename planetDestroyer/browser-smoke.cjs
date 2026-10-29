@@ -258,6 +258,7 @@ let browser,ws;
   for(let level=2;level<=3;level++)await evaluate("document.querySelector('[data-upgrade=\"sun_killer\"]').click()");
   assert.ok(await evaluate("document.querySelector('[data-equip=\"sun_killer\"]').closest('article').textContent.includes('LEVEL 3 / 3') && document.querySelector('[data-upgrade=\"sun_killer\"]').disabled"));
   await evaluate("document.querySelector('[data-equip=\"sun_killer\"]').click()");
+  assert.ok(await evaluate("document.querySelector('[data-equip=\"sun_killer\"]').closest('article').textContent.includes('Solar blasts: 30–200 radius / damage')"));
   const killerBefore=await evaluate("JSON.parse(localStorage.getItem('planetDestroyer.demo.v1'))");assert.equal(killerBefore.credits,0);assert.equal(Object.keys(killerBefore.owned).length,16);
   await evaluate("document.getElementById('closeShop').click();document.getElementById('autoBtn').click()");await sleep(650);
   const killerShot=await send('Page.captureScreenshot');fs.writeFileSync(path.join(screenshotDir,'sun-killer.png'),Buffer.from(killerShot.data,'base64'));

@@ -19,7 +19,7 @@ const sandbox={console,Math,Map,Set,JSON,Number,Object,Array,String,Infinity,Err
   setTimeout:()=>0,clearTimeout(){},requestAnimationFrame(){},
 };
 let source=readFileSync(path.join(__dirname,'game.js'),'utf8');
-source=source.replace('  init();',`globalThis.test={chargedShotStats,dischargeChargedShot,updateChargedShot,updateMortars,mortarPosition,lightningTree,planYoyo,updateYoyo,buzzsaws,buzzsawDPS,sunMaterial,growSunBlock,updateSunGrowth,levelCleared,shockwaveMultiplier,pushLiquid,updateShockwaves,visitLevel,openGalaxy,unlockedLevel,generatePlanet,rayBlocks,damage,stats,fire,update,save,load,draw,resize,renderShop,completeLevel,nextLevel,compactMantle,collides,guideMissile,advanceNuke,detonateNuke,syncDrones,assignDroneTargets,fireDroneLaser,updateDrones,interceptAttack,hexSector,regenerateBlocks,reflectProjectile,updateCoreWaves,pushShip,infectBlock,updateSnow,updatePlague,
+source=source.replace('  init();',`globalThis.test={sunKillerExplosion,advanceSunKiller,chargedShotStats,dischargeChargedShot,updateChargedShot,updateMortars,mortarPosition,lightningTree,planYoyo,updateYoyo,buzzsaws,buzzsawDPS,sunMaterial,growSunBlock,updateSunGrowth,levelCleared,shockwaveMultiplier,pushLiquid,updateShockwaves,visitLevel,openGalaxy,unlockedLevel,generatePlanet,rayBlocks,damage,stats,fire,update,save,load,draw,resize,renderShop,completeLevel,nextLevel,compactMantle,collides,guideMissile,advanceNuke,detonateNuke,syncDrones,assignDroneTargets,fireDroneLaser,updateDrones,interceptAttack,hexSector,regenerateBlocks,reflectProjectile,updateCoreWaves,pushShip,infectBlock,updateSnow,updatePlague,
   setup(data,index=0){definitions=data.weapons;byId=Object.fromEntries(definitions.map(d=>[d.id,d]));state=freshState();state.level=index;planet=generatePlanet(index,state.seed);resetFlight();auto=false;mode='play';},
   get state(){return state;},get planet(){return planet;},get ship(){return ship;},get mode(){return mode;},get bullets(){return bullets;},get effects(){return effects;},get drones(){return drones;},get shells(){return shells;},get blades(){return blades;},get cooldowns(){return cooldowns;},get waves(){return waves;},get shockwaves(){return shockwaves;},get chargedShot(){return chargedShot;},get snow(){return snow;},get plagueContacts(){return plagueContacts;},
   equip(id){state.owned[id]=1;state.slots=[id,null,null];},fireOn(){auto=true;},stop(){auto=false;},
@@ -656,15 +656,48 @@ console.log('Charged shot: distance/damage/time/width, charge caps, automatic di
 
 {
 const definition=data.weapons.find(w=>w.id==='sun_killer');assert.equal(definition.upgrades.length,2);
-for(const [level,count,damage,range,dps,cost]of [[1,1,100,500,1000,42000],[2,3,150,750,4500,189000],[3,5,200,1000,10000,420000]]){
+for(const [level,count,damage,range,dps,cost]of [[1,1,100,1000,1000,42000],[2,3,150,1250,4500,189000],[3,5,200,1500,10000,420000]]){
   game.setup(data,9);game.equip('sun_killer');game.state.owned.sun_killer=level;game.aimAt(0,0);const s=game.stats('sun_killer');
   assert.equal(s.projectileCount,count);assert.equal(s.damage,damage);assert.equal(s.range,range);assert.equal(s.cooldown,.1);assert.equal(s.damage*s.projectileCount/s.cooldown,dps);
   assert.equal(level===1?definition.unlockCost:definition.upgrades[level-2].cost,cost);assert.equal(cost,Math.round(140*dps/(4/1.2)));
   game.fire('sun_killer');assert.equal(game.bullets.length,count);
-  game.bullets.forEach((b,i)=>{assert.equal(b.damage,damage);assert.equal(b.left,range);assert.ok(Math.abs(Math.atan2(b.vy,b.vx)-game.ship.angle-(i-(count-1)/2)*Math.PI/36)<1e-9);});
+  game.bullets.forEach((b,i)=>{assert.equal(b.damage,damage);assert.equal(b.left,range);assert.ok(Math.abs(Math.atan2(b.vy,b.vx)-game.ship.angle-(i-(count-1)/2)*Math.PI/36)<=Math.PI/180+1e-9);});
   const before=game.planet.blocks.reduce((sum,b)=>sum+b.hp,0);for(let n=0;n<25;n++)game.update(.016);assert.ok(game.planet.blocks.reduce((sum,b)=>sum+b.hp,0)<before,'Physical projectiles damage Last Sun');
   game.save();game.load();assert.equal(game.state.owned.sun_killer,level);game.renderShop();assert.ok(element('weaponGrid').innerHTML.includes(`LEVEL ${level} / 3`));
 }
 game.setup(data,3);game.equip('sun_killer');const turret=game.planet.turrets[0],mount=game.planet.blocks[turret.blockId];game.ship.x=turret.x+(turret.x-mount.x)*3;game.ship.y=turret.y+(turret.y-mount.y)*3;game.aimAt(mount.x,mount.y);game.fire('sun_killer');game.update(.016);assert.equal(game.bullets.length,0,'Sun Killer retains projectile interception rules');
 console.log('Sun Killer: three levels, projectile fan angles/damage/range, fixed cooldown, potential-DPS prices, physical damage, defense interception and saves passed.');
+}
+
+{
+function overkillFixture(hps){game.setup(data,2);const p=game.planet;p.blocks=hps.map((hp,i)=>({id:i,i,j:0,x:i*16+8,y:8,hp,max:hp,reward:1,phase:'solid'}));p.grid.clear();p.blocks.forEach(b=>p.grid.set(`${b.i},0`,b));p.total=hps.length;p.remaining=hps.length;return p;}
+let p=overkillFixture([20,30,80]),shot={x:-8,y:8,vx:1000,vy:0,left:1000,damage:100,overkill:true};
+game.advanceSunKiller(shot,64,8,72);assert.deepEqual(p.blocks.map(b=>b.hp),[0,0,30]);assert.equal(shot.damage,0);assert.equal(shot.left,0);
+p=overkillFixture([20,30]);shot={x:-8,y:8,vx:1000,vy:0,left:1000,damage:100,overkill:true};
+game.advanceSunKiller(shot,40,8,48);assert.equal(shot.damage,50);assert.equal(shot.left,952);assert.equal(shot.x,40);
+game.advanceSunKiller(shot,56,8,16);assert.equal(shot.damage,50,'Empty space consumes range, not damage');assert.equal(shot.left,936);
+p=overkillFixture([100,30]);shot={x:-8,y:8,vx:1000,vy:0,left:1000,damage:100,overkill:true};game.advanceSunKiller(shot,48,8,56);assert.deepEqual(p.blocks.map(b=>b.hp),[0,30]);assert.equal(shot.left,0,'Exact lethal hit has no leftover damage');
+p=overkillFixture([10,50]);p.blocks[1].reflective=true;shot={x:-8,y:8,vx:1000,vy:0,left:1000,damage:100,overkill:true};game.advanceSunKiller(shot,48,8,56);assert.equal(shot.damage,90);assert.equal(p.blocks[1].hp,50);assert.ok(shot.vx<0,'Reflection retains the remaining damage budget');
+game.setup(data);game.equip('sun_killer');const headings=[];for(let n=0;n<20;n++){game.fire('sun_killer');const b=game.bullets.at(-1);headings.push(Math.atan2(b.vy,b.vx));}assert.ok(new Set(headings).size>1,'Random spread varies between projectiles');
+console.log('Sun Killer overkill: remaining damage across multiple blocks, exact kill stop, range consumption, reflection, and random spread passed.');
+}
+
+{
+for(let level=1;level<=3;level++){
+  game.setup(data,9);game.equip('sun_killer');game.state.owned.sun_killer=level;game.fire('sun_killer');const s=game.stats('sun_killer');
+  assert.equal(s.solarBlastMin,level*10);assert.equal(s.solarBlastMax,50+level*50);assert.ok(game.planet.blocks.every(b=>b.solar));
+  game.bullets.forEach(b=>{assert.equal(b.color,'#00e5ff');assert.equal(b.solarBlastMin,s.solarBlastMin);assert.equal(b.solarBlastMax,s.solarBlastMax);});
+  for(const [roll,radius]of [[0,s.solarBlastMin],[.999999,s.solarBlastMax]]){
+    const target=game.planet.blocks[0];target.hp=1000;target.max=1000;const neighbor=game.planet.blocks.find(b=>b.x===target.x+16&&b.y===target.y);neighbor.hp=1000;neighbor.max=1000;
+    game.sunKillerExplosion(game.bullets[0],target,()=>roll);assert.equal(game.effects.at(-1).r,radius);assert.equal(target.hp,1000-radius,'Solar explosions deal physical radius-based damage');assert.equal(neighbor.hp,16<=radius?1000-radius:1000);
+  }
+}
+game.setup(data,2);game.equip('sun_killer');game.fire('sun_killer');const count=game.effects.length;game.sunKillerExplosion(game.bullets[0],game.planet.blocks[0]);assert.equal(game.effects.length,count,'Non-solar impacts do not explode');
+game.setup(data,9);const p=game.planet;p.blocks=[20,20,200].map((hp,i)=>({id:i,i,j:0,x:8+i*16,y:8,hp,max:hp,reward:1,phase:'liquid',solar:true,core:false}));p.grid.clear();p.blocks.forEach(b=>p.grid.set(`${b.i},0`,b));p.remaining=3;p.total=3;p.liquidRemaining=3;
+const shot={x:-8,y:8,vx:1000,vy:0,left:1000,damage:100,solarBlastMin:100,solarBlastMax:100};
+game.advanceSunKiller(shot,56,8,64);
+assert.equal(p.blocks[0].hp,0);assert.equal(p.blocks[1].hp,0);assert.equal(p.blocks[2].hp,0);assert.equal(shot.damage,0);assert.equal(shot.left,0);
+assert.equal(game.effects.filter(e=>e.type==='blast').length,2,'Only direct hits detonate; blast-killed blocks are skipped and cannot chain');
+game.save();game.load();assert.ok(game.planet.blocks.every(b=>b.solar),'Restored and generated solar material retains its tag');
+console.log('Sun Killer solar blasts: cyan shots, upgrade radius bounds, radius-based physical damage, ordinary-block exclusion, non-recursion and overkill interaction passed.');
 }

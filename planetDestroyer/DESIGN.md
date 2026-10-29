@@ -106,7 +106,9 @@ Every damage source uses one shared damage function. It ignores already destroye
 
 ## Weapons
 
-Sun Killer has three levels with 1 / 3 / 5 physical projectiles, 100 / 150 / 200 damage each, 500 / 750 / 1,000 range, and a fixed 0.1-second cooldown. The centered fan uses 5° spacing. Potential DPS is 1,000 / 4,500 / 10,000; prices are 42,000 / 189,000 / 420,000 using the base mortar's price-per-DPS anchor. See `SUN-KILLER.md`. Maximum weapon level is derived from the JSON upgrade list in both armory and save validation.
+Sun Killer uses cyan projectiles and detonates on direct hits against tagged solar material. Radius is uniformly rolled from 10–100 at level 1, 20–150 at level 2, and 30–200 at level 3. Physical AoE damage equals the radius, without falloff. Blasts are nonrecursive and do not consume the bullet's remaining overkill budget; destroyed blocks are skipped during further travel. See `SUN-KILLER.md`.
+
+Sun Killer has three levels with 1 / 3 / 5 physical projectiles, 100 / 150 / 200 damage each, 1,000 / 1,250 / 1,500 range, and a fixed 0.1-second cooldown. The centered fan uses 5° spacing plus random ±1° per projectile. Overkills subtract the HP consumed and continue with the leftover damage. Potential DPS is 1,000 / 4,500 / 10,000; prices are 42,000 / 189,000 / 420,000 using the base mortar's price-per-DPS anchor. See `SUN-KILLER.md`. Maximum weapon level is derived from the JSON upgrade list in both armory and save validation.
 
 Charged Shot is a physical piercing beam that automatically discharges after charging for a focus-distance-dependent duration. Damage/range scale at 20 damage and 400 range per second, with 1 damage and 0.1-second minimums. Level caps are 1 / 2 / 4 / 6 / 10 seconds; shots above 50 damage bypass point defense. Reflection never applies. Both versions show a rising ship glow, charge meter, and lightning trail. See `CHARGED-SHOT.md` for width thresholds, cancellation, and pricing.
 

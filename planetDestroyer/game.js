@@ -55,7 +55,7 @@
     const scale=index===2?1:1+(index-2)*.2;
     return material(layerNames[layer],Math.round(cinderHP[layer]*scale),cinderCredits[layer]+Math.max(0,index-2),index===2?[68,70,76]:[26,30,42]);
   }
-  const colors=['#7afce1','#ffb76b','#c19aff','#f58bbe','#b2baff','#79dbff','#ffe080','#e6faff','#ff7dce','#adff73','#ff963e','#65caff','#e8fff1','#99ecff','#fff4b4','#ff784f'];
+  const colors=['#7afce1','#ffb76b','#c19aff','#f58bbe','#b2baff','#79dbff','#ffe080','#e6faff','#ff7dce','#adff73','#ff963e','#65caff','#e8fff1','#99ecff','#fff4b4','#00e5ff'];
   const icons=['Ⅱ','⋰','ϟ','◉','⌒','↕','◔','⟶','⋙','⌖','☢','✥','❄','◎','✦','☀'];
   const descriptions={
     parallel_projectiles:'Two straight shots. A dependable tool for carving tunnels.',
@@ -71,7 +71,7 @@
     piercing_nuke:'Flies to your mouse position and detonates there. Drills up to 5 × level blocks on the way; blast radius is 4 × level block widths.',
     mining_drones:'Autonomous miners roam near the ship and reserve different nearest blocks. Each level adds a drone, one pierced block, and one laser damage.',
     plague:'Infectious snow falls toward the planet center. Infected blocks take damage every second and spread infection through sustained edge contact.',
-    sun_killer:'Rapid physical projectiles. Upgrades add more powerful shots in a fan with 5° spacing. Ten volleys per second.',
+    sun_killer:'Cyan physical projectiles carry leftover damage through blocks. Solar impacts explode: larger blasts deal more damage. A 5° fan adds random ±1° aim variation.',
     charged_shot:'Hold fire to charge toward your focus. Farther aim means more damage and a longer charge. Pierces without bouncing; shots over 50 damage ignore point defense.',
     shockwave:'Expanding thunder ring. Deals 2× outward, 1× sideways, and 0.5× inward damage, smoothly by angle. Pushes liquid; cannot be deflected. Upgrades increase range.'
   };
@@ -144,7 +144,7 @@
     }
     return {blocks,grid,radius,turrets,remaining:blocks.length,total:blocks.length,coreTotal,coreRemaining:coreTotal,liquidTotal,liquidRemaining:liquidTotal,chaosTotal,chaosRemaining:chaosTotal,collapseOnTurtleOnly:index===7,collapseOnLiquid:index===3,collapseOnCore:index<2||index===6,collapse:null,compaction:0,regenAccumulator:0,growthTimer:0,growthSeed:seed>>>0,halfW:index===9?1200:Math.max(600,radius+220),halfH:index===9?1000:Math.max(450,radius+170)};
   }
-  function sunMaterial(core){return {...material(core?'Solar core':'Solar liquid',core?150:50,core?12:6,core?[200,100,20]:[150,55,18],'liquid',core),energyHealing:true,plagueImmune:true};}
+  function sunMaterial(core){return {...material(core?'Solar core':'Solar liquid',core?150:50,core?12:6,core?[200,100,20]:[150,55,18],'liquid',core),energyHealing:true,plagueImmune:true,solar:true};}
   function growSunBlock(source,core,di,dj){
     if(source.hp<=0||!source.core||(core&&planet.coreRemaining>=1000)||(!di&&!dj))return false;
     const chain=[];let i=source.i+di,j=source.j+dj;
@@ -344,7 +344,7 @@
     $('weaponGrid').innerHTML=definitions.map((d,i)=>{
       const owned=state.owned[d.id]||0,s=stats(d.id),next=d.upgrades.find(u=>u.level===owned+1),equipped=state.slots.includes(d.id);
       const timing=s.cooldown||s.cycleDuration||s.contactInterval;
-      const special=d.behavior==="sun_killer"?`${s.projectileCount} projectiles · ${s.range} range<br>${format(s.damage*s.projectileCount/s.cooldown)} potential DPS${s.projectileCount>1?" · 5° spacing":""}`:s.maxCharge?`1–${s.damage*s.maxCharge} damage · ${s.minCooldown}–${s.maxCharge}s charge<br>${s.range} max range · physical piercing`:s.blastCount?`${s.splitCount} primary ${s.splitCount===1?"shot":"shots"} · ${s.blastCount-1} secondaries each<br>${s.blastCount>1?s.secondaryRange+" scatter range":"No secondary explosions"}`:s.rootBranches?`${s.rootBranches} initial ${s.rootBranches===1?"branch":"branches"} · ${s.branchDepth} tiers<br>${Array.from({length:s.branchDepth},(_,i)=>`T${i+1}: ${s[`tier${i+1}Min`]}–${s[`tier${i+1}Max`]} blocks`).join(" · ")}`:s.contourSteps?`2 automatic combos · ${s.contourSteps} contour steps · ${s.loopCount} figure-eight ${s.loopCount===1?"pass":"passes"}`:s.sawCount?`${s.sawCount} saws · ${buzzsawDPS(s).toFixed(1)} contact DPS · alternating orbits`:s.spreadSeconds?`${s.damage} damage/s · ${Number(s.spreadSeconds.toFixed(2))}s contact to spread`:s.droneCount?`${s.droneCount} drones · ${s.penetration} blocks pierced · autonomous`:s.drillBlocks?`${s.drillBlocks} blocks drilled · ${s.blastRadiusBlocks}-block blast radius`:s.rayCount?`${s.rayCount} ${s.rayCount===1?'ray':'rays'} on different blocks · ${(1/s.cooldown).toFixed(1)} pulses/s`:s.missileCount?`${s.missileCount} guided missiles · ${s.blastRadius} blast radius`:s.pelletCount?`${s.pelletCount} pellets`:s.maxTargets?`${s.maxTargets} targets`:s.penetration?`${s.penetration} blocks pierced`:s.blastRadius?`${s.blastRadius} blast radius`:s.orbitRadius?`${s.orbitRadius} orbit radius`:`${Math.round(s.range)} range`;
+      const special=d.behavior==="sun_killer"?`${s.projectileCount} projectiles · ${s.range} range<br>${format(s.damage*s.projectileCount/s.cooldown)} projectile DPS · ±${s.randomSpreadDegrees}° random${s.projectileCount>1?" · 5° spacing":""}<br>Solar blasts: ${s.solarBlastMin}–${s.solarBlastMax} radius / damage`:s.maxCharge?`1–${s.damage*s.maxCharge} damage · ${s.minCooldown}–${s.maxCharge}s charge<br>${s.range} max range · physical piercing`:s.blastCount?`${s.splitCount} primary ${s.splitCount===1?"shot":"shots"} · ${s.blastCount-1} secondaries each<br>${s.blastCount>1?s.secondaryRange+" scatter range":"No secondary explosions"}`:s.rootBranches?`${s.rootBranches} initial ${s.rootBranches===1?"branch":"branches"} · ${s.branchDepth} tiers<br>${Array.from({length:s.branchDepth},(_,i)=>`T${i+1}: ${s[`tier${i+1}Min`]}–${s[`tier${i+1}Max`]} blocks`).join(" · ")}`:s.contourSteps?`2 automatic combos · ${s.contourSteps} contour steps · ${s.loopCount} figure-eight ${s.loopCount===1?"pass":"passes"}`:s.sawCount?`${s.sawCount} saws · ${buzzsawDPS(s).toFixed(1)} contact DPS · alternating orbits`:s.spreadSeconds?`${s.damage} damage/s · ${Number(s.spreadSeconds.toFixed(2))}s contact to spread`:s.droneCount?`${s.droneCount} drones · ${s.penetration} blocks pierced · autonomous`:s.drillBlocks?`${s.drillBlocks} blocks drilled · ${s.blastRadiusBlocks}-block blast radius`:s.rayCount?`${s.rayCount} ${s.rayCount===1?'ray':'rays'} on different blocks · ${(1/s.cooldown).toFixed(1)} pulses/s`:s.missileCount?`${s.missileCount} guided missiles · ${s.blastRadius} blast radius`:s.pelletCount?`${s.pelletCount} pellets`:s.maxTargets?`${s.maxTargets} targets`:s.penetration?`${s.penetration} blocks pierced`:s.blastRadius?`${s.blastRadius} blast radius`:s.orbitRadius?`${s.orbitRadius} orbit radius`:`${Math.round(s.range)} range`;
       let preview='';
       if(next)preview=Object.entries(next.modifiers.add).map(([k,v])=>`+${Number(v.toFixed(2))} ${k.replace(/([A-Z])/g,' $1').toLowerCase()}`).join(' · ')+(Object.values(next.modifiers.multiply||{}).some(v=>v===.92)?' · 8% faster':'')+(next.modifiers.multiply?.spreadSeconds?` · ${(s.spreadSeconds*next.modifiers.multiply.spreadSeconds).toFixed(2)}s spread`:'');
       return `<article class="weapon-card"><div class="weapon-icon" style="color:${colors[i]}">${icons[i]}</div><div><h3>${d.name}</h3><div class="badge">${owned?`LEVEL ${owned} / ${d.upgrades.length+1}${equipped?' · EQUIPPED':''}`:'LOCKED'}</div></div><p>${descriptions[d.behavior]}</p><div class="numbers">${Number(s.damage.toFixed(2))} ${s.spreadSeconds ? "damage/s" : "damage"} · ${timing.toFixed(2)}s<br>${special}</div><div class="actions">${!owned?`<button class="primary" data-buy="${d.id}" ${state.credits<d.unlockCost?'disabled':''}>Unlock · ${d.unlockCost} ◈</button>`:`<button data-upgrade="${d.id}" ${!next||state.credits<next.cost?'disabled':''}>${next?`Upgrade · ${next.cost} ◈`:'Maximum level'}</button><button data-equip="${d.id}">${equipped?'Unequip':`Equip in slot ${selectedSlot+1}`}</button>`}</div>${owned&&next?`<small class="eyebrow" style="letter-spacing:0;text-transform:none">Next: ${preview}</small>`:''}</article>`;
@@ -449,8 +449,8 @@
         break;
       case 'sun_killer':
         for(let n=0;n<s.projectileCount;n++){
-          const angle=a+(n-(s.projectileCount-1)/2)*s.spreadDegrees*Math.PI/180;
-          bullets.push({x:ship.x+Math.cos(angle)*17,y:ship.y+Math.sin(angle)*17,vx:Math.cos(angle)*s.projectileSpeed,vy:Math.sin(angle)*s.projectileSpeed,left:s.range,damage:s.damage,color});
+          const angle=a+((n-(s.projectileCount-1)/2)*s.spreadDegrees+(Math.random()*2-1)*s.randomSpreadDegrees)*Math.PI/180;
+          bullets.push({overkill:true,solarBlastMin:s.solarBlastMin,solarBlastMax:s.solarBlastMax,x:ship.x+Math.cos(angle)*17,y:ship.y+Math.sin(angle)*17,vx:Math.cos(angle)*s.projectileSpeed,vy:Math.sin(angle)*s.projectileSpeed,left:s.range,damage:s.damage,color});
         }break;
       case 'parallel_projectiles': case 'spread_projectiles':{
         const spread=d.behavior==='spread_projectiles',count=spread?s.pelletCount:s.projectileCount;
@@ -700,6 +700,21 @@
     const ticks=Math.floor((planet.regenAccumulator+1e-9)/.1);planet.regenAccumulator=Math.max(0,planet.regenAccumulator-ticks*.1);
     for(const b of planet.blocks)if(b.hp>0&&b.hp<b.max){if(b.regen)b.hp=Math.min(b.max,b.hp+b.regen*dt);if(b.regenStep&&ticks)b.hp=Math.min(b.max,b.hp+b.regenStep*ticks);}
   }
+  function sunKillerExplosion(b,block,random=Math.random){
+    if(!block.solar||!b.solarBlastMin||!b.solarBlastMax)return;
+    const radius=b.solarBlastMin+Math.floor(random()*(b.solarBlastMax-b.solarBlastMin+1));
+    for(const target of nearby(block.x,block.y,radius))if(distance(target,block)<=radius)damage(target,radius);
+    effects.push({type:'blast',x:block.x,y:block.y,r:radius,color:'#00e5ff',life:.4,max:.4});spark(block.x,block.y,'#00e5ff',8);
+  }
+  function advanceSunKiller(b,nx,ny,travel){
+    for(const block of rayBlocks(b.x,b.y,nx,ny)){
+      if(block.hp<=0)continue;
+      if(reflectProjectile(b,block))return;
+      const spent=Math.min(b.damage,block.hp);damage(block,b.damage);b.damage=Math.max(0,b.damage-spent);sunKillerExplosion(b,block);
+      if(b.damage<=0){b.left=0;return;}
+    }
+    b.left=Math.max(0,b.left-travel);b.x=nx;b.y=ny;
+  }
   function reflectProjectile(m,block){
     if(!block.reflective)return false;
     const speed=Math.hypot(m.vx,m.vy);if(!speed)return false;
@@ -918,6 +933,7 @@
       if(b.guided&&!guideMissile(b,dt))continue;
       const speed=Math.hypot(b.vx,b.vy),travel=Math.min(speed*dt,b.left),nx=b.x+b.vx/speed*travel,ny=b.y+b.vy/speed*travel;
       if(interceptAttack(b,{x:nx,y:ny})){b.left=0;continue;}
+      if(b.overkill){advanceSunKiller(b,nx,ny,travel);continue;}
       const hit=rayBlocks(b.x,b.y,nx,ny)[0];if(hit){
         if(reflectProjectile(b,hit))continue;
         if(b.guided||b.blastRadius){const radius=b.blastRadius||b.s.blastRadius;for(const block of nearby(hit.x,hit.y,radius))if(distance(block,hit)<=radius)damage(block,b.damage);effects.push({type:'blast',x:hit.x,y:hit.y,r:radius,color:b.color,life:.25,max:.25});}

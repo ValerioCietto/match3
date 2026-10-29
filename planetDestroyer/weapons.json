@@ -887,12 +887,55 @@
                         ]
                     },
                     {
-                        "id": "sun_killer", "name": "Sun Killer", "behavior": "sun_killer", "unlockCost": 42000,
-                        "baseStats": { "damage": 100, "cooldown": 0.1, "range": 500, "projectileCount": 1, "projectileSpeed": 1100, "spreadDegrees": 5 },
-                        "upgrades": [
-                            { "level": 2, "cost": 189000, "modifiers": { "add": { "damage": 50, "range": 250, "projectileCount": 2 }, "multiply": {} } },
-                            { "level": 3, "cost": 420000, "modifiers": { "add": { "damage": 50, "range": 250, "projectileCount": 2 }, "multiply": {} } }
-                        ]
-                    }
+    "id":  "sun_killer",
+    "name":  "Sun Killer",
+    "behavior":  "sun_killer",
+    "unlockCost":  42000,
+    "baseStats":  {
+                      "damage":  100,
+                      "cooldown":  0.1,
+                      "range":  1000,
+                      "projectileCount":  1,
+                      "projectileSpeed":  1100,
+                      "spreadDegrees":  5,
+                      "randomSpreadDegrees":  1,
+                      "solarBlastMin":  10,
+                      "solarBlastMax":  100
+                  },
+    "upgrades":  [
+                     {
+                         "level":  2,
+                         "cost":  189000,
+                         "modifiers":  {
+                                           "add":  {
+                                                       "damage":  50,
+                                                       "range":  250,
+                                                       "projectileCount":  2,
+                                                       "solarBlastMin":  10,
+                                                       "solarBlastMax":  50
+                                                   },
+                                           "multiply":  {
+
+                                                        }
+                                       }
+                     },
+                     {
+                         "level":  3,
+                         "cost":  420000,
+                         "modifiers":  {
+                                           "add":  {
+                                                       "damage":  50,
+                                                       "range":  250,
+                                                       "projectileCount":  2,
+                                                       "solarBlastMin":  10,
+                                                       "solarBlastMax":  50
+                                                   },
+                                           "multiply":  {
+
+                                                        }
+                                       }
+                     }
+                 ]
+}
                 ]
 }
