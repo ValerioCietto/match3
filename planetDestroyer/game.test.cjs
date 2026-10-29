@@ -50,10 +50,10 @@ for(const d of data.weapons){
   game.aimAt(0,0);game.fireOn();
   for(let frame=0;frame<240;frame++)game.update(1/60);
   assert.ok(game.planet.blocks.some(b=>b.hp<b.max),`${d.name} deals damage`);
-  game.stop();game.state.owned[d.id]=5;
+  game.stop();game.state.owned[d.id]=d.upgrades.length+1;
   const s=game.stats(d.id);assert.equal(s.damage,d.behavior==='mining_drones'?configuredDrone(5,'damage'):d.behavior==='plague'?5:['shockwave','orbiting_blade','lobbed_explosion','charged_shot'].includes(d.behavior)?d.baseStats.damage:d.baseStats.damage*2);
   const timing=d.baseStats.cooldown?'cooldown':d.baseStats.cycleDuration?'cycleDuration':'contactInterval';
-  assert.ok(Math.abs(s[timing]-d.baseStats[timing]*(['mining_drones','plague','shockwave','orbiting_blade','lobbed_explosion','charged_shot'].includes(d.behavior)?1:.92**4))<1e-9);
+  assert.ok(Math.abs(s[timing]-d.baseStats[timing]*(['mining_drones','plague','shockwave','orbiting_blade','lobbed_explosion','charged_shot','sun_killer'].includes(d.behavior)?1:.92**4))<1e-9);
   game.resize();game.draw();game.renderShop();
   console.log(`${d.name}: damage, upgrades, and render paths passed`);
 }
@@ -652,4 +652,19 @@ game.setup(data,6);game.equip('charged_shot');game.state.owned.charged_shot=5;ga
 game.ship.x=8;game.ship.y=-game.planet.radius-30;const shellHP=shell.hp;game.dischargeChargedShot(game.stats('charged_shot'),{range:1200,damage:80,width:3},{x:8,y:500});assert.ok(shell.hp<shellHP,'Pierces reflective Turtle shell');
 game.setup(data,9);game.equip('charged_shot');const target=game.planet.blocks[0];game.ship.x=target.x;game.ship.y=target.y-40;const solarHP=target.hp;game.dischargeChargedShot(game.stats('charged_shot'),{range:80,damage:20,width:1},{x:target.x,y:target.y+40});assert.equal(target.hp,solarHP-20,'Physical shot damages Last Sun');
 console.log('Charged shot: distance/damage/time/width, charge caps, automatic discharge, cancellation, physical piercing, lightning trail, and strict defense threshold passed.');
+}
+
+{
+const definition=data.weapons.find(w=>w.id==='sun_killer');assert.equal(definition.upgrades.length,2);
+for(const [level,count,damage,range,dps,cost]of [[1,1,100,500,1000,42000],[2,3,150,750,4500,189000],[3,5,200,1000,10000,420000]]){
+  game.setup(data,9);game.equip('sun_killer');game.state.owned.sun_killer=level;game.aimAt(0,0);const s=game.stats('sun_killer');
+  assert.equal(s.projectileCount,count);assert.equal(s.damage,damage);assert.equal(s.range,range);assert.equal(s.cooldown,.1);assert.equal(s.damage*s.projectileCount/s.cooldown,dps);
+  assert.equal(level===1?definition.unlockCost:definition.upgrades[level-2].cost,cost);assert.equal(cost,Math.round(140*dps/(4/1.2)));
+  game.fire('sun_killer');assert.equal(game.bullets.length,count);
+  game.bullets.forEach((b,i)=>{assert.equal(b.damage,damage);assert.equal(b.left,range);assert.ok(Math.abs(Math.atan2(b.vy,b.vx)-game.ship.angle-(i-(count-1)/2)*Math.PI/36)<1e-9);});
+  const before=game.planet.blocks.reduce((sum,b)=>sum+b.hp,0);for(let n=0;n<25;n++)game.update(.016);assert.ok(game.planet.blocks.reduce((sum,b)=>sum+b.hp,0)<before,'Physical projectiles damage Last Sun');
+  game.save();game.load();assert.equal(game.state.owned.sun_killer,level);game.renderShop();assert.ok(element('weaponGrid').innerHTML.includes(`LEVEL ${level} / 3`));
+}
+game.setup(data,3);game.equip('sun_killer');const turret=game.planet.turrets[0],mount=game.planet.blocks[turret.blockId];game.ship.x=turret.x+(turret.x-mount.x)*3;game.ship.y=turret.y+(turret.y-mount.y)*3;game.aimAt(mount.x,mount.y);game.fire('sun_killer');game.update(.016);assert.equal(game.bullets.length,0,'Sun Killer retains projectile interception rules');
+console.log('Sun Killer: three levels, projectile fan angles/damage/range, fixed cooldown, potential-DPS prices, physical damage, defense interception and saves passed.');
 }

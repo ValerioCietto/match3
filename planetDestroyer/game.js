@@ -55,8 +55,8 @@
     const scale=index===2?1:1+(index-2)*.2;
     return material(layerNames[layer],Math.round(cinderHP[layer]*scale),cinderCredits[layer]+Math.max(0,index-2),index===2?[68,70,76]:[26,30,42]);
   }
-  const colors=['#7afce1','#ffb76b','#c19aff','#f58bbe','#b2baff','#79dbff','#ffe080','#e6faff','#ff7dce','#adff73','#ff963e','#65caff','#e8fff1','#99ecff','#fff4b4'];
-  const icons=['Ⅱ','⋰','ϟ','◉','⌒','↕','◔','⟶','⋙','⌖','☢','✥','❄','◎','✦'];
+  const colors=['#7afce1','#ffb76b','#c19aff','#f58bbe','#b2baff','#79dbff','#ffe080','#e6faff','#ff7dce','#adff73','#ff963e','#65caff','#e8fff1','#99ecff','#fff4b4','#ff784f'];
+  const icons=['Ⅱ','⋰','ϟ','◉','⌒','↕','◔','⟶','⋙','⌖','☢','✥','❄','◎','✦','☀'];
   const descriptions={
     parallel_projectiles:'Two straight shots. A dependable tool for carving tunnels.',
     spread_projectiles:'A wide pellet fan that shreds crust and opens up the surface.',
@@ -71,6 +71,7 @@
     piercing_nuke:'Flies to your mouse position and detonates there. Drills up to 5 × level blocks on the way; blast radius is 4 × level block widths.',
     mining_drones:'Autonomous miners roam near the ship and reserve different nearest blocks. Each level adds a drone, one pierced block, and one laser damage.',
     plague:'Infectious snow falls toward the planet center. Infected blocks take damage every second and spread infection through sustained edge contact.',
+    sun_killer:'Rapid physical projectiles. Upgrades add more powerful shots in a fan with 5° spacing. Ten volleys per second.',
     charged_shot:'Hold fire to charge toward your focus. Farther aim means more damage and a longer charge. Pierces without bouncing; shots over 50 damage ignore point defense.',
     shockwave:'Expanding thunder ring. Deals 2× outward, 1× sideways, and 0.5× inward damage, smoothly by angle. Pushes liquid; cannot be deflected. Upgrades increase range.'
   };
@@ -207,7 +208,7 @@
       if(raw){
         const s=JSON.parse(raw);
         if(![1,2].includes(s.version)||!Number.isInteger(s.level)||s.level<0||s.level>=10||!Number.isFinite(s.credits)||s.credits<0||!s.owned||!Array.isArray(s.slots)||s.slots.length!==3||!Array.isArray(s.paid)) throw Error('Invalid save');
-        for(const [id,level] of Object.entries(s.owned)) if(!byId[id]||!Number.isInteger(level)||level<1||level>5) throw Error('Invalid weapon level');
+        for(const [id,level] of Object.entries(s.owned)) if(!byId[id]||!Number.isInteger(level)||level<1||level>byId[id].upgrades.length+1) throw Error('Invalid weapon level');
         const equipped=s.slots.filter(Boolean);
         if(new Set(equipped).size!==equipped.length||equipped.some(id=>!s.owned[id])) throw Error('Invalid loadout');
         if(s.paid.some(i=>!Number.isInteger(i)||i<0||i>=10)) throw Error('Invalid completion state');
@@ -343,10 +344,10 @@
     $('weaponGrid').innerHTML=definitions.map((d,i)=>{
       const owned=state.owned[d.id]||0,s=stats(d.id),next=d.upgrades.find(u=>u.level===owned+1),equipped=state.slots.includes(d.id);
       const timing=s.cooldown||s.cycleDuration||s.contactInterval;
-      const special=s.maxCharge?`1–${s.damage*s.maxCharge} damage · ${s.minCooldown}–${s.maxCharge}s charge<br>${s.range} max range · physical piercing`:s.blastCount?`${s.splitCount} primary ${s.splitCount===1?"shot":"shots"} · ${s.blastCount-1} secondaries each<br>${s.blastCount>1?s.secondaryRange+" scatter range":"No secondary explosions"}`:s.rootBranches?`${s.rootBranches} initial ${s.rootBranches===1?"branch":"branches"} · ${s.branchDepth} tiers<br>${Array.from({length:s.branchDepth},(_,i)=>`T${i+1}: ${s[`tier${i+1}Min`]}–${s[`tier${i+1}Max`]} blocks`).join(" · ")}`:s.contourSteps?`2 automatic combos · ${s.contourSteps} contour steps · ${s.loopCount} figure-eight ${s.loopCount===1?"pass":"passes"}`:s.sawCount?`${s.sawCount} saws · ${buzzsawDPS(s).toFixed(1)} contact DPS · alternating orbits`:s.spreadSeconds?`${s.damage} damage/s · ${Number(s.spreadSeconds.toFixed(2))}s contact to spread`:s.droneCount?`${s.droneCount} drones · ${s.penetration} blocks pierced · autonomous`:s.drillBlocks?`${s.drillBlocks} blocks drilled · ${s.blastRadiusBlocks}-block blast radius`:s.rayCount?`${s.rayCount} ${s.rayCount===1?'ray':'rays'} on different blocks · ${(1/s.cooldown).toFixed(1)} pulses/s`:s.missileCount?`${s.missileCount} guided missiles · ${s.blastRadius} blast radius`:s.pelletCount?`${s.pelletCount} pellets`:s.maxTargets?`${s.maxTargets} targets`:s.penetration?`${s.penetration} blocks pierced`:s.blastRadius?`${s.blastRadius} blast radius`:s.orbitRadius?`${s.orbitRadius} orbit radius`:`${Math.round(s.range)} range`;
+      const special=d.behavior==="sun_killer"?`${s.projectileCount} projectiles · ${s.range} range<br>${format(s.damage*s.projectileCount/s.cooldown)} potential DPS${s.projectileCount>1?" · 5° spacing":""}`:s.maxCharge?`1–${s.damage*s.maxCharge} damage · ${s.minCooldown}–${s.maxCharge}s charge<br>${s.range} max range · physical piercing`:s.blastCount?`${s.splitCount} primary ${s.splitCount===1?"shot":"shots"} · ${s.blastCount-1} secondaries each<br>${s.blastCount>1?s.secondaryRange+" scatter range":"No secondary explosions"}`:s.rootBranches?`${s.rootBranches} initial ${s.rootBranches===1?"branch":"branches"} · ${s.branchDepth} tiers<br>${Array.from({length:s.branchDepth},(_,i)=>`T${i+1}: ${s[`tier${i+1}Min`]}–${s[`tier${i+1}Max`]} blocks`).join(" · ")}`:s.contourSteps?`2 automatic combos · ${s.contourSteps} contour steps · ${s.loopCount} figure-eight ${s.loopCount===1?"pass":"passes"}`:s.sawCount?`${s.sawCount} saws · ${buzzsawDPS(s).toFixed(1)} contact DPS · alternating orbits`:s.spreadSeconds?`${s.damage} damage/s · ${Number(s.spreadSeconds.toFixed(2))}s contact to spread`:s.droneCount?`${s.droneCount} drones · ${s.penetration} blocks pierced · autonomous`:s.drillBlocks?`${s.drillBlocks} blocks drilled · ${s.blastRadiusBlocks}-block blast radius`:s.rayCount?`${s.rayCount} ${s.rayCount===1?'ray':'rays'} on different blocks · ${(1/s.cooldown).toFixed(1)} pulses/s`:s.missileCount?`${s.missileCount} guided missiles · ${s.blastRadius} blast radius`:s.pelletCount?`${s.pelletCount} pellets`:s.maxTargets?`${s.maxTargets} targets`:s.penetration?`${s.penetration} blocks pierced`:s.blastRadius?`${s.blastRadius} blast radius`:s.orbitRadius?`${s.orbitRadius} orbit radius`:`${Math.round(s.range)} range`;
       let preview='';
       if(next)preview=Object.entries(next.modifiers.add).map(([k,v])=>`+${Number(v.toFixed(2))} ${k.replace(/([A-Z])/g,' $1').toLowerCase()}`).join(' · ')+(Object.values(next.modifiers.multiply||{}).some(v=>v===.92)?' · 8% faster':'')+(next.modifiers.multiply?.spreadSeconds?` · ${(s.spreadSeconds*next.modifiers.multiply.spreadSeconds).toFixed(2)}s spread`:'');
-      return `<article class="weapon-card"><div class="weapon-icon" style="color:${colors[i]}">${icons[i]}</div><div><h3>${d.name}</h3><div class="badge">${owned?`LEVEL ${owned} / 5${equipped?' · EQUIPPED':''}`:'LOCKED'}</div></div><p>${descriptions[d.behavior]}</p><div class="numbers">${Number(s.damage.toFixed(2))} ${s.spreadSeconds ? "damage/s" : "damage"} · ${timing.toFixed(2)}s<br>${special}</div><div class="actions">${!owned?`<button class="primary" data-buy="${d.id}" ${state.credits<d.unlockCost?'disabled':''}>Unlock · ${d.unlockCost} ◈</button>`:`<button data-upgrade="${d.id}" ${!next||state.credits<next.cost?'disabled':''}>${next?`Upgrade · ${next.cost} ◈`:'Maximum level'}</button><button data-equip="${d.id}">${equipped?'Unequip':`Equip in slot ${selectedSlot+1}`}</button>`}</div>${owned&&next?`<small class="eyebrow" style="letter-spacing:0;text-transform:none">Next: ${preview}</small>`:''}</article>`;
+      return `<article class="weapon-card"><div class="weapon-icon" style="color:${colors[i]}">${icons[i]}</div><div><h3>${d.name}</h3><div class="badge">${owned?`LEVEL ${owned} / ${d.upgrades.length+1}${equipped?' · EQUIPPED':''}`:'LOCKED'}</div></div><p>${descriptions[d.behavior]}</p><div class="numbers">${Number(s.damage.toFixed(2))} ${s.spreadSeconds ? "damage/s" : "damage"} · ${timing.toFixed(2)}s<br>${special}</div><div class="actions">${!owned?`<button class="primary" data-buy="${d.id}" ${state.credits<d.unlockCost?'disabled':''}>Unlock · ${d.unlockCost} ◈</button>`:`<button data-upgrade="${d.id}" ${!next||state.credits<next.cost?'disabled':''}>${next?`Upgrade · ${next.cost} ◈`:'Maximum level'}</button><button data-equip="${d.id}">${equipped?'Unequip':`Equip in slot ${selectedSlot+1}`}</button>`}</div>${owned&&next?`<small class="eyebrow" style="letter-spacing:0;text-transform:none">Next: ${preview}</small>`:''}</article>`;
     }).join('');
     $('shopMessage').textContent=`Slot ${selectedSlot+1} selected. ${state.slots[selectedSlot]?'Equipping another weapon replaces this slot.':'Ready for a weapon.'}`;
   }
@@ -446,6 +447,11 @@
       case 'guided_missiles':
         for(let n=0;n<s.missileCount;n++)bullets.push({guided:true,pending:true,delay:n*s.burstInterval,spread:(n/Math.max(1,s.missileCount-1)-.5)*s.spreadDegrees*Math.PI/180,index:n,x:ship.x,y:ship.y,vx:0,vy:0,left:s.range,damage:s.damage,color,s,trail:[],seekTimer:0,targetId:null});
         break;
+      case 'sun_killer':
+        for(let n=0;n<s.projectileCount;n++){
+          const angle=a+(n-(s.projectileCount-1)/2)*s.spreadDegrees*Math.PI/180;
+          bullets.push({x:ship.x+Math.cos(angle)*17,y:ship.y+Math.sin(angle)*17,vx:Math.cos(angle)*s.projectileSpeed,vy:Math.sin(angle)*s.projectileSpeed,left:s.range,damage:s.damage,color});
+        }break;
       case 'parallel_projectiles': case 'spread_projectiles':{
         const spread=d.behavior==='spread_projectiles',count=spread?s.pelletCount:s.projectileCount;
         for(let n=0;n<count;n++){

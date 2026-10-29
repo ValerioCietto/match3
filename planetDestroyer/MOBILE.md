@@ -1,6 +1,6 @@
 # Mobile demo and control proposals
 
-Open `game-mobile.html` through the same local web server as the desktop demo. It loads `game-mobile.js` and shares `weapons.json`. All ten planets, fifteen weapons, upgrades, Galaxy replays, and growth mechanics are included. Mobile has its own local save (`planetDestroyer.mobile.v1`), so desktop progress is not overwritten. The mobile script is a separate copy of the simulation; future gameplay changes must be applied to both scripts.
+Open `game-mobile.html` through the same local web server as the desktop demo. It loads `game-mobile.js` and shares `weapons.json`. All ten planets, sixteen weapons, upgrades, Galaxy replays, and growth mechanics are included. Mobile has its own local save (`planetDestroyer.mobile.v1`), so desktop progress is not overwritten. The mobile script is a separate copy of the simulation; future gameplay changes must be applied to both scripts.
 
 ## Implemented controls
 

@@ -64,6 +64,8 @@ Mobile entry point: **`game-mobile.html`**, with its own `game-mobile.js` and se
 
 **Charged shot:** distance controls charge duration and physical piercing damage. Upgrades raise the charge limit to 1 / 2 / 4 / 6 / 10 seconds. Shots over 50 damage ignore point defense; all shots bypass reflection. A rising glow, charge meter, and lightning trail show its state. See [CHARGED-SHOT.md](CHARGED-SHOT.md) for exact scaling and controls. Available on desktop and mobile.
 
+**Sun Killer:** three levels with 1 / 3 / 5 physical projectiles dealing 100 / 150 / 200 damage each, always on a 0.1-second cooldown. Range is 500 / 750 / 1,000. Prices scale with potential DPS; see [SUN-KILLER.md](SUN-KILLER.md) for the table and spread interpretation. Available on desktop and mobile.
+
 ## Checks
 
 ```powershell
