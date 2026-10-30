@@ -2,6 +2,7 @@
 'use strict';
 (() => {
   const $ = id => document.getElementById(id);
+  const translate = text => window.PlanetI18n?.t(text) ?? text;
   const canvas = $('game'), ctx = canvas.getContext('2d');
   const CELL = 16, SAVE_KEY = 'planetDestroyer.demo.v1', TAU = Math.PI * 2;
   const levels = [
@@ -1018,7 +1019,7 @@
     visitLevel(state.level+1);
   }
   function resetFlight(){chargedShot=null;ship={x:0,y:-planet.radius-90,vx:0,vy:0,angle:Math.PI/2};bullets=[];blades=[];shells=[];effects=[];particles=[];cooldowns={};drones=[];waves=[];snow=[];shockwaves=[];plagueContacts=new Map();sawHits.clear();pointer.moved=false;syncDrones();}
-  function newCampaign(){if(!window.confirm('Start a new campaign? This resets all planets, credits, and weapon upgrades.'))return;state=freshState();auto=false;planet=generatePlanet(0);resetFlight();save();$('reducedMotion').checked=false;setMode('play');resize();updateHUD();}
+  function newCampaign(){if(!window.confirm(translate('Start a new campaign? This resets all planets, credits, and weapon upgrades.')))return;state=freshState();auto=false;planet=generatePlanet(0);resetFlight();save();$('reducedMotion').checked=false;setMode('play');resize();updateHUD();}
 
   const stops=[[5,5,8],[89,16,24],[212,58,18],[255,149,0],[255,243,106]];
   function blockColor(b){const t=clamp((1-b.hp/b.max)*4,0,3.999),i=Math.floor(t),f=t-i,start=i===0?b.tint:stops[i];return `rgb(${start.map((v,k)=>Math.round(v+(stops[i+1][k]-v)*f)).join(',')})`;}
@@ -1034,7 +1035,7 @@
     ctx.translate(ox,oy);ctx.scale(scale,scale);
     ctx.strokeStyle='#172337';ctx.lineWidth=1/scale;ctx.setLineDash([3,12]);ctx.beginPath();ctx.arc(0,0,planet.radius+55,0,TAU);ctx.stroke();ctx.setLineDash([]);
     ctx.strokeStyle='#18273b';ctx.strokeRect(-planet.halfW+12,-planet.halfH+12,planet.halfW*2-24,planet.halfH*2-24);
-    for(const moon of planet.moons||[]){ctx.strokeStyle='#355448';ctx.beginPath();ctx.arc(moon.x,moon.y,moon.radius+24,0,TAU);ctx.stroke();ctx.fillStyle='#8e9db5';ctx.font=`${11/scale}px monospace`;ctx.textAlign='center';ctx.fillText(`OPTIONAL MOON · ${moon.count} BLOCKS`,moon.x,moon.y+moon.radius+55);ctx.textAlign='left';}
+    for(const moon of planet.moons||[]){ctx.strokeStyle='#355448';ctx.beginPath();ctx.arc(moon.x,moon.y,moon.radius+24,0,TAU);ctx.stroke();ctx.fillStyle='#8e9db5';ctx.font=`${11/scale}px monospace`;ctx.textAlign='center';ctx.fillText(translate(`OPTIONAL MOON · ${moon.count} BLOCKS`),moon.x,moon.y+moon.radius+55);ctx.textAlign='left';}
     ctx.save();
     const collapseFraction=planet.collapse===null?0:clamp(planet.collapse/1.4,0,1);
     if(collapseFraction){const shrink=state.reduced?1:Math.max(.02,1-collapseFraction*collapseFraction);ctx.scale(shrink,shrink);ctx.globalAlpha=1-collapseFraction;}
@@ -1106,14 +1107,14 @@
   function toggleAuto(){if(!state||mode!=='play')return;auto=!auto;save();updateHUD();}
   function togglePause(){if(mode==='play')setMode('pause');else if(mode==='pause')setMode('play');else if(mode==='shop')setMode(shopReturn);else if(mode==='galaxy')setMode(galaxyReturn);}
   window.addEventListener('keydown',event=>{
-    if(['Space','KeyW','KeyA','KeyS','KeyD','KeyF','KeyU','Escape'].includes(event.code)&&!['INPUT','TEXTAREA'].includes(event.target.tagName)){
+    if(['Space','KeyW','KeyA','KeyS','KeyD','KeyF','KeyU','Escape'].includes(event.code)&&!['INPUT','TEXTAREA','SELECT'].includes(event.target.tagName)){
       if(event.code==='Space'&&mode!=='play')return;
       event.preventDefault();if(event.repeat)return;
       if(event.code==='Escape'){togglePause();return;}if(event.code==='KeyU'){if(mode==='shop')setMode(shopReturn);else if(mode==='play'||mode==='pause')openShop();return;}if(event.code==='KeyF'){toggleAuto();return;}
       if(mode==='play')keys.add(event.code);
     }
     if(event.code==='Tab'&&mode!=='play'){
-      const panel=$(mode),focusable=[...panel.querySelectorAll('button:not(:disabled),input')];if(!focusable.length)return;const first=focusable[0],last=focusable.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
+      const panel=$(mode),focusable=[...panel.querySelectorAll('button:not(:disabled),input,select')];if(!focusable.length)return;const first=focusable[0],last=focusable.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
     }
   });
   window.addEventListener('keyup',event=>keys.delete(event.code));

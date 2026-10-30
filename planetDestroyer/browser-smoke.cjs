@@ -10,7 +10,7 @@ const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const profile=fs.mkdtempSync(path.join(os.tmpdir(),'planet-destroyer-browser-'));
 const server=http.createServer((req,res)=>{
   const name=decodeURIComponent(new URL(req.url,'http://localhost').pathname).replace(/^\//,'');
-  if(!['game.html','game.js','weapons.json'].includes(name)){res.writeHead(404);res.end();return;}
+  if(!['game.html','game.js','weapons.json','i18n.js'].includes(name)){res.writeHead(404);res.end();return;}
   res.setHeader('Content-Type',name.endsWith('.html')?'text/html':name.endsWith('.js')?'text/javascript':'application/json');
   res.end(fs.readFileSync(path.join(__dirname,name)));
 });
@@ -36,6 +36,7 @@ let browser,ws;
   console.log('Browser connected; loading demo.');
   await send('Runtime.enable');await send('Page.enable');await send('Page.navigate',{url});
   await until("!!document.getElementById('startBtn') && !document.getElementById('startBtn').disabled");
+  await require('./i18n-browser-checks.cjs')({evaluate,send,until,mobile:false});
   await evaluate("document.getElementById('startBtn').click()");
   await send('Input.dispatchKeyEvent',{type:'keyDown',key:' ',code:'Space',windowsVirtualKeyCode:32});
   await sleep(2200);

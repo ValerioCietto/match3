@@ -2,6 +2,8 @@
 
 The playable demo is `game.html`; all game logic is in `game.js`. Weapon base statistics and upgrade definitions load from `weapons.json`.
 
+**English / Italiano:** choose the language on the welcome screen or in the pause menu, on desktop and mobile. Use `?lang=it` for Italian or `?lang=en` for English on either HTML page. Missing or unsupported values default to English, regardless of older saved language preferences. The menu selector applies immediately and updates the URL without reloading, preserving other parameters and the fragment; reloading retains the language in that URL. Campaign progress is unaffected. Menus, weapon descriptions and stats, planet objectives, notifications, touch instructions, and accessibility labels are translated; planet proper names and keyboard key labels stay unchanged. Shared translations live in `i18n.js`, loaded before the game script. When adding UI wording or new weapons, add Italian phrases there as well. The browser smoke suites check switching, reload persistence, and preservation of campaign data.
+
 From the repository directory (`match3`, containing `package.json`), run:
 
 ```powershell
