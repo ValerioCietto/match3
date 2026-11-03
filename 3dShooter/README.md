@@ -14,4 +14,6 @@ From the repository root run `npm start`, then open `http://localhost:3000/3dSho
 - Hull regeneration costs 25 credits and repairs 1 hull per second of active flight, capped at 100 hull.
 - Guided missiles cost 10 credits to unlock and start at one missile every 5 seconds, dealing 3 damage. Separate upgrades add 0.1 volleys/second, 1 missile/volley, or 1 damage/missile per level; each starts at 10 credits with 1.3× cost growth. Missiles home on different living enemies, reserving targets across active volleys. If there are fewer available targets, fewer missiles launch. A missile expires if its target dies or after 8 seconds.
 
+Missiles launch along the ship's forward heading at twice its current forward speed: 24 m/s cruising, 64 m/s boosting, or 4 m/s braking. They fly straight for 0.2 seconds, then turn toward their reserved target at up to 3 radians/second while approaching a 55 m/s homing speed.
+
 Run logic and simulated-DOM runtime checks with `node --test 3dShooter/core.test.mjs 3dShooter/runtime.test.mjs`.

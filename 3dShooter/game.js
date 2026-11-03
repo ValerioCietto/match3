@@ -76,12 +76,13 @@ function fireVolley(){
   if(target)bullet.v=mul(unit(sub(target.p,bullet.p)),100);
  }
 }
+function shipSpeed(){return brake||keys.ControlLeft||keys.ControlRight?2:boost||keys.ShiftLeft||keys.ShiftRight?32:12;}
 function fireMissiles(){
  const reserved=new Set(bullets.filter(b=>b.missile&&b.life>0).map(b=>b.target));
  const targets=enemies.filter(e=>e.hp>0&&!reserved.has(e)).sort((a,b)=>length(sub(a.p,player))-length(sub(b.p,player))).slice(0,value('missile_amount',1));
  for(const target of targets){
   const p=add(player,mul(forward,2));
-  bullets.push({missile:true,target,p,v:mul(unit(sub(target.p,p)),55),life:8,damage:value('missile_damage',3)});
+  bullets.push({missile:true,target,p,v:mul(forward,shipSpeed()*2),age:0,life:8,damage:value('missile_damage',3)});
  }
  if(targets.length)play('shot');
 }
@@ -99,7 +100,7 @@ function update(dt){
  elapsed+=dt;invincible=Math.max(0,invincible-dt);bombClock=Math.max(0,bombClock-dt);
  yaw+=(steer[0]+((keys.ArrowRight||keys.KeyD)?1:0)-((keys.ArrowLeft||keys.KeyA)?1:0))*dt*1.6;
  pitch=Math.max(-1.4,Math.min(1.4,pitch+(-steer[1]+((keys.ArrowUp||keys.KeyW)?1:0)-((keys.ArrowDown||keys.KeyS)?1:0))*dt*1.25));basis();
- const speed=brake||keys.ControlLeft||keys.ControlRight?2:boost||keys.ShiftLeft||keys.ShiftRight?32:12;
+ const speed=shipSpeed();
  player=add(player,mul(forward,speed*dt));
  player=add(player,mul(right,((keys.KeyE?1:0)-(keys.KeyQ?1:0))*18*dt));
  const radius=Math.hypot(...player.map((v,i)=>v/RADII[i]));if(radius>.97){player=mul(player,.97/radius);toastBoundary();}basis();
@@ -113,7 +114,19 @@ function update(dt){
  for(const b of bullets){
   if(b.missile){
    if(b.target.hp<=0||!enemies.includes(b.target)){b.life=0;continue;}
-   b.v=mul(unit(sub(b.target.p,b.p)),55);
+   // Clear the launcher straight ahead before gradually steering toward the target.
+   if(b.age>=.2){
+    const heading=unit(b.v),desired=unit(sub(b.target.p,b.p));
+    const cosine=Math.max(-1,Math.min(1,dot(heading,desired))),angle=Math.acos(cosine);
+    let direction=desired;
+    if(angle>3*dt){
+     let tangent=sub(desired,mul(heading,cosine));
+     if(length(tangent)<1e-6){const axis=Math.abs(heading[1])<.9?[0,1,0]:[1,0,0];tangent=sub(axis,mul(heading,dot(axis,heading)));}
+     direction=add(mul(heading,Math.cos(3*dt)),mul(unit(tangent),Math.sin(3*dt)));
+    }
+    b.v=mul(direction,length(b.v)+(55-length(b.v))*(1-Math.exp(-2*dt)));
+   }
+   b.age+=dt;
   }
   const previous=b.p;b.p=add(b.p,mul(b.v,dt));b.life-=dt;
   for(const e of enemies){if(e.hp<=0||(b.missile&&e!==b.target))continue;if(segmentHitsBox(previous,b.p,e.p,e.size/2+.15)){b.life=0;e.hp-=b.damage;e.flash=.14;burst(b.p,b.missile?'#ffb65c':b.critical?'#ff6477':'#b4ffe3',b.missile?12:3);if(e.hp<=0){kills++;save.money+=e.bounty;burst(e.p,e.color,e.name==='boss'?40:15);play(e.name==='boss'?'boss':'hit');persist();}break;}}

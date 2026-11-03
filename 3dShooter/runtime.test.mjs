@@ -109,6 +109,8 @@ test('launch, game loop, touch steering, pause, shop purchase and persistence',a
  vm.runInContext('updateSystems(.11)',sandbox);
  assert.equal(vm.runInContext('bullets.length',sandbox),1);
  assert.equal(vm.runInContext('bullets[0].damage',sandbox),3);
+ assert.equal(vm.runInContext('length(bullets[0].v)',sandbox),24);
+ assert.equal(vm.runInContext('dot(unit(bullets[0].v),forward)',sandbox),1);
  card('Missile amount').children[1].click();
  card('Missile amount').children[1].click();
  card('Missile damage').children[1].click();
@@ -122,7 +124,10 @@ test('launch, game loop, touch steering, pause, shop purchase and persistence',a
  assert.equal(vm.runInContext('bullets.length',sandbox),3);
  // Homing follows a moving target, and loss of a target safely removes its missile.
  vm.runInContext('bullets[0].target.p[0]+=15;spawnClock=100;fireClock=100;update(.04)',sandbox);
- assert.equal(vm.runInContext('dot(unit(bullets[0].v),unit(sub(bullets[0].target.p,bullets[0].p)))>1-1e-9',sandbox),true);
+ assert.equal(vm.runInContext('length(bullets[0].v)',sandbox),24);
+ assert.equal(vm.runInContext('dot(unit(bullets[0].v),forward)',sandbox),1);
+ vm.runInContext('for(let i=0;i<15;i++)update(.04)',sandbox);
+ assert.equal(vm.runInContext('dot(unit(bullets[0].v),unit(sub(bullets[0].target.p,bullets[0].p)))>.99',sandbox),true);
  vm.runInContext('bullets[0].target.hp=0;update(.04)',sandbox);
  assert.equal(vm.runInContext('bullets.length',sandbox),2);
  vm.runInContext(`
@@ -131,6 +136,16 @@ test('launch, game loop, touch steering, pause, shop purchase and persistence',a
  `,sandbox);
  assert.equal(vm.runInContext('enemies.length',sandbox),0);
  assert.equal(vm.runInContext('bullets.length',sandbox),0);
+ // Launch speed uses current thrust, and forward follows the ship's yaw and pitch.
+ vm.runInContext(`
+  yaw=.8;pitch=.4;basis();
+  enemies=[{...chooseEnemy(.5),p:[0,0,-60]}];boost=true;fireMissiles();
+ `,sandbox);
+ assert.ok(Math.abs(vm.runInContext('length(bullets[0].v)',sandbox)-64)<1e-9);
+ assert.ok(vm.runInContext('dot(unit(bullets[0].v),forward)',sandbox)>1-1e-9);
+ vm.runInContext('bullets=[];boost=false;brake=true;fireMissiles()',sandbox);
+ assert.ok(Math.abs(vm.runInContext('length(bullets[0].v)',sandbox)-4)<1e-9);
+ vm.runInContext('brake=false',sandbox);
  // Pausing freezes regeneration and the missile clock; restarting clears projectiles.
  get('pause').click();
  vm.runInContext('hp=70;missileClock=2',sandbox);callback(6000);
