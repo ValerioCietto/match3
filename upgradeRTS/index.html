@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Upgrade RTS · Axe Valley</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header><a href="../" aria-label="Back to games">←</a><div><small>UPGRADE RTS</small><h1>Axe Valley</h1></div><div class="gold"><span>GOLD</span><strong id="gold">0</strong></div><button id="pause" aria-label="Pause game">Pause</button></header>
+  <main>
+    <section class="playfield" aria-label="Game area">
+      <canvas id="game" aria-label="Move with WASD, arrow keys, or the joystick. Stand in a station circle to work." tabindex="0"></canvas>
+      <div class="level"><small id="level-name"></small><strong id="objective"></strong><progress id="level-progress" max="8" value="0"></progress></div>
+      <div id="message" role="status">Welcome! Walk to the trees to gather wood.</div>
+      <div id="joystick" aria-label="Movement joystick"><div id="stick"></div></div>
+      <div class="controls">WASD / arrows <span>or drag the joystick</span></div>
+      <div id="paused" hidden><h2>Taking a break</h2><p>Press Resume to return to the valley.</p></div>
+    </section>
+    <aside>
+      <div class="eyebrow">YOUR WORKSHOP</div><h2>From forest to forge.</h2><p class="intro">Stand in a station’s ring to work. Your bag and workers share all materials.</p>
+      <div id="inventory"></div>
+      <div class="recipe"><h3>Make an axe · earn 20 gold</h3><p>Tree → Wood → Sawmill → Stick</p><p>Mine → Iron → Furnace → Ingot → Forge → Head</p><p>Assembly table: Stick + Head → Axe</p><p>Market table: Axe → <b>20 gold</b></p></div>
+      <div class="hint"><b>Build your crew</b><p>Stand on a gold pad beside a station to hire its worker. Each pad takes 1 gold every 0.1s. Step away to pause; your payment is kept.</p><p>After hiring, the pad upgrades that station’s speed.</p></div>
+      <p class="footer-note">Workers keep producing while you explore.<br>Progress lasts for this play session.</p>
+    </aside>
+  </main>
+  <script src="engine.js"></script><script src="game.js"></script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#060c19">
+  <title>Void Wing · 3D Arena</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="space" aria-label="3D starship arena"></canvas>
+  <header>
+    <div class="brand"><span class="logo">⌁</span><div>VOID WING<small>ELLIPSOID ARENA / 01</small></div></div>
+    <button id="pause" aria-label="Pause game">Ⅱ</button>
+  </header>
+  <section class="telemetry">
+    <div><small>HULL INTEGRITY</small><div class="hull"><i id="healthBar"></i></div><span id="health">100%</span></div>
+    <div class="credits"><small>CREDITS</small><strong id="money">0</strong></div>
+  </section>
+  <div id="readout"><span class="live"></span> SECTOR ACTIVE <b id="kills">0 ELIMINATED</b></div>
+  <div id="reticle"><i></i><span>AUTO FIRE</span></div>
+  <div id="target"></div>
+  <div id="toast" role="status"></div>
+  <aside class="flight"><small>FLIGHT VECTOR</small><span id="position">X 0 / Y 0 / Z 0</span><span id="speed">CRUISE · 12 m/s</span></aside>
+  <div class="controls">
+    <div class="steering"><div id="stick" aria-label="Drag to steer"><div id="knob"></div></div><small>STEER / PITCH</small></div>
+    <div class="actions"><button id="boost">↟<small>BOOST</small></button><button id="brake">↓<small>BRAKE</small></button><button id="bomb">✳<small>BOMB</small></button></div>
+  </div>
+  <footer><button id="shop">＋ <span>UPGRADES</span></button><span id="enemyCount">0 HOSTILES</span><button id="sound" aria-label="Toggle sound">SOUND OFF</button></footer>
+  <section id="overlay" class="overlay">
+    <div class="intro panel"><div class="eyebrow">DEEP SPACE / SURVIVAL</div><h1>Into the<br><em>void.</em></h1><p>Pilot your starship through a 3D arena.<br>Hunt the cubes. Upgrade. Survive.</p><div class="brief"><span>01 <b>Steer</b> with the left stick</span><span>02 <b>Line up</b> cubes for automatic fire</span><span>03 <b>Boost</b> away from incoming enemies</span></div><button id="launch" class="primary">LAUNCH STARSHIP <span>↗</span></button><small class="desktop">WASD / arrows steer · Shift boost · Ctrl brake<br>Q / E strafe · Space bomb · P pause</small><p id="loading" role="status">Loading upgrade catalog…</p></div>
+  </section>
+  <dialog id="hangar"><div class="shopHead"><div><small>STARSHIP SYSTEMS</small><h2>Upgrade hangar</h2></div><button id="closeShop" aria-label="Close upgrades">×</button></div><div class="shopBalance"><span id="shopMoney"></span><button id="sort" hidden>Sort by price ↑</button></div><div id="catalog"></div><p class="shopNote">Upgrade your weapons, targeting, and hull. Progress saves automatically.</p></dialog>
+  <script type="module" src="game.js"></script>
+</body>
+</html>
