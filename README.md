@@ -7,6 +7,14 @@ https://valeriocietto.github.io/match3/
 Edit `showcase-projects.js` to change project titles, links, or numeric `weight`
 values. Higher weights appear first. Missing or invalid weights count as `0`;
 equal weights keep their order in the file. All projects initially have weight `0`.
+Set `"category": "quiz"` to place a project in the Quizzes section. Other projects
+appear in Games showcase. Weight ordering applies within each section.
+
+For multiple versions, use one project entry with a `versions` array of
+`{ "label": "v2", "href": "folder/game_v2.html" }` objects. Each version appears
+as a link inside the same card. Keep the project's `href` as its default URL;
+that URL also determines the presentation image folder. The project's `weight`
+controls the whole card's position.
 
 Add an optional `presentation-image.png` beside a project's HTML file (or inside
 its folder for directory links). Projects sharing a folder share that image;

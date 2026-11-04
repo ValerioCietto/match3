@@ -9,12 +9,14 @@ function projectImage(project) {
 }
 
 const grid = document.getElementById('project-grid');
+const quizGrid = document.getElementById('quiz-grid');
 const sortedProjects = [...showcaseProjects].sort((a, b) => projectWeight(b) - projectWeight(a));
 
 for (const [index, project] of sortedProjects.entries()) {
-  const card = document.createElement('a');
+  const hasVersions = Array.isArray(project.versions) && project.versions.length > 0;
+  const card = document.createElement(hasVersions ? 'article' : 'a');
   card.className = 'card';
-  card.href = project.href;
+  if (!hasVersions) card.href = project.href;
   card.style.setProperty('--hue', (index * 47 + 200) % 360);
   const media = document.createElement('div');
   media.className = 'card-media';
@@ -34,17 +36,29 @@ for (const [index, project] of sortedProjects.entries()) {
   body.className = 'card-body';
   const title = document.createElement('h3');
   title.textContent = project.title;
-  const action = document.createElement('span');
-  action.className = 'card-action';
-  action.textContent = 'Explore project';
-  const arrow = document.createElement('span');
-  arrow.className = 'card-arrow';
-  arrow.setAttribute('aria-hidden', 'true');
-  arrow.textContent = '↗';
-  action.append(arrow);
-  body.append(title, action);
+  const actions = document.createElement('div');
+  actions.className = hasVersions ? 'card-links' : 'card-links card-links-single';
+  for (const version of hasVersions ? project.versions : [{ label: 'Explore project' }]) {
+    const action = document.createElement(hasVersions ? 'a' : 'span');
+    action.className = 'card-action';
+    action.textContent = version.label;
+    if (hasVersions) {
+      action.href = version.href;
+      action.setAttribute('aria-label', `${project.title}: ${version.label}`);
+    }
+    const arrow = document.createElement('span');
+    arrow.className = 'card-arrow';
+    arrow.setAttribute('aria-hidden', 'true');
+    arrow.textContent = '↗';
+    action.append(arrow);
+    actions.append(action);
+  }
+  body.append(title, actions);
   card.append(media, body);
-  grid.append(card);
+  const targetGrid = project.category === 'quiz' ? quizGrid : grid;
+  targetGrid.append(card);
 }
 
-document.getElementById('project-count').textContent = `${sortedProjects.length} projects`;
+const quizCount = sortedProjects.filter(project => project.category === 'quiz').length;
+document.getElementById('project-count').textContent = `${sortedProjects.length - quizCount} projects`;
+document.getElementById('quiz-count').textContent = `${quizCount} quizzes`;

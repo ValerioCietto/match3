@@ -18,6 +18,7 @@ const showcaseProjects = [
   {
     "title": "Testa se hai la tetracromia!",
     "href": "tetracromia_quiz.html",
+    "category": "quiz",
     "weight": 0
   },
   {
@@ -98,47 +99,66 @@ const showcaseProjects = [
   {
     "title": "Planet Destroyer",
     "href": "planetDestroyer/game.html",
-    "weight": 0
+    "weight": 0,
+    "versions": [
+      {
+        "label": "Desktop",
+        "href": "planetDestroyer/game.html"
+      },
+      {
+        "label": "Mobile",
+        "href": "planetDestroyer/game-mobile.html"
+      }
+    ]
   },
   {
-    "title": "Planet Destroyer - Mobile",
-    "href": "planetDestroyer/game-mobile.html",
-    "weight": 0
-  },
-  {
-    "title": "Three Warriors - Battle Sandbox",
+    "title": "Three Warriors",
     "href": "astraRTS/game.html",
-    "weight": 0
+    "weight": 0,
+    "versions": [
+      {
+        "label": "Battle Sandbox",
+        "href": "astraRTS/game.html"
+      },
+      {
+        "label": "Adventure",
+        "href": "astraRTS/adventure.html"
+      }
+    ]
   },
   {
-    "title": "Three Warriors - Adventure",
-    "href": "astraRTS/adventure.html",
-    "weight": 0
-  },
-  {
-    "title": "Fantasy RTS - Original",
+    "title": "Fantasy RTS",
     "href": "rts/battle.html",
-    "weight": 0
+    "weight": 0,
+    "versions": [
+      {
+        "label": "Original",
+        "href": "rts/battle.html"
+      },
+      {
+        "label": "v2 - Dragon Dogfight",
+        "href": "rts/battle_v2.html"
+      },
+      {
+        "label": "v3 - Dragon Cone & Bouncy Boulders",
+        "href": "rts/battle_v3.html"
+      }
+    ]
   },
   {
-    "title": "Fantasy RTS - Dragon Dogfight (v2)",
-    "href": "rts/battle_v2.html",
-    "weight": 0
-  },
-  {
-    "title": "Fantasy RTS - Dragon Cone & Bouncy Boulders (v3)",
-    "href": "rts/battle_v3.html",
-    "weight": 0
-  },
-  {
-    "title": "Turn-Based Arena - Battle Simulator (v2)",
+    "title": "Turn-Based Arena",
     "href": "rpgMultiplayer/battlesim_v2.html",
-    "weight": 0
-  },
-  {
-    "title": "Turn-Based Arena - Roles & Abilities (v3)",
-    "href": "rpgMultiplayer/battle_sim_v3.html",
-    "weight": 0
+    "weight": 0,
+    "versions": [
+      {
+        "label": "v2 - Battle Simulator",
+        "href": "rpgMultiplayer/battlesim_v2.html"
+      },
+      {
+        "label": "v3 - Roles & Abilities",
+        "href": "rpgMultiplayer/battle_sim_v3.html"
+      }
+    ]
   },
   {
     "title": "MTG Solo Simulator",
@@ -176,39 +196,46 @@ const showcaseProjects = [
     "weight": 0
   },
   {
-    "title": "Lancio del Bouquet - Original",
+    "title": "Lancio del Bouquet",
     "href": "Bouquet%20Laucher%20Commando/bouquet.html",
-    "weight": 0
+    "weight": 0,
+    "versions": [
+      {
+        "label": "Original",
+        "href": "Bouquet%20Laucher%20Commando/bouquet.html"
+      },
+      {
+        "label": "v2",
+        "href": "Bouquet%20Laucher%20Commando/bouquet_v2.html"
+      },
+      {
+        "label": "v3",
+        "href": "Bouquet%20Laucher%20Commando/bouquet_v3.html"
+      }
+    ]
   },
   {
-    "title": "Lancio del Bouquet - v2",
-    "href": "Bouquet%20Laucher%20Commando/bouquet_v2.html",
-    "weight": 0
-  },
-  {
-    "title": "Lancio del Bouquet - v3",
-    "href": "Bouquet%20Laucher%20Commando/bouquet_v3.html",
-    "weight": 0
-  },
-  {
-    "title": "Falling Sand Sandbox - Original",
+    "title": "Falling Sand Sandbox",
     "href": "sandbox.html",
-    "weight": 0
-  },
-  {
-    "title": "Sand, Water & Rock Sandbox - v2",
-    "href": "sandbox_v2.html",
-    "weight": 0
-  },
-  {
-    "title": "Water Source Sandbox - v3",
-    "href": "sandbox_v3.html",
-    "weight": 0
-  },
-  {
-    "title": "Realistic Flow Sandbox - v4",
-    "href": "sandbox_v4.html",
-    "weight": 0
+    "weight": 0,
+    "versions": [
+      {
+        "label": "Original",
+        "href": "sandbox.html"
+      },
+      {
+        "label": "v2 - Sand, Water & Rock",
+        "href": "sandbox_v2.html"
+      },
+      {
+        "label": "v3 - Water Source",
+        "href": "sandbox_v3.html"
+      },
+      {
+        "label": "v4 - Realistic Flow",
+        "href": "sandbox_v4.html"
+      }
+    ]
   },
   {
     "title": "Bouncing Balls",
@@ -218,21 +245,25 @@ const showcaseProjects = [
   {
     "title": "Quiz di Fine Corso",
     "href": "quiz_fine_corso.html",
+    "category": "quiz",
     "weight": 0
   },
   {
     "title": "Quiz - Fondamenti del Pensiero Critico",
     "href": "quiz_pensiero_critico.html",
+    "category": "quiz",
     "weight": 0
   },
   {
     "title": "Quiz Socievolezza",
     "href": "quiz_socialita.html",
+    "category": "quiz",
     "weight": 0
   },
   {
     "title": "Quanto conosci gli sposi?",
     "href": "quiz_sposi.html",
+    "category": "quiz",
     "weight": 0
   }
 ];
