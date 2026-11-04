@@ -1,261 +1,30 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Games ShowCase</title>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-  <style>
-    * {
-      box-sizing: border-box;
-    }
-    body {
-      margin: 0;
-      font-family: 'Roboto', sans-serif;
-      background: #121212;
-      color: #fff;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 40px 20px;
-    }
-    h1 {
-      font-size: 2.5em;
-      margin-bottom: 10px;
-    }
-    p {
-      color: #aaa;
-      margin-bottom: 40px;
-    }
-    .card {
-      background: #1e1e1e;
-      border-radius: 12px;
-      padding: 20px 30px;
-      width: 100%;
-      max-width: 500px;
-      margin-bottom: 20px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      transition: transform 0.2s;
-    }
-    .card:hover {
-      transform: scale(1.02);
-    }
-    .card a {
-      color: #90caf9;
-      text-decoration: none;
-      font-size: 1.1em;
-    }
-    .material-icons {
-      font-size: 24px;
-      color: #90caf9;
-    }
-  </style>
+  <meta name="description" content="Browser games, playful experiments, and interactive demos.">
+  <title>Games Showcase</title>
+  <link rel="stylesheet" href="showcase.css">
+  <script src="showcase-projects.js" defer></script>
+  <script src="showcase.js" defer></script>
 </head>
 <body>
-  <h1>Games ShowCase</h1>
-  <p>Made with vibe coding techniques</p>
-  <div class="card">
-    <a href="upgradeRTS/">Upgrade RTS - Axe Valley</a>
-    <span class="material-icons">arrow_forward</span>
-  </div>
-  <div class="card">
-    <a href="./shooter/shooter_upgrade_complete.html">🎮 Arcade Shooter Upgrade Complete</a>
-    <span class="material-icons">arrow_forward</span>
-  </div>
-
-  <div class="card">
-    <a href="https://valeriocietto.github.io/RaysOfImprovedDoom/game.html">🎮 Rays of Improved Doom</a>
-    <span class="material-icons">arrow_forward</span>
-  </div>
-
-  <div class="card">
-    <a href="tetracromia_quiz.html"> Testa se hai la tetracromia!</a>
-    <span class="material-icons">arrow_forward</span>
-  </div>
-
-  <div class="card">
-    <a href="spinning_balls.html">🎈 Una animazione da capogiro</a>
-    <span class="material-icons">arrow_forward</span>
-  </div>
-  
-  <div class="card">
-    <a href="game.html">🎮 Match 3</a>
-    <span class="material-icons">arrow_forward</span>
-  </div>
-  
-  <div class="card">
-    <a href="animation.html">📽️ Animazione di un omino che corre buffa</a>
-    <span class="material-icons">arrow_forward</span>
-  </div>
-
-  <div class="card">
-    <a href="stickmanPoseEditor.html">🕴️ StickMan Pose Editor</a>
-    <span class="material-icons">arrow_forward</span>
-  </div>
-
-  <div class="card">
-    <a href="runner.html">🏃 Running Stickman</a>
-    <span class="material-icons">arrow_forward</span>
-  </div>
-
-  <div class="card">
-    <a href="clock_game.html"> Clock game</a>
-    <span class="material-icons">arrow_forward</span>
-  </div>
-
-  <div class="card">
-    <a href="memoria_temporanea.html"> Test Memoria Temporanea</a>
-    <span class="material-icons">arrow_forward</span>
-  </div>
-
-  <div class="card">
-    <a href="rts.html"> Gioco strategia realtime</a>
-    <span class="material-icons">arrow_forward</span>
-  </div>
-
-  <div class="card">
-    <a href="mtgModular/"> Un gioco di carte collezionabili famoso</a>
-    <span class="material-icons">arrow_forward</span>
-  </div>
-  <div class="card">
-    <a href="strategicBattle/">Strategic Battle - Air Command</a>
-    <span class="material-icons">arrow_forward</span>
-  </div>
-  <div class="card">
-    <a href="3dShooter/">Void Wing - Cylinder Run</a>
-    <span class="material-icons" aria-hidden="true">arrow_forward</span>
-  </div>
-  <div class="card">
-    <a href="gemma-shooter/">Gemma Mobile Shooter</a>
-    <span class="material-icons" aria-hidden="true">arrow_forward</span>
-  </div>
-  <div class="card">
-    <a href="starship.html">Starship - Shield &amp; Overdrive</a>
-    <span class="material-icons" aria-hidden="true">arrow_forward</span>
-  </div>
-  <div class="card">
-    <a href="starship_deml.html">Triangle Starship</a>
-    <span class="material-icons" aria-hidden="true">arrow_forward</span>
-  </div>
-  <div class="card">
-    <a href="sniper.html">Point &amp; Click Sniper</a>
-    <span class="material-icons" aria-hidden="true">arrow_forward</span>
-  </div>
-  <div class="card">
-    <a href="planetDestroyer/game.html">Planet Destroyer</a>
-    <span class="material-icons" aria-hidden="true">arrow_forward</span>
-  </div>
-  <div class="card">
-    <a href="planetDestroyer/game-mobile.html">Planet Destroyer - Mobile</a>
-    <span class="material-icons" aria-hidden="true">arrow_forward</span>
-  </div>
-  <div class="card">
-    <a href="astraRTS/game.html">Three Warriors - Battle Sandbox</a>
-    <span class="material-icons" aria-hidden="true">arrow_forward</span>
-  </div>
-  <div class="card">
-    <a href="astraRTS/adventure.html">Three Warriors - Adventure</a>
-    <span class="material-icons" aria-hidden="true">arrow_forward</span>
-  </div>
-  <div class="card">
-    <a href="rts/battle.html">Fantasy RTS - Original</a>
-    <span class="material-icons" aria-hidden="true">arrow_forward</span>
-  </div>
-  <div class="card">
-    <a href="rts/battle_v2.html">Fantasy RTS - Dragon Dogfight (v2)</a>
-    <span class="material-icons" aria-hidden="true">arrow_forward</span>
-  </div>
-  <div class="card">
-    <a href="rts/battle_v3.html">Fantasy RTS - Dragon Cone &amp; Bouncy Boulders (v3)</a>
-    <span class="material-icons" aria-hidden="true">arrow_forward</span>
-  </div>
-  <div class="card">
-    <a href="rpgMultiplayer/battlesim_v2.html">Turn-Based Arena - Battle Simulator (v2)</a>
-    <span class="material-icons" aria-hidden="true">arrow_forward</span>
-  </div>
-  <div class="card">
-    <a href="rpgMultiplayer/battle_sim_v3.html">Turn-Based Arena - Roles &amp; Abilities (v3)</a>
-    <span class="material-icons" aria-hidden="true">arrow_forward</span>
-  </div>
-  <div class="card">
-    <a href="mtg/playTest.html">MTG Solo Simulator</a>
-    <span class="material-icons" aria-hidden="true">arrow_forward</span>
-  </div>
-  <div class="card">
-    <a href="castleCrashers.html">Castle Crashers - Catapult Castle</a>
-    <span class="material-icons" aria-hidden="true">arrow_forward</span>
-  </div>
-  <div class="card">
-    <a href="shipbuilder.html">Starship Builder</a>
-    <span class="material-icons" aria-hidden="true">arrow_forward</span>
-  </div>
-  <div class="card">
-    <a href="energy.html">Energy Idle Generator</a>
-    <span class="material-icons" aria-hidden="true">arrow_forward</span>
-  </div>
-  <div class="card">
-    <a href="memory.html">Memory - 24 Tiles</a>
-    <span class="material-icons" aria-hidden="true">arrow_forward</span>
-  </div>
-  <div class="card">
-    <a href="cryingBaby/">Crying Baby - Una piccola grande settimana</a>
-    <span class="material-icons" aria-hidden="true">arrow_forward</span>
-  </div>
-  <div class="card">
-    <a href="gravidanza.html">40 Settimane</a>
-    <span class="material-icons" aria-hidden="true">arrow_forward</span>
-  </div>
-  <div class="card">
-    <a href="bouquet.html">Lancio del Bouquet - Original</a>
-    <span class="material-icons" aria-hidden="true">arrow_forward</span>
-  </div>
-  <div class="card">
-    <a href="bouquet_v2.html">Lancio del Bouquet - v2</a>
-    <span class="material-icons" aria-hidden="true">arrow_forward</span>
-  </div>
-  <div class="card">
-    <a href="bouquet_v3.html">Lancio del Bouquet - v3</a>
-    <span class="material-icons" aria-hidden="true">arrow_forward</span>
-  </div>
-  <div class="card">
-    <a href="sandbox.html">Falling Sand Sandbox - Original</a>
-    <span class="material-icons" aria-hidden="true">arrow_forward</span>
-  </div>
-  <div class="card">
-    <a href="sandbox_v2.html">Sand, Water &amp; Rock Sandbox - v2</a>
-    <span class="material-icons" aria-hidden="true">arrow_forward</span>
-  </div>
-  <div class="card">
-    <a href="sandbox_v3.html">Water Source Sandbox - v3</a>
-    <span class="material-icons" aria-hidden="true">arrow_forward</span>
-  </div>
-  <div class="card">
-    <a href="sandbox_v4.html">Realistic Flow Sandbox - v4</a>
-    <span class="material-icons" aria-hidden="true">arrow_forward</span>
-  </div>
-  <div class="card">
-    <a href="infinite_balls.html">Bouncing Balls</a>
-    <span class="material-icons" aria-hidden="true">arrow_forward</span>
-  </div>
-  <div class="card">
-    <a href="quiz_fine_corso.html">Quiz di Fine Corso</a>
-    <span class="material-icons" aria-hidden="true">arrow_forward</span>
-  </div>
-  <div class="card">
-    <a href="quiz_pensiero_critico.html">Quiz - Fondamenti del Pensiero Critico</a>
-    <span class="material-icons" aria-hidden="true">arrow_forward</span>
-  </div>
-  <div class="card">
-    <a href="quiz_socialita.html">Quiz Socievolezza</a>
-    <span class="material-icons" aria-hidden="true">arrow_forward</span>
-  </div>
-  <div class="card">
-    <a href="quiz_sposi.html">Quanto conosci gli sposi?</a>
-    <span class="material-icons" aria-hidden="true">arrow_forward</span>
-  </div>
+  <main>
+    <header class="intro">
+      <p class="eyebrow">THE PLAYGROUND</p>
+      <h1>Small games.<br><span>Big experiments.</span></h1>
+      <p class="description">Browser games, curious ideas, and playful experiments.<br>Made with vibe coding techniques. Pick one and jump in.</p>
+    </header>
+    <section aria-labelledby="collection-title">
+      <div class="collection-heading">
+        <h2 id="collection-title">Games showcase</h2>
+        <span id="project-count"></span>
+      </div>
+      <div id="project-grid" class="project-grid"></div>
+      <noscript><p>Enable JavaScript to view the project collection.</p></noscript>
+    </section>
+    <footer>A collection of things made to be played.</footer>
+  </main>
 </body>
 </html>

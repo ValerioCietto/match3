@@ -2,6 +2,17 @@ Varie prove di demo fatte con vibe coding.
 Quiz, mini giochi, test di animazioni, e altre cose varie.
 https://valeriocietto.github.io/match3/
 
+## Showcase catalog
+
+Edit `showcase-projects.js` to change project titles, links, or numeric `weight`
+values. Higher weights appear first. Missing or invalid weights count as `0`;
+equal weights keep their order in the file. All projects initially have weight `0`.
+
+Add an optional `presentation-image.png` beside a project's HTML file (or inside
+its folder for directory links). Projects sharing a folder share that image;
+root-level HTML projects use the root image. External projects look for the image
+at their own URL. Missing images show a colored initials placeholder instead.
+
 ## Local development
 
 Requires Node.js 22 or newer. From this directory:
