@@ -29,10 +29,10 @@ check(Math.abs(Number($('stat-massEmpty').dataset.value)-mass/8)<1e-8,'Scaled st
 $('undo').click();check(Math.abs(Number($('stat-massEmpty').dataset.value)-mass/4)<1e-8,'Undo stats');$('redo').click();check(Math.abs(Number($('stat-massEmpty').dataset.value)-mass/8)<1e-8,'Redo stats');
 $('mirror').checked=true;$('mirror').dispatchEvent(new Event('change'));check(Math.abs(Number($('stat-massEmpty').dataset.value)-mass/4)<1e-8,'Mirrored stats');
 const {presetCatalog}=await import('./model.js');
-for(const id of ['carrier','megaCargo','explorer','cruise']){
+for(const id of ['interceptor','carrier','megaCargo','explorer','cruise']){
   const before=$('shipName').value;$('preset').value=id;$('preset').dispatchEvent(new Event('change'));check($('presetDescription').textContent===presetCatalog[id].description,'Preset description');$('build').click();check($('shipName').value===presetCatalog[id].name,'Preset name '+id);check($('assembly').children.length===preset(id).length,'Preset assembly '+id);check(Number($('stat-acceleration').dataset.value)>0,'Preset stats '+id);
   renderer.setModel(combined(preset(id)));renderer.render({yaw:-.65,pitch:.55,distance:3.5,width:400,height:400,grid:false,wireframe:false});renderer.gl.readPixels(0,0,400,400,renderer.gl.RGBA,renderer.gl.UNSIGNED_BYTE,pixels);check(pixels.some((v,i)=>i%4===3&&v>0),'Preset pixels '+id);check(renderer.gl.getError()===0,'Preset GL '+id);
   $('undo').click();check($('shipName').value===before,'Undo preset '+id);$('redo').click();check($('shipName').value===presetCatalog[id].name,'Redo preset '+id);
 }
-document.getElementById('result').textContent='PASS: Four role presets, WebGL, hull and wing options, live stats, scaling, mirror, undo/redo';}catch(e){document.getElementById('result').textContent='FAIL: '+e.stack;}};
+document.getElementById('result').textContent='PASS: Five role presets including Interceptor, WebGL, hull and wing options, live stats, scaling, mirror, undo/redo';}catch(e){document.getElementById('result').textContent='FAIL: '+e.stack;}};
 </script></body></html>

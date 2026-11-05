@@ -6,6 +6,7 @@ Choose a ship under **Starting point**, then click **Load preset**. Loading is u
 
 | Preset | Layout |
 | --- | --- |
+| Kestrel / Interceptor | Six small thrusters with matching cores, four wings in an X configuration, a tapered arrowhead hull and paired cannons. |
 | Bastion / Carrier | Four side-facing fighter bays, four defense turrets, shields and paired engines. |
 | Mammoth / Mega Cargo | Eight enlarged cargo pods, four fuel canisters and heavy engines around a long box hull. |
 | Odyssey / Deep Space Explorer | Four enlarged fuel tanks, oversized engines and thruster cores, shields and a crew cabin. |
