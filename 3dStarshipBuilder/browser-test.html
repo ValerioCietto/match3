@@ -34,5 +34,12 @@ for(const id of ['interceptor','carrier','megaCargo','explorer','cruise']){
   renderer.setModel(combined(preset(id)));renderer.render({yaw:-.65,pitch:.55,distance:3.5,width:400,height:400,grid:false,wireframe:false});renderer.gl.readPixels(0,0,400,400,renderer.gl.RGBA,renderer.gl.UNSIGNED_BYTE,pixels);check(pixels.some((v,i)=>i%4===3&&v>0),'Preset pixels '+id);check(renderer.gl.getError()===0,'Preset GL '+id);
   $('undo').click();check($('shipName').value===before,'Undo preset '+id);$('redo').click();check($('shipName').value===presetCatalog[id].name,'Redo preset '+id);
 }
-document.getElementById('result').textContent='PASS: Five role presets including Interceptor, WebGL, hull and wing options, live stats, scaling, mirror, undo/redo';}catch(e){document.getElementById('result').textContent='FAIL: '+e.stack;}};
+check($('save').nextElementSibling===$('testFlight')&&$('testFlight').nextElementSibling===$('export'),'Test Flight toolbar placement');
+const designName=$('shipName').value,designParts=$('assembly').children.length;
+$('testFlight').click();await new Promise(r=>setTimeout(r,400));check($('testFlightDialog').open,'Flight opens');check($('flightTitle').textContent===designName,'Flight current ship');check(!$('flightError').textContent,'Flight WebGL initialization');check($('flightShip').getContext('webgl').getError()===0,'Flight GL');
+$('flightPause').click();check($('flightPause').textContent==='Resume','Flight pause');$('flightReset').click();check($('flightPause').textContent==='Pause','Flight restart');
+$('flightClose').click();await new Promise(r=>setTimeout(r,80));check(!$('testFlightDialog'),'Flight closes');check($('shipName').value===designName&&$('assembly').children.length===designParts,'Flight preserves design');
+$('testFlight').click();check($('testFlightDialog').open,'Flight reopens');$('testFlightDialog').close();await new Promise(r=>setTimeout(r,80));check(!$('testFlightDialog'),'Flight cleanup');
+$('preset').value='empty';$('build').click();check($('testFlight').disabled,'Empty ship cannot launch');$('undo').click();check(!$('testFlight').disabled,'Restored ship can launch');
+document.getElementById('result').textContent='PASS: Test Flight launch/pause/restart/close, toolbar placement, presets, WebGL, stats and editor controls';}catch(e){document.getElementById('result').textContent='FAIL: '+e.stack;}};
 </script></body></html>

@@ -1,5 +1,11 @@
 # Orbital Foundry — 3D Starship Builder
 
+## Test Flight
+
+Click **Test Flight** between **Save project** and **Export glTF** to launch the current ship in a modal flight sandbox. The ship uses WebGL rendering against a moving starfield. Arrow keys steer, W/S adjust throttle, and Space brakes; on-screen controls also support touch. Pause, restart, or return with **Back to builder** / Escape. Switching away pauses the simulation. Empty ships cannot launch; ships without propulsion show a message and remain stationary.
+
+Flight uses the recommended full-load acceleration, terminal speed, turn acceleration and turn-rate limit. Throttle sets the target cruise speed; arcade damping eases toward it, with stronger damping for braking. Steering rates accelerate toward their limits. This is a handling preview without combat or collisions. The ship model is fitted to the preview camera, and the design is never edited by flight. Run `node --test 3dStarshipBuilder/flight.test.mjs` for movement checks.
+
 ## Example ships
 
 Choose a ship under **Starting point**, then click **Load preset**. Loading is undoable.

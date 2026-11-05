@@ -1,4 +1,5 @@
 import {WebGLRenderer} from './webgl-renderer.js';
+import {openTestFlight} from './flight.js';
 import {recommendedStats,statFields} from './stats.js';
 import {library,hullProfiles,wingProfiles,presetCatalog,part,preset,combined,validateProject,objFiles,gltf} from './model.js';
 const $=id=>document.getElementById(id),key='orbital-foundry-v1';
@@ -8,6 +9,9 @@ const status=message=>{$('status').textContent=message;};
 try{const saved=localStorage.getItem(key);if(saved)project=validateProject(JSON.parse(saved));}catch{status('Could not restore autosave. A starter ship is ready.');}
 try{renderer=new WebGLRenderer(canvas,{onError:message=>{$('renderError').hidden=false;$('renderError').textContent=message;},onRestore:()=>{$('renderError').hidden=true;dirty=true;}});}catch(error){$('renderError').hidden=false;$('renderError').textContent=error.message;}
 const current=()=>project.parts.find(p=>p.id===selected);
+document.head.append(Object.assign(document.createElement('link'),{rel:'stylesheet',href:new URL('./flight.css',import.meta.url).href}));
+const testFlightButton=document.createElement('button');testFlightButton.id='testFlight';testFlightButton.textContent='Test Flight';$('export').before(testFlightButton);
+testFlightButton.onclick=()=>openTestFlight(project);
 const presetDescription=document.createElement('p');presetDescription.id='presetDescription';presetDescription.className='hint';$('preset').after(presetDescription);
 $('preset').replaceChildren();for(const [id,spec] of Object.entries(presetCatalog)){const option=document.createElement('option');option.value=id;option.textContent=spec.label;$('preset').append(option);}
 $('preset').onchange=()=>presetDescription.textContent=presetCatalog[$('preset').value].description;$('preset').onchange();
@@ -34,6 +38,7 @@ for(const [id,label,min,max,step,,unit] of wingFields){const field=document.crea
 function remember(){undo.push(JSON.stringify(project));if(undo.length>60)undo.shift();redo=[];}
 function persist(){try{localStorage.setItem(key,JSON.stringify(project));status('All changes saved locally.');}catch{status('Autosave unavailable. Use Save project to keep your work.');}}
 function refresh(){
+  testFlightButton.disabled=!project.parts.length;
   updateStats();
   if(!current())selected=project.parts[0]?.id;
   const model=combined(project.parts);if(model.vertices.length)renderer?.setModel(model);else if(renderer)renderer.model=null;
