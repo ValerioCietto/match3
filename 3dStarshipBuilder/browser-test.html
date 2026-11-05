@@ -1,0 +1,38 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Builder smoke test</title><body><pre id="result">RUNNING</pre><iframe src="./" width="1400" height="1000"></iframe><script type="module">
+const frame=document.querySelector('iframe');
+frame.onload=async()=>{try{await new Promise(r=>setTimeout(r,800));const d=frame.contentDocument,$=id=>d.getElementById(id),check=(value,message)=>{if(!value)throw Error(message);};
+check($('renderError').hidden,'WebGL initialization');check($('assembly').children.length>0,'Initial assembly');const initial=$('assembly').children.length;
+$('parts').children[0].click();check($('assembly').children.length===initial+1,'Add part');$('duplicate').click();check($('assembly').children.length===initial+2,'Duplicate');$('delete').click();check($('assembly').children.length===initial+1,'Delete');$('undo').click();check($('assembly').children.length===initial+2,'Undo');$('redo').click();check($('assembly').children.length===initial+1,'Redo');
+const x=d.querySelector('[data-field="position"][data-axis="0"]');x.value='2';x.dispatchEvent(new Event('change'));check(x.value==='2','Transform');$('mirror').checked=true;$('mirror').dispatchEvent(new Event('change'));check($('assembly').querySelector('[aria-pressed=true]').textContent.includes('×2'),'Mirror');
+$('preset').value='empty';$('build').click();check(!$('empty').hidden&&$('export').disabled,'Empty state');$('undo').click();check($('empty').hidden&&!$('export').disabled,'Restore');
+const {WebGLRenderer}=await import('./webgl-renderer.js'),{combined,preset}=await import('./model.js');const canvas=document.createElement('canvas');canvas.width=400;canvas.height=400;const renderer=new WebGLRenderer(canvas);renderer.setModel(combined(preset('fighter')));renderer.render({yaw:-.65,pitch:.55,distance:3.5,width:400,height:400,grid:true,wireframe:false});const pixels=new Uint8Array(400*400*4);renderer.gl.readPixels(0,0,400,400,renderer.gl.RGBA,renderer.gl.UNSIGNED_BYTE,pixels);check(pixels.some((v,i)=>i%4===3&&v>0),'Rendered pixels');check(renderer.gl.getError()===0,'GL error');
+const {library,part}=await import('./model.js');
+const wingButton=[...$('parts').children].find(b=>b.querySelector('small').textContent==='Swept wing');wingButton.click();check(!$('wingOptions').hidden&&$('hullOptions').hidden,'Wing inspector visible');
+$('wingProfile').value='delta';$('wingProfile').dispatchEvent(new Event('change'));check($('wingProfile').value==='delta','Wing profile');
+for(const [id,value] of [['wingSweep','20'],['wingDihedral','-30'],['wingThickness','0.4']]){$(id).value=value;$(id).dispatchEvent(new Event('change'));check($(id).value===value,'Wing control '+id);}
+$('undo').click();check($('wingThickness').value==='0.16','Undo wing thickness');$('redo').click();check($('wingThickness').value==='0.4','Redo wing thickness');$('duplicate').click();check($('wingProfile').value==='delta'&&$('wingDihedral').value==='-30','Duplicate wing options');
+const hullButton=[...$('parts').children].find(b=>b.querySelector('small').textContent==='Hull');hullButton.click();check(!$('hullOptions').hidden,'Hull inspector visible');
+$('hullProfile').value='diamond';$('hullProfile').dispatchEvent(new Event('change'));check($('hullProfile').value==='diamond','Change hull profile');
+$('deckTaper').value='.5';$('deckTaper').dispatchEvent(new Event('change'));check($('deckTaper').value==='0.5','Hull taper');$('undo').click();check($('deckTaper').value==='1','Undo hull taper');$('redo').click();check($('deckTaper').value==='0.5','Redo hull taper');
+$('duplicate').click();check($('hullProfile').value==='diamond'&&$('deckTaper').value==='0.5','Duplicate hull options');
+for(const [type,spec] of Object.entries(library).filter(([,s])=>s.composite)){
+  const button=[...$('parts').children].find(b=>b.textContent.includes(spec.name));check(button,'Library button '+type);button.click();check($('selectedName').textContent===spec.name,'Select '+type);check($('hullOptions').hidden,'Hide hull options for other parts');
+  renderer.setModel(combined([part(type)]));renderer.render({yaw:-.65,pitch:.55,distance:3.5,width:400,height:400,grid:false,wireframe:false});renderer.gl.readPixels(0,0,400,400,renderer.gl.RGBA,renderer.gl.UNSIGNED_BYTE,pixels);check(pixels.some((v,i)=>i%4===3&&v>0),'Block pixels '+type);check(renderer.gl.getError()===0,'Block GL error '+type);
+}
+check($('wingOptions').hidden,'Wing options hidden for other parts');
+check($('recommendedStats').nextElementSibling.contains($('shipName')),'Stats above ship name');check($('recommendedStatsValues').children.length===17,'All requested stats');
+$('preset').value='empty';$('build').click();check(Number($('stat-massEmpty').dataset.value)===0,'Empty stats');
+[...$('parts').children].find(b=>b.querySelector('small').textContent==='Engine').click();
+const mass=Number($('stat-massEmpty').dataset.value),cost=Number($('stat-expectedCost').dataset.value);
+for(const input of d.querySelectorAll('[data-field="scale"]')){input.value='.5';input.dispatchEvent(new Event('change'));}
+check(Math.abs(Number($('stat-massEmpty').dataset.value)-mass/8)<1e-8,'Scaled stats');check(Math.abs(Number($('stat-expectedCost').dataset.value)-cost/8)<1e-8,'Scaled cost');
+$('undo').click();check(Math.abs(Number($('stat-massEmpty').dataset.value)-mass/4)<1e-8,'Undo stats');$('redo').click();check(Math.abs(Number($('stat-massEmpty').dataset.value)-mass/8)<1e-8,'Redo stats');
+$('mirror').checked=true;$('mirror').dispatchEvent(new Event('change'));check(Math.abs(Number($('stat-massEmpty').dataset.value)-mass/4)<1e-8,'Mirrored stats');
+const {presetCatalog}=await import('./model.js');
+for(const id of ['carrier','megaCargo','explorer','cruise']){
+  const before=$('shipName').value;$('preset').value=id;$('preset').dispatchEvent(new Event('change'));check($('presetDescription').textContent===presetCatalog[id].description,'Preset description');$('build').click();check($('shipName').value===presetCatalog[id].name,'Preset name '+id);check($('assembly').children.length===preset(id).length,'Preset assembly '+id);check(Number($('stat-acceleration').dataset.value)>0,'Preset stats '+id);
+  renderer.setModel(combined(preset(id)));renderer.render({yaw:-.65,pitch:.55,distance:3.5,width:400,height:400,grid:false,wireframe:false});renderer.gl.readPixels(0,0,400,400,renderer.gl.RGBA,renderer.gl.UNSIGNED_BYTE,pixels);check(pixels.some((v,i)=>i%4===3&&v>0),'Preset pixels '+id);check(renderer.gl.getError()===0,'Preset GL '+id);
+  $('undo').click();check($('shipName').value===before,'Undo preset '+id);$('redo').click();check($('shipName').value===presetCatalog[id].name,'Redo preset '+id);
+}
+document.getElementById('result').textContent='PASS: Four role presets, WebGL, hull and wing options, live stats, scaling, mirror, undo/redo';}catch(e){document.getElementById('result').textContent='FAIL: '+e.stack;}};
+</script></body></html>

@@ -1,0 +1,68 @@
+import {library,mesh} from './model.js';
+
+// Game-balance coefficients per cubic unit. Mass is in tonnes; cost is credits.
+// Missing capabilities contribute zero. Every module contributes mass, hull and cost.
+export const moduleRates = {
+  hull: {mass: .65, hull: 300, repair: 1.5, cost: 200, torque: 2},
+  wing: {mass: .25, hull: 100, cost: 260, torque: 60},
+  engine: {mass: 1.2, hull: 150, cost: 1200, thrust: 45, torque: 8},
+  cockpit: {mass: .45, hull: 120, cost: 1000, torque: 4},
+  cannon: {mass: 1.1, hull: 180, cost: 1400},
+  cargo: {mass: .35, payload: 1.5, hull: 140, cost: 160},
+  fin: {mass: .3, hull: 100, cost: 180, torque: 20},
+  nozzle: {mass: .6, hull: 90, cost: 800, thrust: 20, torque: 5},
+  turret: {mass: 1.2, hull: 250, cost: 2000},
+  fighterBay: {mass: .5, payload: 2, hull: 180, cost: 900},
+  fuelPod: {mass: .2, payload: .8, hull: 90, cost: 300},
+  shieldGenerator: {mass: .9, hull: 120, shield: 800, shieldRegen: 20, cost: 2400},
+  passengerModule: {mass: .4, hull: 180, cost: 450}
+};
+const neutral = {position:[0,0,0],rotation:[0,0,0],scale:[1,1,1],mirror:false};
+
+// Signed tetrahedra measure the actual closed surfaces, not the bounding box.
+// For composite blocks this sums component solids, including intersecting components.
+export function moduleVolume(p){
+  const m=mesh({...p,...neutral});let volume=0;
+  for(const face of m.faces)for(let i=1;i<face.length-1;i++){
+    const [a,b,c]=[face[0],face[i],face[i+1]].map(index=>m.vertices[index]);
+    volume+=a[0]*(b[1]*c[2]-b[2]*c[1])+a[1]*(b[2]*c[0]-b[0]*c[2])+a[2]*(b[0]*c[1]-b[1]*c[0]);
+  }
+  return Math.abs(volume/6)*p.scale.reduce((a,b)=>a*b,1)*(p.mirror?2:1);
+}
+const defaultVolumes=Object.fromEntries(Object.keys(library).map(type=>[type,moduleVolume({type,name:type,color:library[type].color,...neutral})]));
+
+export function moduleStats(p){
+  const volume=moduleVolume(p),r=moduleRates[p.type],capacity=volume/defaultVolumes[p.type];
+  const passengers=p.type==='passengerModule'?capacity*8:0;
+  return {
+    volume,massEmpty:volume*r.mass,massFull:volume*(r.mass+(r.payload||0))+passengers*.1,
+    thrust:volume*(r.thrust||0),torque:volume*(r.torque||0),wingVolume:p.type==='wing'?volume:0,
+    shieldRegen:volume*(r.shieldRegen||0),shieldMax:volume*(r.shield||0),
+    hullRegen:volume*(r.repair||0),hullMax:volume*r.hull,
+    maxPassengers:passengers,gunSlots:p.type==='cannon'?capacity:0,
+    turretSlots:p.type==='turret'?capacity:0,fighterSlots:p.type==='fighterBay'?capacity:0,
+    expectedCost:volume*r.cost
+  };
+}
+export function recommendedStats(parts){
+  const totals={volume:0,massEmpty:0,massFull:0,thrust:0,torque:0,wingVolume:0,shieldRegen:0,shieldMax:0,hullRegen:0,hullMax:0,maxPassengers:0,gunSlots:0,turretSlots:0,fighterSlots:0,expectedCost:0};
+  for(const p of parts)for(const [key,value] of Object.entries(moduleStats(p)))totals[key]+=value;
+  const inertia=totals.volume;
+  const turnInertia=inertia?inertia/(1+6*totals.wingVolume/inertia):0;
+  const acceleration=totals.massFull?totals.thrust/totals.massFull:0;
+  // Arcade damping gives a useful finite cruise-speed recommendation in space.
+  const maxSpeed=totals.massFull?totals.thrust/(.08*totals.massFull+.02*inertia):0;
+  const turnAcceleration=turnInertia?totals.torque/turnInertia:0;
+  const turnMaxSpeed=turnAcceleration?Math.sqrt(turnAcceleration)*12:0;
+  return {...totals,acceleration,maxSpeed,inertia,turnAcceleration,turnMaxSpeed,turnInertia};
+}
+
+export const statFields=[
+  ['acceleration','Acceleration','m/s²'],['maxSpeed','Max speed','m/s'],['inertia','Inertia','vol'],
+  ['massFull','Mass full','t'],['massEmpty','Mass empty','t'],
+  ['turnAcceleration','Turn acceleration','°/s²'],['turnMaxSpeed','Turn max speed','°/s'],['turnInertia','Turn inertia','idx'],
+  ['shieldRegen','Shield regen','HP/s'],['shieldMax','Shield max','HP'],
+  ['hullRegen','Hull regen','HP/s'],['hullMax','Hull max','HP'],
+  ['maxPassengers','Max passengers',''],['gunSlots','Gun slots',''],['turretSlots','Turret slots',''],['fighterSlots','Fighter slots',''],
+  ['expectedCost','Expected cost','cr']
+];

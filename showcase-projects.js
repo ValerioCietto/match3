@@ -1,6 +1,21 @@
 // Higher weights appear first. Equal weights keep the order below.
 const showcaseProjects = [
   {
+    "title": "3D Starship Builder - Orbital Foundry",
+    "href": "3dStarshipBuilder/",
+    "weight": 10,
+    "versions": [
+      {
+        "label": "Build a starship",
+        "href": "3dStarshipBuilder/"
+      },
+      {
+        "label": "Explore 3D mesh references",
+        "href": "3dGallery/"
+      }
+    ]
+  },
+  {
     "title": "3D Gallery - Mesh Catalog",
     "href": "3dGallery/",
     "weight": 0
