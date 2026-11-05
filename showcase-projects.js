@@ -1,6 +1,11 @@
 // Higher weights appear first. Equal weights keep the order below.
 const showcaseProjects = [
   {
+    "title": "3D Gallery - Mesh Catalog",
+    "href": "3dGallery/",
+    "weight": 0
+  },
+  {
     "title": "Upgrade RTS - Axe Valley",
     "href": "upgradeRTS/",
     "weight": 0

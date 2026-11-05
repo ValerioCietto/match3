@@ -1,0 +1,32 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>WebGL renderer regression checks</title>
+<canvas id="canvas" width="256" height="256"></canvas>
+<pre id="result">Running…</pre>
+<script type="module">
+import { WebGLRenderer } from './webgl-renderer.js';
+import { catalog, upgrades } from './catalog.js';
+const result=document.getElementById('result');
+try {
+  const renderer=new WebGLRenderer(document.getElementById('canvas'));
+  const gl=renderer.gl;
+  const view={yaw:0,pitch:0,distance:4.2,width:256,height:256,wireframe:false,grid:false};
+  const pixel=new Uint8Array(4);
+  // Draw the near red surface FIRST and the far green surface LAST.
+  // The center must remain red regardless of face submission order.
+  const fixture={color:'#ffffff',vertices:[[-1,-1,.4],[1,-1,.4],[0,1,.4],[-1,-1,-.4],[1,-1,-.4],[0,1,-.4]],faces:[[0,1,2],[3,4,5]],faceColors:['#ff0000','#00ff00']};
+  for(const reverse of [false,true]) {
+    renderer.setModel(reverse?{...fixture,faces:[...fixture.faces].reverse(),faceColors:[...fixture.faceColors].reverse()}:fixture);
+    renderer.render(view);gl.readPixels(128,138,1,1,gl.RGBA,gl.UNSIGNED_BYTE,pixel);
+    if(pixel[0]<100||pixel[1]!==0||pixel[3]!==255)throw new Error(`Depth occlusion failed: ${pixel}`);
+  }
+  const pixels=new Uint8Array(256*256*4);
+  for(const model of [...catalog,...Object.values(upgrades)])for(const wireframe of [false,true]) {
+    renderer.setModel(model);renderer.render({...view,yaw:-.55,pitch:.35,wireframe});
+    gl.readPixels(0,0,256,256,gl.RGBA,gl.UNSIGNED_BYTE,pixels);
+    if(!pixels.some((value,i)=>i%4===3&&value>0))throw new Error(`Empty render: ${model.name}`);
+    if(gl.getError()!==gl.NO_ERROR)throw new Error(`WebGL error: ${model.name}`);
+  }
+  result.textContent='PASS: depth occlusion in both draw orders; all 14 models in solid and wireframe modes.';
+} catch(error) {result.textContent=`FAIL: ${error.stack}`;}
+</script>

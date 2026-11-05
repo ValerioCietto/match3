@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101719">
+  <title>3D Gallery · Mesh catalog</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header><a class="brand" href="../">◈ <span>3D GALLERY</span></a><span class="subtitle">THE MESH COLLECTION</span><a href="../3dShooter/">Launch 3D Shooter ↗</a></header>
+  <main>
+    <aside>
+      <div class="eyebrow">COLLECTION 01</div><h1>Void Wing<br>catalog<span>.</span></h1>
+      <p class="intro">Explore the shapes behind the shooter.</p>
+      <label class="search">Find a model<input id="search" type="search" placeholder="Search the collection…"></label>
+      <div class="list-heading"><span>MODELS</span><span id="count"></span></div>
+      <nav id="catalog" aria-label="Model catalog"></nav>
+      <p id="empty" hidden>No matching models.</p>
+      <div class="collection-note"><span class="dot"></span> Original 3D Shooter meshes<br><small>One model. One JavaScript file.</small></div>
+    </aside>
+    <section class="workspace" aria-label="3D model viewer">
+      <div class="viewport" id="viewport">
+        <div class="viewport-heading"><span id="category"></span><span class="live">INTERACTIVE VIEW</span></div>
+        <canvas id="scene" tabindex="0" aria-label="3D model. Drag or use arrow keys to orbit; scroll or use plus and minus to zoom."></canvas>
+        <p id="renderError" role="alert" hidden></p>
+        <div class="view-presets" aria-label="Camera presets"><button data-view="perspective" aria-pressed="true">Perspective</button><button data-view="front" aria-pressed="false">Front</button><button data-view="side" aria-pressed="false">Side</button><button data-view="top" aria-pressed="false">Top</button></div>
+        <div class="view-help">Drag to orbit <span>·</span> Scroll / pinch to zoom <span>·</span> Arrow keys to rotate</div>
+      </div>
+      <div class="toolbar">
+        <label class="upgrade-toggle"><input id="upgraded" type="checkbox"> Upgraded model <span id="variant">Original</span></label>
+        <div><label><input id="rotate" type="checkbox"> Auto-rotate</label><label><input id="wireframe" type="checkbox"> Wireframe</label><label><input id="grid" type="checkbox" checked> Grid</label></div>
+        <div><button id="zoomOut" aria-label="Zoom out">−</button><button id="zoomIn" aria-label="Zoom in">+</button><button id="reset">Reset view ↺</button></div>
+      </div>
+      <section class="details" aria-live="polite"><div><div class="eyebrow" id="modelNumber"></div><h2 id="name"></h2><p id="description"></p><a id="source" target="_blank" rel="noopener">View model source ↗</a></div><dl><div><dt>VERTICES</dt><dd id="vertices"></dd></div><div><dt>FACES</dt><dd id="faces"></dd></div><div><dt>EDGES</dt><dd id="edges"></dd></div></dl></section>
+    </section>
+  </main>
+  <script type="module" src="viewer.js"></script>
+</body>
+</html>
