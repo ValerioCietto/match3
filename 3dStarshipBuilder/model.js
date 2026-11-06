@@ -1,4 +1,6 @@
-import {blockGeometry} from './blocks.js';
+import {blockGeometry,specialHullGeometry,thrusterGeometry,cockpitGeometry} from './blocks.js';
+export const cockpitProfiles={classic:{name:'Classic / original cockpit'},capsule:{name:'Capsule'},fighterCanopy:{name:'Fighter jet canopy'},almond:{name:'Almond shape'},industrialDiamond:{name:'Industrial diamond'},luxuryDiamond:{name:'Luxury diamond'}};
+export const thrusterProfiles={classic:{name:'Classic / original engine'},drone:{name:'Drone / small conical exhaust'},reverseDrone:{name:'Reverse drone / front mount'},speeder:{name:'Speeder / twin exhaust'},hauler:{name:'Hauler / triangular triple exhaust'},carrier:{name:'Carrier / square quad exhaust'}};
 export const wingProfiles = {
   swept: {name:'Swept / classic',shape:[[0,-.7],[2.2,.6],[2.3,1.2],[0,.65]]},
   straight: {name:'Straight / patrol',shape:[[0,-.7],[2.3,-.7],[2.3,.65],[0,.65]]},
@@ -8,6 +10,9 @@ export const wingProfiles = {
   clipped: {name:'Clipped / heavy fighter',shape:[[0,-.85],[1.65,-.3],[2.3,.35],[2.3,.7],[1.65,1],[0,.8]]}
 };
 export const hullProfiles = {
+  research:{name:'Research ship / joined spheres',composite:true},
+  swan:{name:'Swan / open wings',composite:true},
+  axe:{name:'Axe / double round blade',composite:true},
   standard: {name:'Classic / tapered bow',shape:[[-.65,1.6],[.65,1.6],[.65,-.6],[.3,-1.7],[-.3,-1.7],[-.65,-.6]]},
   arrow: {name:'Arrowhead / interceptor',shape:[[-.85,1.6],[.85,1.6],[.5,-.5],[0,-1.7],[-.5,-.5]]},
   wedge: {name:'Wedge / destroyer',shape:[[-1.15,1.6],[1.15,1.6],[.18,-1.7],[-.18,-1.7]]},
@@ -28,7 +33,7 @@ export const library = {
   cannon: {name:'Cannon',icon:'╎',color:'#ced5d4',shape:[[-.13,-1.4],[.13,-1.4],[.2,.65],[-.2,.65]],height:.25},
   cargo: {name:'Cargo pod',icon:'▤',color:'#bb975d',shape:[[-.55,-.9],[.55,-.9],[.55,.9],[-.55,.9]],height:.85},
   fin: {name:'Dorsal fin',icon:'◭',color:'#adbecc',shape:[[-.08,-.6],[.08,-.6],[.08,.8],[-.08,.8]],height:1.1},
-  nozzle: {name:'Thruster core',icon:'◎',color:'#8ef1e4',shape:Array.from({length:8},(_,i)=>[Math.cos(i*Math.PI/4)*.3,Math.sin(i*Math.PI/4)*.3]).reverse(),height:.12}
+  nozzle: {legacy:true,name:'Thruster core',icon:'◎',color:'#8ef1e4',shape:Array.from({length:8},(_,i)=>[Math.cos(i*Math.PI/4)*.3,Math.sin(i*Math.PI/4)*.3]).reverse(),height:.12}
 };
 export function part(type,position=[0,0,0],scale=[1,1,1],mirror=false){return {id:crypto.randomUUID(),type,name:library[type].name,position,scale,rotation:[0,0,0],color:library[type].color,mirror};}
 export const presetCatalog={
@@ -47,7 +52,6 @@ function rolePreset(role){
   const add=(type,position,scale=[1,1,1],mirror=false,options={})=>{const p=Object.assign(part(type,position,scale,mirror),options);list.push(p);return p;};
   const engines=(x,z,scale)=>{
     add('engine',[x,0,z],scale,true);
-    add('nozzle',[x,0,z+scale[2]+.04],[scale[0]*1.15,1,scale[1]*1.15],true,{rotation:[90,0,0]});
   };
   if(role==='interceptor'){
     add('hull',[0,0,0],[.8,.65,1.1],false,{hullProfile:'arrow',deckTaper:.7,color:'#9aaec3'});
@@ -55,7 +59,6 @@ function rolePreset(role){
     for(const side of [-1,1])add('wing',[.4,side*.18,.25],[.85,1,.85],true,{wingProfile:'swept',wingDihedral:side*20,color:'#d0a357',name:side>0?'Upper interceptor wing':'Lower interceptor wing'});
     for(const [x,y,z] of [[.45,0,1.8],[1.2,.42,1.5],[1.2,-.42,1.5]]){
       add('engine',[x,y,z],[.55,.55,.65],true,{name:'Small interceptor thruster'});
-      add('nozzle',[x,y,z+.69],[.63,.55,.63],true,{rotation:[90,0,0],name:'Small thruster core'});
     }
     add('cannon',[.65,0,-.75],[.65,.65,.85],true);
   }
@@ -103,7 +106,7 @@ export function preset(name){
   const list=[part('hull'),part('cockpit',[0,.48,-.55]),part('wing',[.5,-.05,.3],[1,1,1],true),part('engine',[.65,0,1.35],[1,1,1],true),part('cannon',[1.65,.08,.1],[1,1,1],true),part('fin',[0,.65,1],[1,.65,1])];
   if(name==='hauler'){list[0].scale=[1.3,1.4,1.4];list[2].scale=[.7,1,1];list.splice(4,1,part('cargo',[1,.1,.1],[1,1,1],true));}
   if(name==='scout'){list[2].scale=[.7,1,1.3];list.splice(4,2);list[0].scale=[.8,.8,1.2];}
-  list.push(part('nozzle',[.65,0,2.37],[1,1,1],true));list.at(-1).rotation=[90,0,0];return list;
+  return list;
 }
 function extruded(spec){
   const n=spec.shape.length;
@@ -116,9 +119,11 @@ function extruded(spec){
 }
 export function mesh(p,reflected=false){
   const base=library[p.type];
-  const spec=p.type==='hull'?{...base,shape:hullProfiles[p.hullProfile||'standard'].shape}:p.type==='wing'?{...base,shape:wingProfiles[p.wingProfile||'swept'].shape,height:p.wingThickness??.16}:base;
-  const {vertices,faces,faceColors}=spec.composite?blockGeometry(p.type,p.color):extruded(spec);
-  if(p.type==='hull')for(const v of vertices)if(v[1]>0){v[0]*=p.deckTaper??1;v[2]*=p.deckTaper??1;}
+  const hull=p.type==='hull'?hullProfiles[p.hullProfile||'standard']:null;
+  const spec=hull?{...base,shape:hull.shape}:p.type==='wing'?{...base,shape:wingProfiles[p.wingProfile||'swept'].shape,height:p.wingThickness??.16}:base;
+  const geometry=p.type==='cockpit'&&p.cockpitProfile&&p.cockpitProfile!=='classic'?cockpitGeometry(p.cockpitProfile,p.color):hull?.composite?specialHullGeometry(p.hullProfile,p.color):p.type==='engine'&&p.thrusterProfile&&p.thrusterProfile!=='classic'?thrusterGeometry(p.thrusterProfile,p.color):spec.composite?blockGeometry(p.type,p.color):extruded(spec);
+  const {vertices,faces,faceColors}=geometry;
+  if(hull&&!hull.composite)for(const v of vertices)if(v[1]>0){v[0]*=p.deckTaper??1;v[2]*=p.deckTaper??1;}
   if(p.type==='wing')for(const v of vertices){v[2]+=v[0]*Math.tan((p.wingSweep??0)*Math.PI/180);v[1]+=v[0]*Math.tan((p.wingDihedral??0)*Math.PI/180);}
   const angles=p.rotation.map(v=>v*Math.PI/180);
   for(let i=0;i<vertices.length;i++){
@@ -138,6 +143,8 @@ export function validateProject(data){
   if(data?.version!==1||typeof data.name!=='string'||!Array.isArray(data.parts)||data.parts.length>150)throw Error('Invalid project or more than 150 parts.');
   for(const p of data.parts){
     if(!Object.hasOwn(library,p.type)||typeof p.name!=='string'||!/^#[0-9a-f]{6}$/i.test(p.color)||typeof p.mirror!=='boolean')throw Error('Invalid part data.');
+    if(p.type==='engine'&&p.thrusterProfile!==undefined&&!Object.hasOwn(thrusterProfiles,p.thrusterProfile))throw Error('Invalid thruster profile.');
+    if(p.type==='cockpit'&&p.cockpitProfile!==undefined&&!Object.hasOwn(cockpitProfiles,p.cockpitProfile))throw Error('Invalid cockpit profile.');
     if(p.type==='hull'&&((p.hullProfile!==undefined&&!Object.hasOwn(hullProfiles,p.hullProfile))||(p.deckTaper!==undefined&&(!Number.isFinite(p.deckTaper)||p.deckTaper<.35||p.deckTaper>1))))throw Error('Invalid hull options.');
     if(p.type==='wing'){
       if(p.wingProfile!==undefined&&!Object.hasOwn(wingProfiles,p.wingProfile))throw Error('Invalid wing profile.');
@@ -148,9 +155,9 @@ export function validateProject(data){
   return {version:1,name:data.name.slice(0,60),parts:data.parts.map(p=>({...p,id:crypto.randomUUID(),name:p.name.slice(0,60)}))};
 }
 function surfaces(m){const groups=new Map();m.faces.forEach((f,i)=>{const color=m.faceColors?.[i]||m.color;if(!groups.has(color))groups.set(color,[]);groups.get(color).push(f);});return groups;}
-export function objFiles(parts){let offset=1;const obj=['# Orbital Foundry | Y up, -Z forward','mtllib starship.mtl'],mtl=[];meshes(parts).forEach((m,j)=>{obj.push(`o part_${j}`,...m.vertices.map(v=>'v '+v.join(' ')));let k=0;for(const [color,faces] of surfaces(m)){const name=`material_${j}_${k++}`;obj.push(`usemtl ${name}`);for(const f of faces)for(let i=1;i<f.length-1;i++)obj.push('f '+[f[0],f[i],f[i+1]].map(v=>v+offset).join(' '));mtl.push(`newmtl ${name}`,`Kd ${[1,3,5].map(i=>parseInt(color.slice(i,i+2),16)/255).join(' ')}`,'');}offset+=m.vertices.length;});return {obj:obj.join('\n'),mtl:mtl.join('\n')};}
+export function objFiles(parts){let offset=1;const obj=['# Starship builder | Y up, -Z forward','mtllib starship.mtl'],mtl=[];meshes(parts).forEach((m,j)=>{obj.push(`o part_${j}`,...m.vertices.map(v=>'v '+v.join(' ')));let k=0;for(const [color,faces] of surfaces(m)){const name=`material_${j}_${k++}`;obj.push(`usemtl ${name}`);for(const f of faces)for(let i=1;i<f.length-1;i++)obj.push('f '+[f[0],f[i],f[i+1]].map(v=>v+offset).join(' '));mtl.push(`newmtl ${name}`,`Kd ${[1,3,5].map(i=>parseInt(color.slice(i,i+2),16)/255).join(' ')}`,'');}offset+=m.vertices.length;});return {obj:obj.join('\n'),mtl:mtl.join('\n')};}
 export function gltf(parts){
-  const doc={asset:{version:'2.0',generator:'Orbital Foundry'},scene:0,scenes:[{nodes:[]}],nodes:[],meshes:[],materials:[],buffers:[],bufferViews:[],accessors:[]},chunks=[];let byteLength=0;
+  const doc={asset:{version:'2.0',generator:'Starship builder'},scene:0,scenes:[{nodes:[]}],nodes:[],meshes:[],materials:[],buffers:[],bufferViews:[],accessors:[]},chunks=[];let byteLength=0;
   const accessor=(values,bounds)=>{const array=new Float32Array(values),view=doc.bufferViews.length;chunks.push(new Uint8Array(array.buffer));doc.bufferViews.push({buffer:0,byteOffset:byteLength,byteLength:array.byteLength,target:34962});byteLength+=array.byteLength;const index=doc.accessors.length;doc.accessors.push({bufferView:view,componentType:5126,count:values.length/3,type:'VEC3',...bounds});return index;};
   meshes(parts).forEach((m,index)=>{const primitives=[];for(const [color,faces] of surfaces(m)){const pos=[],norm=[];for(const f of faces)for(let i=1;i<f.length-1;i++){const tri=[m.vertices[f[0]],m.vertices[f[i]],m.vertices[f[i+1]]],u=tri[1].map((v,a)=>v-tri[0][a]),v=tri[2].map((v,a)=>v-tri[0][a]),n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]],length=Math.hypot(...n)||1;pos.push(...tri.flat());for(let k=0;k<3;k++)norm.push(...n.map(v=>v/length));}
     const min=[Infinity,Infinity,Infinity],max=[-Infinity,-Infinity,-Infinity];pos.forEach((v,i)=>{min[i%3]=Math.min(min[i%3],v);max[i%3]=Math.max(max[i%3],v);});

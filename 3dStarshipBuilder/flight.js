@@ -33,7 +33,7 @@ export function openTestFlight(project){
   const stars=Array.from({length:700},()=>[(random()-.5)*1600,(random()-.5)*1600,(random()-.5)*1600]);
   try{renderer=new WebGLRenderer(canvas,{onError:message=>{if(!closed){paused=true;$('flightError').textContent=message;}},onRestore:()=>{if(!closed){$('flightError').textContent='Graphics restored. Press Resume.';$('flightPause').textContent='Resume';}}});renderer.setModel(combined(project.parts));}
   catch(error){$('flightError').textContent=error.message;paused=true;}
-  if(renderer&&!stats.thrust)$('flightError').textContent='No propulsion: add engines or thruster cores to move. Steering is available if the ship has turning power.';
+  if(renderer&&!stats.thrust)$('flightError').textContent='No propulsion: add engines to move. Steering is available if the ship has turning power.';
   function clearInput(){keys.clear();held.clear();}
   function setPaused(value){paused=value;clearInput();$('flightPause').textContent=paused?'Resume':'Pause';}
   function close(){if(closed)return;closed=true;cancelAnimationFrame(frameId);observer.disconnect();abort.abort();if(renderer){for(const entry of Object.values(renderer.buffers))renderer.gl.deleteBuffer(entry.buffer);renderer.gl.deleteProgram(renderer.program);}dialog.remove();document.getElementById('testFlight')?.focus();}

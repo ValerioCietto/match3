@@ -1,4 +1,26 @@
-# Orbital Foundry — 3D Starship Builder
+# Starship builder
+
+## Editable configuration export
+
+Click **Export configuration JSON** beneath Ship assembly to download `<ship-name>.starship.json`. It contains the project name and all editable modules, including their shapes, transforms, colors, mirroring and custom hull/wing/cockpit/thruster settings. Use **Open project** in this editor to import the file and continue editing. Import replaces the current assembly and can be undone. **Save project** also downloads compatible editable JSON; glTF and OBJ remain geometry exports.
+
+## Cockpit options
+
+Select a Cockpit in Ship assembly to choose **Capsule**, **Fighter jet canopy**, **Almond shape**, **Industrial diamond**, or **Luxury diamond**, alongside the original Classic cockpit. Capsule is a rounded elongated pod; the canopy has a narrow armored sill; Almond has pointed ends and a raised central ridge; Industrial diamond has heavy structural framing; Luxury diamond has additional facets and gold trim. The complete cockpit follows scale, rotation and mirroring, with surface color applied to the glazing. Shapes persist through saves, duplication and undo/redo, update volume-based stats, and appear in exports and Test Flight.
+
+## Sculpted hulls and complete thrusters
+
+Hull Options also includes **Research ship** (connected spherical laboratories), **Swan** (body, curved neck, head and spread feathered wings, no legs), and **Axe** (a flat double round blade and handle). These are composite solids; the upper-deck taper control is hidden for them. Transform and color controls still apply to the whole hull.
+
+Select an **Engine** in the assembly to open **Thruster Module** options:
+
+- **Drone:** compact box housing and one flared conical exhaust.
+- **Reverse drone:** the entire Drone assembly turned 180° for front mounting.
+- **Speeder:** elongated housing with two parallel exhausts.
+- **Hauler:** broad, tall housing with three exhausts in a triangle.
+- **Carrier:** a longer heavy housing with four exhausts in a square.
+
+Changing a thruster profile replaces the complete selected engine mesh, including its housing, collars, bells and exhaust faces. Scaling, rotation and mirroring transform all of it together. Body color changes the housing while exhaust trim keeps its accent colors. Standalone thruster cores are no longer available in the parts library or any preset. Saved projects containing legacy cores still load without losing those parts. New profiles persist in saves, duplicates, undo/redo, exports and Test Flight. Their recommended stats use their full composite volume. The handling sandbox still aggregates engine thrust without simulating individual thrust directions.
 
 ## Test Flight
 
@@ -12,10 +34,10 @@ Choose a ship under **Starting point**, then click **Load preset**. Loading is u
 
 | Preset | Layout |
 | --- | --- |
-| Kestrel / Interceptor | Six small thrusters with matching cores, four wings in an X configuration, a tapered arrowhead hull and paired cannons. |
+| Kestrel / Interceptor | Six small thrusters, four wings in an X configuration, a tapered arrowhead hull and paired cannons. |
 | Bastion / Carrier | Four side-facing fighter bays, four defense turrets, shields and paired engines. |
 | Mammoth / Mega Cargo | Eight enlarged cargo pods, four fuel canisters and heavy engines around a long box hull. |
-| Odyssey / Deep Space Explorer | Four enlarged fuel tanks, oversized engines and thruster cores, shields and a crew cabin. |
+| Odyssey / Deep Space Explorer | Four enlarged fuel tanks, oversized engines, shields and a crew cabin. |
 | Aurora / Luxury Cruise | Eight enlarged passenger modules (96 passenger equivalents), shields, fuel and gold-trimmed wings. |
 
 These join the original Peregrine fighter, Atlas hauler and Wisp scout. Every preset is made from editable modules and automatically populates the Recommended stats panel.

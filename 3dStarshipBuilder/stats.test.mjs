@@ -3,6 +3,11 @@ import assert from 'node:assert/strict';
 import {library,presetCatalog,part,preset,validateProject,gltf,objFiles} from './model.js';
 import {moduleVolume,moduleStats,recommendedStats,statFields} from './stats.js';
 const near=(a,b)=>assert.ok(Math.abs(a-b)<1e-8*Math.max(1,Math.abs(b)),`${a} != ${b}`);
+test('standalone cores are retired from the library and every preset, but old saves load',()=>{
+  assert.equal(library.nozzle.legacy,true);
+  for(const id of Object.keys(presetCatalog))assert.ok(preset(id).every(p=>p.type!=='nozzle'),id);
+  const saved=validateProject({version:1,name:'Legacy',parts:[part('nozzle')]});assert.equal(saved.parts[0].type,'nozzle');assert.ok(recommendedStats(saved.parts).thrust>0);
+});
 test('role presets supply their advertised modules and roundtrip with usable exports',()=>{
   const count=(parts,type)=>parts.filter(p=>p.type===type).reduce((sum,p)=>sum+(p.mirror?2:1),0);
   for(const id of ['interceptor','carrier','megaCargo','explorer','cruise']){
@@ -10,7 +15,7 @@ test('role presets supply their advertised modules and roundtrip with usable exp
     assert.deepEqual(recommendedStats(saved.parts),stats);assert.ok(stats.acceleration>0&&stats.turnAcceleration>0);assert.equal(new Set(parts.map(p=>p.id)).size,parts.length);
     const doc=gltf(parts);assert.equal(doc.meshes.length,parts.reduce((sum,p)=>sum+(p.mirror?2:1),0));assert.equal(Buffer.from(doc.buffers[0].uri.split(',')[1],'base64').length,doc.buffers[0].byteLength);assert.ok(objFiles(parts).obj.includes('f '));
     if(id==='carrier'){assert.equal(count(parts,'fighterBay'),4);near(stats.fighterSlots,4);assert.equal(count(parts,'turret'),4);}
-    if(id==='interceptor'){assert.equal(count(parts,'engine'),6);assert.equal(count(parts,'nozzle'),6);assert.equal(count(parts,'wing'),4);assert.ok(parts.filter(p=>p.type==='engine'||p.type==='nozzle').every(p=>p.scale.every(v=>v<1)));assert.ok(parts.some(p=>p.type==='wing'&&p.wingDihedral>0)&&parts.some(p=>p.type==='wing'&&p.wingDihedral<0));}
+    if(id==='interceptor'){assert.equal(count(parts,'engine'),6);assert.equal(count(parts,'nozzle'),0);assert.equal(count(parts,'wing'),4);assert.ok(parts.filter(p=>p.type==='engine'||p.type==='nozzle').every(p=>p.scale.every(v=>v<1)));assert.ok(parts.some(p=>p.type==='wing'&&p.wingDihedral>0)&&parts.some(p=>p.type==='wing'&&p.wingDihedral<0));}
     if(id==='megaCargo'){assert.equal(count(parts,'cargo'),8);assert.equal(count(parts,'fuelPod'),4);assert.ok(stats.massFull>recommendedStats(preset('hauler')).massFull);}
     if(id==='explorer'){assert.equal(count(parts,'fuelPod'),4);assert.ok(parts.filter(p=>p.type==='engine').every(p=>p.scale.every(v=>v>1)));assert.ok(stats.shieldMax>0);}
     if(id==='cruise'){assert.equal(count(parts,'passengerModule'),8);near(stats.maxPassengers,96);assert.ok(stats.shieldMax>0);}

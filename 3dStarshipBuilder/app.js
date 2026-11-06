@@ -1,7 +1,7 @@
 import {WebGLRenderer} from './webgl-renderer.js';
 import {openTestFlight} from './flight.js';
 import {recommendedStats,statFields} from './stats.js';
-import {library,hullProfiles,wingProfiles,presetCatalog,part,preset,combined,validateProject,objFiles,gltf} from './model.js';
+import {library,hullProfiles,wingProfiles,thrusterProfiles,cockpitProfiles,presetCatalog,part,preset,combined,validateProject,objFiles,gltf} from './model.js';
 const $=id=>document.getElementById(id),key='orbital-foundry-v1';
 let project={version:1,name:'Peregrine MK I',parts:preset('fighter')},selected,undo=[],redo=[],renderer,dirty=true,yaw=-.65,pitch=.55,distance=3.5;
 const canvas=$('scene'),pointers=new Map();let width=1,height=1,last=0;
@@ -15,8 +15,8 @@ testFlightButton.onclick=()=>openTestFlight(project);
 const presetDescription=document.createElement('p');presetDescription.id='presetDescription';presetDescription.className='hint';$('preset').after(presetDescription);
 $('preset').replaceChildren();for(const [id,spec] of Object.entries(presetCatalog)){const option=document.createElement('option');option.value=id;option.textContent=spec.label;$('preset').append(option);}
 $('preset').onchange=()=>presetDescription.textContent=presetCatalog[$('preset').value].description;$('preset').onchange();
-const statsPanel=document.createElement('section');statsPanel.id='recommendedStats';statsPanel.className='recommended-stats';statsPanel.setAttribute('aria-labelledby','recommendedStatsTitle');
-statsPanel.innerHTML='<h2 id="recommendedStatsTitle">Recommended stats</h2><p class="stats-subtitle">VOLUME-BASED ESTIMATES</p><dl id="recommendedStatsValues"></dl><details><summary>How stats work</summary><p>Module contributions scale with volume. Half size on all three axes means ⅛ the contribution. Mirrored copies count twice.</p><p>Movement uses full mass. Wings add steering power and reduce turn inertia. Fuel, cargo, fighters and passengers add loaded mass.</p><p>Fractional capacities are slot or passenger equivalents, not whole occupants. These are game-balance recommendations. Composite volumes sum their solids, including overlaps.</p></details>';
+const statsPanel=document.createElement('details');statsPanel.open=true;statsPanel.id='recommendedStats';statsPanel.className='recommended-stats';statsPanel.setAttribute('aria-labelledby','recommendedStatsTitle');
+statsPanel.innerHTML='<summary id="recommendedStatsTitle">Recommended stats</summary><p class="stats-subtitle">VOLUME-BASED ESTIMATES</p><dl id="recommendedStatsValues"></dl><details><summary>How stats work</summary><p>Module contributions scale with volume. Half size on all three axes means ⅛ the contribution. Mirrored copies count twice.</p><p>Movement uses full mass. Wings add steering power and reduce turn inertia. Fuel, cargo, fighters and passengers add loaded mass.</p><p>Fractional capacities are slot or passenger equivalents, not whole occupants. These are game-balance recommendations. Composite volumes sum their solids, including overlaps.</p></details>';
 $('shipName').closest('label').before(statsPanel);
 for(const [id,label,unit] of statFields){const row=document.createElement('div'),term=document.createElement('dt'),value=document.createElement('dd');term.textContent=label;value.id='stat-'+id;value.dataset.unit=unit;row.append(term,value);$('recommendedStatsValues').append(row);}
 const statsNumber=new Intl.NumberFormat('en',{maximumFractionDigits:2});
@@ -29,6 +29,16 @@ $('hullProfile').onchange=()=>{if(current()?.type==='hull')change(()=>current().
 $('deckTaper').oninput=()=>{$('deckTaperValue').textContent=Math.round(Number($('deckTaper').value)*100)+'% upper deck';};
 $('deckTaper').onchange=()=>{if(current()?.type==='hull')change(()=>current().deckTaper=Number($('deckTaper').value));};
 const wingOptions=document.createElement('div');wingOptions.id='wingOptions';wingOptions.hidden=true;
+const cockpitOptions=document.createElement('div');cockpitOptions.id='cockpitOptions';cockpitOptions.hidden=true;
+cockpitOptions.innerHTML='<p class="eyebrow">COCKPIT OPTIONS</p><label class="field">Cockpit shape<select id="cockpitProfile"></select></label><p class="hint">Scale and rotate the complete cockpit below. Surface color changes the glazing; structural trim retains its accent color.</p>';
+$('transforms').before(cockpitOptions);
+for(const [value,profile] of Object.entries(cockpitProfiles)){const option=document.createElement('option');option.value=value;option.textContent=profile.name;$('cockpitProfile').append(option);}
+$('cockpitProfile').onchange=()=>{if(current()?.type==='cockpit')change(()=>current().cockpitProfile=$('cockpitProfile').value);};
+const thrusterOptions=document.createElement('div');thrusterOptions.id='thrusterOptions';thrusterOptions.hidden=true;
+thrusterOptions.innerHTML='<p class="eyebrow">THRUSTER MODULE</p><label class="field">Complete module<select id="thrusterProfile"></select></label><p class="hint">Changes the housing and every exhaust together. Scale, rotate, mirror and recolor the complete assembly below. Reverse drone faces forward for mounting at the nose. Separate legacy thruster cores remain independent parts.</p>';
+$('transforms').before(thrusterOptions);
+for(const [value,profile] of Object.entries(thrusterProfiles)){const option=document.createElement('option');option.value=value;option.textContent=profile.name;$('thrusterProfile').append(option);}
+$('thrusterProfile').onchange=()=>{if(current()?.type==='engine')change(()=>current().thrusterProfile=$('thrusterProfile').value);};
 wingOptions.innerHTML='<p class="eyebrow">WING OPTIONS</p><label class="field">Wing shape<select id="wingProfile"></select></label><p class="hint">Sweep moves the tip forward or back. Dihedral raises or lowers it. Use Scale X for span and Z for chord. Enable Mirror for a matching pair.</p>';
 $('transforms').before(wingOptions);
 for(const [value,profile] of Object.entries(wingProfiles)){const option=document.createElement('option');option.value=value;option.textContent=profile.name;$('wingProfile').append(option);}
@@ -38,6 +48,9 @@ for(const [id,label,min,max,step,,unit] of wingFields){const field=document.crea
 function remember(){undo.push(JSON.stringify(project));if(undo.length>60)undo.shift();redo=[];}
 function persist(){try{localStorage.setItem(key,JSON.stringify(project));status('All changes saved locally.');}catch{status('Autosave unavailable. Use Save project to keep your work.');}}
 function refresh(){
+  const missing=['hull','engine'].filter(type=>!project.parts.some(p=>p.type===type));
+  $('flightReady').dataset.ready=String(!missing.length);
+  $('flightReady').textContent=missing.length?'○ Not ready — needs '+missing.join(' and '):'✓ Ready to fly';
   testFlightButton.disabled=!project.parts.length;
   updateStats();
   if(!current())selected=project.parts[0]?.id;
@@ -48,13 +61,16 @@ function refresh(){
   const p=current();$('controls').hidden=!p;$('selectedName').textContent=p?.name||'Select a part';
   hullOptions.hidden=p?.type!=='hull';
   wingOptions.hidden=p?.type!=='wing';
+  cockpitOptions.hidden=p?.type!=='cockpit';if(p?.type==='cockpit')$('cockpitProfile').value=p.cockpitProfile||'classic';
+  thrusterOptions.hidden=p?.type!=='engine';if(p?.type==='engine')$('thrusterProfile').value=p.thrusterProfile||'classic';
+  $('deckTaper').closest('label').hidden=p?.type==='hull'&&!!hullProfiles[p.hullProfile||'standard'].composite;
   if(p?.type==='wing'){$('wingProfile').value=p.wingProfile||'swept';for(const [id,,,,,fallback,unit] of wingFields){$(id).value=p[id]??fallback;$(id+'Value').textContent=(p[id]??fallback)+unit;}}
   if(p?.type==='hull'){$('hullProfile').value=p.hullProfile||'standard';$('deckTaper').value=p.deckTaper??1;$('deckTaperValue').textContent=Math.round((p.deckTaper??1)*100)+'% upper deck';}
   if(p){$('partName').value=p.name;$('color').value=p.color;$('mirror').checked=p.mirror;document.querySelectorAll('[data-axis]').forEach(input=>input.value=p[input.dataset.field][Number(input.dataset.axis)]);}
   dirty=true;
 }
 function change(fn){remember();fn();refresh();persist();}
-for(const [type,spec] of Object.entries(library)){const button=document.createElement('button'),icon=document.createElement('strong'),name=document.createElement('small');icon.textContent=spec.icon;name.textContent=spec.name;button.append(icon,name);button.onclick=()=>{if(project.parts.length>=150)return status('Maximum 150 parts.');change(()=>{const p=part(type,type==='cockpit'?[0,.5,-.5]:type==='wing'?[.6,0,0]:[0,0,0]);project.parts.push(p);selected=p.id;});};$('parts').append(button);}
+for(const [type,spec] of Object.entries(library).filter(([,spec])=>!spec.legacy)){const button=document.createElement('button'),icon=document.createElement('strong'),name=document.createElement('small');icon.textContent=spec.icon;name.textContent=spec.name;button.append(icon,name);button.onclick=()=>{if(project.parts.length>=150)return status('Maximum 150 parts.');change(()=>{const p=part(type,type==='cockpit'?[0,.5,-.5]:type==='wing'?[.6,0,0]:[0,0,0]);project.parts.push(p);selected=p.id;});};$('parts').append(button);}
 for(const field of ['position','rotation','scale']){const group=document.createElement('div');group.className='transform';const label=document.createElement('span');label.textContent=field.toUpperCase()+(field==='rotation'?' / DEGREES':'');const axes=document.createElement('div');axes.className='axes';['X','Y','Z'].forEach((axis,i)=>{const wrap=document.createElement('label');wrap.textContent=axis;const input=document.createElement('input');input.type='number';input.step=field==='rotation'?'5':'.1';input.min=field==='scale'?'.05':field==='rotation'?'-360':'-100';input.max=field==='rotation'?'360':'100';input.dataset.field=field;input.dataset.axis=i;input.setAttribute('aria-label',`${field} ${axis}`);input.onchange=()=>{const value=Number(input.value);if(input.value===''||!Number.isFinite(value)||value<Number(input.min)||value>Number(input.max)){refresh();return status('Transform is outside its allowed range.');}change(()=>current()[field][i]=value);};wrap.append(input);axes.append(wrap);});group.append(label,axes);$('transforms').append(group);}
 $('shipName').onchange=()=>change(()=>project.name=$('shipName').value.trim()||'Untitled ship');
 $('partName').onchange=()=>change(()=>current().name=$('partName').value.trim()||library[current().type].name);
@@ -67,6 +83,9 @@ function historyStep(from,to){if(!from.length)return;to.push(JSON.stringify(proj
 $('undo').onclick=()=>historyStep(undo,redo);$('redo').onclick=()=>historyStep(redo,undo);
 function download(name,text,type){const url=URL.createObjectURL(new Blob([text],{type}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);}
 const filename=()=>project.name.replace(/[^a-z0-9_-]/gi,'_')||'starship';
+const configExport=document.createElement('button');configExport.id='exportConfig';configExport.textContent='Export configuration JSON';configExport.title='Download all editable parts and settings; restore with Open project';$('obj').before(configExport);
+configExport.onclick=()=>{download(filename()+'.starship.json',JSON.stringify(project,null,2),'application/json');status('Configuration JSON exported. Use Open project to import it into this editor.');};
+$('load').title='Import an editable project or .starship.json configuration';
 $('save').onclick=()=>{download(filename()+'.json',JSON.stringify(project,null,2),'application/json');status('Project downloaded.');};
 $('export').onclick=()=>{download(filename()+'.gltf',JSON.stringify(gltf(project.parts)),'model/gltf+json');status('glTF exported with materials and separate part meshes.');};
 $('obj').onclick=()=>{const files=objFiles(project.parts);download(filename()+'.obj',files.obj,'text/plain');download('starship.mtl',files.mtl,'text/plain');status('OBJ + MTL exported. Keep both files together; allow multiple downloads if prompted.');};

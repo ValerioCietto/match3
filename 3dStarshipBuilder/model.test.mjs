@@ -13,7 +13,7 @@ test('wing profiles remain solid across sweep, dihedral and thickness limits',()
   for(const bad of [{wingProfile:'bad'},{wingProfile:'__proto__'},{wingSweep:36},{wingDihedral:-46},{wingThickness:0},{wingThickness:'0.16'}])assert.throws(()=>validateProject({version:1,name:'Bad',parts:[{...legacy,...bad}]}));
 });
 test('hull profiles and taper stay outward, persist and export',()=>{
-  for(const hullProfile of Object.keys(hullProfiles))for(const deckTaper of [.35,.7,1])for(const reflected of [false,true]){
+  for(const hullProfile of Object.keys(hullProfiles).filter(key=>!hullProfiles[key].composite))for(const deckTaper of [.35,.7,1])for(const reflected of [false,true]){
     const p={...part('hull'),hullProfile,deckTaper},m=mesh(p,reflected);
     const center=[0,1,2].map(a=>m.vertices.reduce((sum,v)=>sum+v[a],0)/m.vertices.length);
     for(const f of m.faces){const [a,b,c]=f.map(i=>m.vertices[i]),u=b.map((v,i)=>v-a[i]),v=c.map((v,i)=>v-a[i]);const n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];assert.ok(n.reduce((s,v,i)=>s+v*(a[i]-center[i]),0)>0,hullProfile);}

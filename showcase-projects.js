@@ -1,7 +1,7 @@
 // Higher weights appear first. Equal weights keep the order below.
 const showcaseProjects = [
   {
-    "title": "3D Starship Builder - Orbital Foundry",
+    "title": "Starship builder",
     "href": "3dStarshipBuilder/",
     "weight": 10,
     "versions": [
