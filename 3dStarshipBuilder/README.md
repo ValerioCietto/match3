@@ -1,5 +1,7 @@
 # Starship builder
 
+Cargo pods use container-style geometry: corrugated walls and roof, reinforced rails, eight corner blocks, twin doors with locking rods and hinges, identification plates and visibility markings. Details retain the original 1.1 × 0.85 × 1.8 footprint before scaling, so existing placements remain compatible. Body color applies to the panels and ribs; framing and hardware retain accent colors. All details are included in mirrored copies, exports and Test Flight, with volume-based stats recalculated from the detailed mesh.
+
 ## Cannon options
 
 Select a Cannon to combine **Barrel** (hexagonal, square, octagonal), **Muzzle** (none, hexagonal, octagonal, square) and **Receiver** (square, beveled square, beveled parallelepiped, cylinder). All 48 combinations are complete assemblies pointing along −Z, with the receiver at the rear. Color, transforms and mirroring apply to the assembly; muzzle trim and the dark bore face retain accent colors. Options update volume-based stats and persist through JSON, glTF/OBJ, duplication and undo/redo. Classic preserves the original cannon geometry for older projects; changing muzzle or receiver automatically activates a hexagonal modular barrel if Classic was selected.

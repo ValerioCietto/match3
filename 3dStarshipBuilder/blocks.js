@@ -126,6 +126,39 @@ export function thrusterGeometry(profile,color){
 }
 export function blockGeometry(type,color){
   const dark='#344756',metal='#b7c8d2',glass='#73e3ed';
+  if(type==='cargo'){
+    // Keep the original 1.1 x .85 x 1.8 envelope so saved placements still fit.
+    const pieces=[box(.505,.375,.85,color)];
+    for(const x of [-.5,.5])for(const y of [-.375,.375])pieces.push(move(box(.04,.04,.86,dark),[x,y,0]));
+    for(const z of [-.85,.85]){
+      for(const y of [-.375,.375])pieces.push(move(box(.5,.04,.035,dark),[0,y,z]));
+      for(const x of [-.5,.5])pieces.push(move(box(.04,.375,.035,dark),[x,0,z]));
+      for(const x of [-.5,.5])for(const y of [-.375,.375]){
+        pieces.push(move(box(.05,.05,.05,metal),[x,y,z]));
+        pieces.push(move(box(.022,.014,.002,dark),[x,y,z+Math.sign(z)*.048]));
+      }
+    }
+    // Raised corrugations on both long walls and the roof.
+    for(let i=0;i<10;i++){const z=-.72+i*.16;
+      for(const side of [-1,1])pieces.push(move(box(.018,.315,.025,color),[side*.52,0,z]));
+      pieces.push(move(box(.44,.018,.025,color),[0,.39,z]));
+    }
+    // Two recessed door leaves at the forward end, with a dark central seam.
+    pieces.push(move(box(.465,.33,.012,dark),[0,0,-.866]));
+    for(const side of [-1,1]){
+      pieces.push(move(box(.218,.315,.012,color),[side*.235,0,-.879]));
+      for(const x of [.14,.33]){
+        pieces.push(move(cylinder(.009,.57,6,metal),[side*x,0,-.89]));
+        pieces.push(move(box(.035,.009,.009,metal),[side*x,-.08,-.89]));
+      }
+      for(const y of [-.22,0,.22])pieces.push(move(box(.027,.022,.009,metal),[side*.46,y,-.89]));
+      // Identification plate and high-visibility corner markings on each side.
+      pieces.push(move(box(.003,.055,.12,dark),[side*.542,.2,.32]));
+      for(let i=0;i<3;i++)pieces.push(move(box(.002,.004,.08,metal),[side*.546,.225-i*.022,.32]));
+      for(const z of [-.68,.68])pieces.push(move(box(.003,.028,.045,'#e9c761'),[side*.542,-.27,z]));
+    }
+    return join(pieces);
+  }
   if(type==='turret')return join([cylinder(.65,.22,8,color),move(cylinder(.42,.16,12,dark),[0,.15,0]),move(sphere(.44,color),[0,.48,0]),move(cylinder(.12,1.15,12,metal,'z'),[0,.5,-.75]),move(cylinder(.16,.16,12,dark,'z'),[0,.5,-1.3])]);
   if(type==='fighterBay'){
     const walls=[];

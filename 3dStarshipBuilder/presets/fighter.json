@@ -1,11 +1,9 @@
 {
   "version": 1,
   "name": "Peregrine MK I",
-  "label": "Peregrine / Fighter",
-  "description": "An arrowhead fighter with paired Drone thrusters, swept wings and compact underslung cannons.",
   "parts": [
     {
-      "id": "67533670-97e5-4a8b-945c-56771965a8c5",
+      "id": "55382760-59ab-403c-b7fe-3b77118be51f",
       "type": "hull",
       "name": "Hull",
       "position": [
@@ -26,16 +24,18 @@
       "color": "#91a6b5",
       "mirror": false,
       "hullProfile": "arrow",
-      "deckTaper": 1
+      "deckTaper": 1,
+      "upperChamfer": 0.32,
+      "lowerChamfer": 0.18
     },
     {
-      "id": "20b2ea27-9fac-4a12-a4d2-8c3ce367a43b",
+      "id": "4ce3cf5c-b741-4f89-9d20-2f6174d55ff5",
       "type": "cockpit",
       "name": "Cockpit",
       "position": [
         0,
-        0.3,
-        -0.55
+        0.2,
+        -0.6
       ],
       "scale": [
         1,
@@ -43,21 +43,22 @@
         1
       ],
       "rotation": [
-        0,
+        -5,
         0,
         0
       ],
       "color": "#64ddd5",
       "mirror": false,
-      "cockpitProfile": "classic"
+      "cockpitProfile": "classic",
+      "cockpitBevel": 0.2
     },
     {
-      "id": "8f541cd2-4300-4b27-aa42-412c5472727b",
+      "id": "3d65839c-6efd-4b48-81f3-a8940b6d3df8",
       "type": "wing",
       "name": "Swept wing",
       "position": [
         0.5,
-        -0.05,
+        0,
         0.3
       ],
       "scale": [
@@ -74,7 +75,7 @@
       "mirror": true
     },
     {
-      "id": "e10c8a3f-299a-4e1a-b73f-0394fe275c65",
+      "id": "f42876a5-4993-4d89-81df-35df64d014a5",
       "type": "engine",
       "name": "Engine",
       "position": [
@@ -97,18 +98,18 @@
       "thrusterProfile": "drone"
     },
     {
-      "id": "364286e5-0f82-471d-98b5-85d57cb7b88a",
+      "id": "4f3173e0-b13c-4063-9e57-5395e0175527",
       "type": "cannon",
       "name": "Cannon",
       "position": [
-        1.2,
-        -0.2,
-        0.1
+        0.9,
+        0,
+        0
       ],
       "scale": [
         1,
         1,
-        0.65
+        1
       ],
       "rotation": [
         0,
@@ -116,16 +117,19 @@
         0
       ],
       "color": "#ced5d4",
-      "mirror": true
+      "mirror": true,
+      "cannonBarrel": "hexagonal",
+      "cannonMuzzle": "none",
+      "cannonReceiver": "cylinder"
     },
     {
-      "id": "49e82afe-2714-4546-b124-74580828e1e2",
+      "id": "4478ca6a-ca01-4015-8f63-756b08bcfc67",
       "type": "fin",
       "name": "Dorsal fin",
       "position": [
         0,
-        0.1,
-        1
+        0.2,
+        0.8
       ],
       "scale": [
         1,
@@ -138,7 +142,8 @@
         0
       ],
       "color": "#adbecc",
-      "mirror": false
+      "mirror": false,
+      "finProfile": "swept"
     }
   ]
 }

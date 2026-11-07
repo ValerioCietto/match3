@@ -3,7 +3,7 @@
   "name": "Kestrel Interceptor",
   "parts": [
     {
-      "id": "7e5d9f14-e36d-4fb9-b703-55de44cecdcd",
+      "id": "c74f184d-8377-40dd-abe5-0e54041f2785",
       "type": "hull",
       "name": "Hull",
       "position": [
@@ -27,7 +27,7 @@
       "deckTaper": 0.75
     },
     {
-      "id": "268a1606-5008-4dcc-81c0-ba9abb7534c0",
+      "id": "060a2228-0add-4bdd-ba0a-932f9912ea61",
       "type": "cockpit",
       "name": "Cockpit",
       "position": [
@@ -50,7 +50,7 @@
       "cockpitBevel": 0.3
     },
     {
-      "id": "4193857c-4ae7-4723-9c8a-b015858715ac",
+      "id": "e590ff9f-5c0b-4cad-94dc-b555a4318ac6",
       "type": "wing",
       "name": "Lower interceptor wing",
       "position": [
@@ -74,7 +74,7 @@
       "wingDihedral": -20
     },
     {
-      "id": "9920b52c-9659-4233-a51d-8ec41ed1892b",
+      "id": "91a96590-0eb3-42f0-a946-e2eb2829ffa6",
       "type": "wing",
       "name": "Upper interceptor wing",
       "position": [
@@ -98,7 +98,7 @@
       "wingDihedral": 20
     },
     {
-      "id": "d864cb06-a2c4-457a-9c4f-bd4c90fe0c2d",
+      "id": "a4430ba7-0d7d-4602-8618-aa938dba9d7b",
       "type": "engine",
       "name": "Small interceptor thruster",
       "position": [
@@ -121,7 +121,7 @@
       "thrusterProfile": "speeder"
     },
     {
-      "id": "05c98fc8-5755-4273-94af-ad1299befe25",
+      "id": "e591a171-c2d3-417f-854d-7cb8b783e023",
       "type": "engine",
       "name": "Small interceptor thruster",
       "position": [
@@ -144,7 +144,7 @@
       "thrusterProfile": "drone"
     },
     {
-      "id": "b6df50d8-b44e-437a-8090-85585529c8b2",
+      "id": "2b02cca0-c7ae-4b3c-8c10-483a6b40fe36",
       "type": "engine",
       "name": "Small interceptor thruster",
       "position": [
@@ -167,7 +167,7 @@
       "thrusterProfile": "drone"
     },
     {
-      "id": "7405ec2a-8996-402a-a3dd-12eb6a8939dc",
+      "id": "e5363844-8bb6-4899-9b53-5d2f31b6ae53",
       "type": "cannon",
       "name": "Cannon",
       "position": [
@@ -186,10 +186,11 @@
         0
       ],
       "color": "#ced5d4",
-      "mirror": true
+      "mirror": true,
+      "cannonBarrel": "hexagonal"
     },
     {
-      "id": "c1eb9f61-bcd8-46c3-b8e1-8cb5e8f66019",
+      "id": "3fbe3803-4a0a-4296-97c3-ac37cd5bc895",
       "type": "fin",
       "name": "Dorsal fin",
       "position": [

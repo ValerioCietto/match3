@@ -45,7 +45,7 @@ export const library = {
   engine: {name:'Engine',icon:'⊙',color:'#5b7d8a',shape:[[-.38,-.8],[.38,-.8],[.5,.7],[.3,1],[-.3,1],[-.5,.7]],height:.7},
   cockpit: {name:'Cockpit',icon:'◈',color:'#64ddd5',shape:[[-.35,.65],[.35,.65],[.25,-.5],[0,-.9],[-.25,-.5]],height:.42},
   cannon: {name:'Cannon',icon:'╎',color:'#ced5d4',shape:[[-.13,-1.4],[.13,-1.4],[.2,.65],[-.2,.65]],height:.25},
-  cargo: {name:'Cargo pod',icon:'▤',color:'#bb975d',shape:[[-.55,-.9],[.55,-.9],[.55,.9],[-.55,.9]],height:.85},
+  cargo: {name:'Cargo pod',icon:'▤',color:'#bb975d',composite:true},
   fin: {name:'Dorsal fin',icon:'◭',color:'#adbecc',shape:[[-.08,-.6],[.08,-.6],[.08,.8],[-.08,.8]],height:1.1},
   nozzle: {legacy:true,name:'Thruster core',icon:'◎',color:'#8ef1e4',shape:Array.from({length:8},(_,i)=>[Math.cos(i*Math.PI/4)*.3,Math.sin(i*Math.PI/4)*.3]).reverse(),height:.12}
 };
