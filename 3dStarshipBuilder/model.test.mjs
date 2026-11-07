@@ -54,7 +54,7 @@ test('fighter bay has an unobstructed axial opening and a twenty-sided shield ba
 test('glTF buffers, normals and mesh counts are valid for each preset',()=>{
   for(const name of ['fighter','hauler','scout']){const parts=preset(name),doc=gltf(parts),buffer=Buffer.from(doc.buffers[0].uri.split(',')[1],'base64');assert.equal(buffer.length,doc.buffers[0].byteLength);assert.equal(doc.meshes.length,meshes(parts).length);
     doc.accessors.forEach((a,i)=>{const view=doc.bufferViews[a.bufferView];assert.equal(view.byteLength,a.count*12);assert.ok(view.byteOffset+view.byteLength<=buffer.length);for(let o=0;o<view.byteLength;o+=12){const values=[0,4,8].map(n=>buffer.readFloatLE(view.byteOffset+o+n));assert.ok(values.every(Number.isFinite));if(i%2)assert.ok(Math.abs(Math.hypot(...values)-1)<1e-5);}});
-    const obj=objFiles(parts);assert.ok(obj.obj.includes('mtllib starship.mtl'));assert.equal((obj.mtl.match(/newmtl/g)||[]).length,doc.meshes.length);
+    const obj=objFiles(parts);assert.ok(obj.obj.includes('mtllib starship.mtl'));assert.equal((obj.mtl.match(/newmtl/g)||[]).length,doc.materials.length);
   }
 });
 test('project roundtrip and malformed project rejection',()=>{const p={version:1,name:'Test',parts:preset('fighter')};p.parts[0].rotation=[180,-360,250];assert.equal(validateProject(JSON.parse(JSON.stringify(p))).parts.length,p.parts.length);assert.throws(()=>validateProject({...p,parts:[{...p.parts[0],scale:[0,1,1]}]}));assert.throws(()=>validateProject({...p,parts:[{...p.parts[0],type:'__proto__'}]}));assert.throws(()=>validateProject({...p,parts:Array(151).fill(p.parts[0])}));});

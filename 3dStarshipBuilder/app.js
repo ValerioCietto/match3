@@ -1,7 +1,7 @@
 import {WebGLRenderer} from './webgl-renderer.js';
 import {openTestFlight} from './flight.js';
 import {recommendedStats,statFields} from './stats.js';
-import {library,hullProfiles,wingProfiles,thrusterProfiles,cockpitProfiles,presetCatalog,part,preset,combined,validateProject,objFiles,gltf} from './model.js';
+import {library,hullProfiles,wingProfiles,thrusterProfiles,cockpitProfiles,finProfiles,presetCatalog,part,preset,combined,validateProject,objFiles,gltf} from './model.js';
 const $=id=>document.getElementById(id),key='orbital-foundry-v1';
 let project={version:1,name:'Peregrine MK I',parts:preset('fighter')},selected,undo=[],redo=[],renderer,dirty=true,yaw=-.65,pitch=.55,distance=3.5;
 const canvas=$('scene'),pointers=new Map();let width=1,height=1,last=0;
@@ -24,16 +24,32 @@ function updateStats(){const values=recommendedStats(project.parts);for(const [i
 const hullOptions=document.createElement('div');hullOptions.id='hullOptions';hullOptions.hidden=true;
 hullOptions.innerHTML='<p class="eyebrow">HULL OPTIONS</p><label class="field">Hull shape<select id="hullProfile"></select></label><label class="field">Upper deck taper<input id="deckTaper" type="range" min="0.35" max="1" step="0.05"><output id="deckTaperValue"></output></label><p class="hint">Lower values slope the armor inward. Use Scale below to adjust width (X), height (Y) and length (Z).</p>';
 $('transforms').before(hullOptions);
-for(const [value,profile] of Object.entries(hullProfiles)){const option=document.createElement('option');option.value=value;option.textContent=profile.name;$('hullProfile').append(option);}
+for(const [value,profile] of Object.entries(hullProfiles).filter(([,profile])=>!profile.legacy)){const option=document.createElement('option');option.value=value;option.textContent=profile.name;$('hullProfile').append(option);}
 $('hullProfile').onchange=()=>{if(current()?.type==='hull')change(()=>current().hullProfile=$('hullProfile').value);};
 $('deckTaper').oninput=()=>{$('deckTaperValue').textContent=Math.round(Number($('deckTaper').value)*100)+'% upper deck';};
 $('deckTaper').onchange=()=>{if(current()?.type==='hull')change(()=>current().deckTaper=Number($('deckTaper').value));};
+for(const [id,title] of [['upperChamfer','Upper chamfer'],['lowerChamfer','Lower chamfer']]){
+  const label=document.createElement('label');label.className='field';label.textContent=title;
+  const input=document.createElement('input');input.id=id;input.type='range';input.min=0;input.max=.4;input.step=.02;
+  const output=document.createElement('output');output.id=id+'Value';input.oninput=()=>output.textContent=Math.round(Number(input.value)*100)+'%';
+  input.onchange=()=>{if(current()?.type==='hull')change(()=>current()[id]=Number(input.value));};label.append(input,output);hullOptions.querySelector('.hint').before(label);
+}
 const wingOptions=document.createElement('div');wingOptions.id='wingOptions';wingOptions.hidden=true;
+const finOptions=document.createElement('div');finOptions.id='finOptions';finOptions.hidden=true;
+finOptions.innerHTML='<p class="eyebrow">DORSAL FIN OPTIONS</p><label class="field">Fin shape<select id="finProfile"></select></label><p class="hint">Sweep moves the tip forward or back; cant leans it sideways. The root stays fixed. Scale Y adjusts height and Z adjusts length.</p>';
+$('transforms').before(finOptions);
+for(const [value,profile] of Object.entries(finProfiles)){const option=document.createElement('option');option.value=value;option.textContent=profile.name;$('finProfile').append(option);}
+$('finProfile').onchange=()=>{if(current()?.type==='fin')change(()=>current().finProfile=$('finProfile').value);};
+const finFields=[['finSweep','Additional sweep',-35,35,5,0,'°'],['finCant','Sideways cant',-45,45,5,0,'°'],['finThickness','Thickness',.04,.4,.02,.16,' units']];
+for(const [id,label,min,max,step,,unit] of finFields){const field=document.createElement('label');field.className='field';field.textContent=label;const input=document.createElement('input');input.type='range';input.id=id;input.min=min;input.max=max;input.step=step;const output=document.createElement('output');output.id=id+'Value';input.oninput=()=>output.textContent=input.value+unit;input.onchange=()=>{if(current()?.type==='fin')change(()=>current()[id]=Number(input.value));};field.append(input,output);finOptions.append(field);}
 const cockpitOptions=document.createElement('div');cockpitOptions.id='cockpitOptions';cockpitOptions.hidden=true;
 cockpitOptions.innerHTML='<p class="eyebrow">COCKPIT OPTIONS</p><label class="field">Cockpit shape<select id="cockpitProfile"></select></label><p class="hint">Scale and rotate the complete cockpit below. Surface color changes the glazing; structural trim retains its accent color.</p>';
 $('transforms').before(cockpitOptions);
 for(const [value,profile] of Object.entries(cockpitProfiles)){const option=document.createElement('option');option.value=value;option.textContent=profile.name;$('cockpitProfile').append(option);}
 $('cockpitProfile').onchange=()=>{if(current()?.type==='cockpit')change(()=>current().cockpitProfile=$('cockpitProfile').value);};
+const bevelField=document.createElement('label');bevelField.className='field';bevelField.innerHTML='Bevel<input id="cockpitBevel" type="range" min="0" max="0.4" step="0.02"><output id="cockpitBevelValue"></output>';cockpitOptions.querySelector('.hint').before(bevelField);
+$('cockpitBevel').oninput=()=>$('cockpitBevelValue').textContent=Math.round(Number($('cockpitBevel').value)*100)+'%';
+$('cockpitBevel').onchange=()=>{if(current()?.type==='cockpit')change(()=>current().cockpitBevel=Number($('cockpitBevel').value));};
 const thrusterOptions=document.createElement('div');thrusterOptions.id='thrusterOptions';thrusterOptions.hidden=true;
 thrusterOptions.innerHTML='<p class="eyebrow">THRUSTER MODULE</p><label class="field">Complete module<select id="thrusterProfile"></select></label><p class="hint">Changes the housing and every exhaust together. Scale, rotate, mirror and recolor the complete assembly below. Reverse drone faces forward for mounting at the nose. Separate legacy thruster cores remain independent parts.</p>';
 $('transforms').before(thrusterOptions);
@@ -61,11 +77,18 @@ function refresh(){
   const p=current();$('controls').hidden=!p;$('selectedName').textContent=p?.name||'Select a part';
   hullOptions.hidden=p?.type!=='hull';
   wingOptions.hidden=p?.type!=='wing';
+  finOptions.hidden=p?.type!=='fin';if(p?.type==='fin'){$('finProfile').value=p.finProfile||'classic';for(const [id,,,,,fallback,unit] of finFields){$(id).value=p[id]??fallback;$(id+'Value').textContent=(p[id]??fallback)+unit;}}
   cockpitOptions.hidden=p?.type!=='cockpit';if(p?.type==='cockpit')$('cockpitProfile').value=p.cockpitProfile||'classic';
+  if(p?.type==='cockpit'){$('cockpitBevel').value=p.cockpitBevel??0;$('cockpitBevelValue').textContent=Math.round((p.cockpitBevel??0)*100)+'%';}
   thrusterOptions.hidden=p?.type!=='engine';if(p?.type==='engine')$('thrusterProfile').value=p.thrusterProfile||'classic';
   $('deckTaper').closest('label').hidden=p?.type==='hull'&&!!hullProfiles[p.hullProfile||'standard'].composite;
+  for(const id of ['upperChamfer','lowerChamfer']){$(id).closest('label').hidden=p?.type==='hull'&&!!hullProfiles[p.hullProfile||'standard'].composite;if(p?.type==='hull'){$(id).value=p[id]??0;$(id+'Value').textContent=Math.round((p[id]??0)*100)+'%';}}
   if(p?.type==='wing'){$('wingProfile').value=p.wingProfile||'swept';for(const [id,,,,,fallback,unit] of wingFields){$(id).value=p[id]??fallback;$(id+'Value').textContent=(p[id]??fallback)+unit;}}
-  if(p?.type==='hull'){$('hullProfile').value=p.hullProfile||'standard';$('deckTaper').value=p.deckTaper??1;$('deckTaperValue').textContent=Math.round((p.deckTaper??1)*100)+'% upper deck';}
+  $('hullProfile').querySelector('[data-legacy]')?.remove();
+  if(p?.type==='hull'){
+    if(hullProfiles[p.hullProfile]?.legacy){const option=document.createElement('option');option.value=p.hullProfile;option.textContent=hullProfiles[p.hullProfile].name+' (legacy)';option.disabled=true;option.dataset.legacy='true';$('hullProfile').append(option);}
+    $('hullProfile').value=p.hullProfile||'standard';$('deckTaper').value=p.deckTaper??1;$('deckTaperValue').textContent=Math.round((p.deckTaper??1)*100)+'% upper deck';
+  }
   if(p){$('partName').value=p.name;$('color').value=p.color;$('mirror').checked=p.mirror;document.querySelectorAll('[data-axis]').forEach(input=>input.value=p[input.dataset.field][Number(input.dataset.axis)]);}
   dirty=true;
 }
@@ -85,6 +108,17 @@ function download(name,text,type){const url=URL.createObjectURL(new Blob([text],
 const filename=()=>project.name.replace(/[^a-z0-9_-]/gi,'_')||'starship';
 const configExport=document.createElement('button');configExport.id='exportConfig';configExport.textContent='Export configuration JSON';configExport.title='Download all editable parts and settings; restore with Open project';$('obj').before(configExport);
 configExport.onclick=()=>{download(filename()+'.starship.json',JSON.stringify(project,null,2),'application/json');status('Configuration JSON exported. Use Open project to import it into this editor.');};
+const copyConfig=document.createElement('button');copyConfig.id='copyConfig';copyConfig.textContent='Copy JSON configuration';configExport.before(copyConfig);
+copyConfig.onclick=async()=>{
+  const json=JSON.stringify(project,null,2);copyConfig.disabled=true;
+  try{await navigator.clipboard.writeText(json);status('JSON configuration copied to clipboard.');}
+  catch{
+    const dialog=document.createElement('dialog');dialog.className='copy-json-dialog';dialog.id='copyConfigDialog';dialog.setAttribute('aria-labelledby','copyConfigTitle');
+    dialog.innerHTML='<h2 id="copyConfigTitle">Copy JSON configuration</h2><p>Clipboard access is unavailable. Select and copy the configuration below (Ctrl+C / ⌘C).</p><textarea aria-label="Editable project JSON" readonly></textarea><button>Close</button>';
+    dialog.querySelector('textarea').value=json;dialog.querySelector('button').onclick=()=>dialog.close();dialog.addEventListener('close',()=>{dialog.remove();copyConfig.focus();},{once:true});document.body.append(dialog);dialog.showModal();dialog.querySelector('textarea').focus();dialog.querySelector('textarea').select();
+    status('Select and copy the JSON in the dialog.');
+  }finally{copyConfig.disabled=false;}
+};
 $('load').title='Import an editable project or .starship.json configuration';
 $('save').onclick=()=>{download(filename()+'.json',JSON.stringify(project,null,2),'application/json');status('Project downloaded.');};
 $('export').onclick=()=>{download(filename()+'.gltf',JSON.stringify(gltf(project.parts)),'model/gltf+json');status('glTF exported with materials and separate part meshes.');};

@@ -26,6 +26,10 @@ function prism(outline,height,color){
   for(let i=0;i<n;i++)faces.push([i,(i+1)%n,(i+1)%n+n,i+n]);return solid(vertices,faces,color);
 }
 function reflect(m){m.vertices=m.vertices.map(([x,y,z])=>[-x,y,z]);m.faces.forEach(f=>f.reverse());return m;}
+export function finGeometry(outline,color){
+  const m=prism(outline,.16,color);
+  m.vertices=m.vertices.map(([height,thickness,z])=>[thickness,height,z]);m.faces.forEach(f=>f.reverse());return m;
+}
 function facetedCabin(outline,height,inset,color){
   const n=outline.length,vertices=[...outline.map(([x,z])=>[x,-.08,z]),...outline.map(([x,z])=>[x*inset,height,z*inset])];
   const faces=[Array.from({length:n},(_,i)=>i),Array.from({length:n},(_,i)=>i+n)];
@@ -84,15 +88,16 @@ export function specialHullGeometry(profile,color){
   throw Error('Unknown hull profile: '+profile);
 }
 export const thrusterLayouts={
-  drone:{halfSize:[.4,.32,.45],exhausts:[[0,0]],radius:.23,length:.48},
-  reverseDrone:{halfSize:[.4,.32,.45],exhausts:[[0,0]],radius:.23,length:.48,reverse:true},
-  speeder:{halfSize:[.55,.3,1.3],exhausts:[[-.28,0],[.28,0]],radius:.2,length:.7},
-  hauler:{halfSize:[.95,.85,.85],exhausts:[[0,.4],[-.44,-.35],[.44,-.35]],radius:.29,length:.65},
-  carrier:{halfSize:[.95,.85,1.65],exhausts:[[-.43,-.37],[.43,-.37],[-.43,.37],[.43,.37]],radius:.29,length:.75}
+  drone:{halfSize:[.4,.32,.27],exhausts:[[0,0]],radius:.23,length:.48},
+  reverseDrone:{halfSize:[.4,.32,.27],exhausts:[[0,0]],radius:.23,length:.48,reverse:true},
+  speeder:{halfSize:[.55,.3,.78],exhausts:[[-.28,0],[.28,0]],radius:.2,length:.7},
+  hauler:{halfSize:[.95,.85,.51],exhausts:[[0,.4],[-.44,-.35],[.44,-.35]],radius:.29,length:.65},
+  carrier:{halfSize:[.95,.85,.99],exhausts:[[-.43,-.37],[.43,-.37],[-.43,.37],[.43,.37]],radius:.29,length:.75}
 };
 export function thrusterGeometry(profile,color){
   const spec=thrusterLayouts[profile], [x,y,z]=spec.halfSize;
-  const pieces=[box(x,y,z,color),move(box(x*1.04,y*1.04,.12,'#344756'),[0,0,z-.15])];
+  const housing=(width,height,depth,tint)=>move(cylinder(1,depth*2,8,tint,'z'),[0,0,0],[width,height,1]);
+  const pieces=[housing(x,y,z,color),move(housing(x*1.04,y*1.04,.12,'#344756'),[0,0,z-.15])];
   for(const [ex,ey] of spec.exhausts){
     const cone=cylinder(spec.radius,spec.length,12,'#8297a6','z');
     // A flared conical bell; the narrow end is mounted inside the housing.

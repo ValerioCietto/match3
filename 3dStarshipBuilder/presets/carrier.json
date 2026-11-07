@@ -1,0 +1,231 @@
+{
+  "version": 1,
+  "name": "Bastion Carrier",
+  "label": "Bastion / Carrier",
+  "description": "Four side-facing fighter bays, four defense turrets and a shield generator.",
+  "parts": [
+    {
+      "id": "a42f7842-6a1b-47ac-8f01-42dd7fd84835",
+      "type": "hull",
+      "name": "Hull",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1.5,
+        2.2,
+        2.4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#697f99",
+      "mirror": false,
+      "hullProfile": "freighter",
+      "deckTaper": 0.8
+    },
+    {
+      "id": "e8434b69-cdc1-45f0-96f3-0da933ff2af1",
+      "type": "cockpit",
+      "name": "Cockpit",
+      "position": [
+        0,
+        1,
+        -2.6
+      ],
+      "scale": [
+        1.6,
+        1.2,
+        1.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#64ddd5",
+      "mirror": false
+    },
+    {
+      "id": "7f708cae-ac4e-4c45-8723-b2e1f6674244",
+      "type": "fighterBay",
+      "name": "Fighter bay",
+      "position": [
+        2.1,
+        0,
+        -1.7
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "color": "#bcc9d2",
+      "mirror": true
+    },
+    {
+      "id": "6edf4559-baad-4b75-bd63-1d252770daf1",
+      "type": "fighterBay",
+      "name": "Fighter bay",
+      "position": [
+        2.1,
+        0,
+        1.7
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "color": "#bcc9d2",
+      "mirror": true
+    },
+    {
+      "id": "f840f399-3e21-4d40-a702-d12059353a4c",
+      "type": "turret",
+      "name": "Turret slot",
+      "position": [
+        0.8,
+        0.85,
+        -2
+      ],
+      "scale": [
+        0.8,
+        0.8,
+        0.8
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#91a6b5",
+      "mirror": true
+    },
+    {
+      "id": "870ce7ef-8258-40bd-a2a2-f19f75470f71",
+      "type": "turret",
+      "name": "Turret slot",
+      "position": [
+        0.8,
+        0.85,
+        2
+      ],
+      "scale": [
+        0.8,
+        0.8,
+        0.8
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#91a6b5",
+      "mirror": true
+    },
+    {
+      "id": "4a32b23b-c615-4511-a502-29a23d94f33a",
+      "type": "shieldGenerator",
+      "name": "Shield generator",
+      "position": [
+        0,
+        0.9,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#6aaec9",
+      "mirror": false
+    },
+    {
+      "id": "4dbd16c6-7943-42c4-ad0e-e66d774d0b3d",
+      "type": "wing",
+      "name": "Swept wing",
+      "position": [
+        1.2,
+        -0.35,
+        2.4
+      ],
+      "scale": [
+        0.65,
+        1.5,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#697f99",
+      "mirror": true,
+      "wingProfile": "clipped"
+    },
+    {
+      "id": "6d59c233-eed8-4e14-8e34-b3a3999dba64",
+      "type": "fuelPod",
+      "name": "Fuel pod",
+      "position": [
+        0.75,
+        -1,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#a16bd4",
+      "mirror": true
+    },
+    {
+      "id": "d152de09-6932-4762-9b9e-b94fa2fb91ff",
+      "type": "engine",
+      "name": "Engine",
+      "position": [
+        0.85,
+        0,
+        4.2
+      ],
+      "scale": [
+        1.4,
+        1.4,
+        1.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#5b7d8a",
+      "mirror": true
+    }
+  ]
+}

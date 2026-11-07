@@ -1,0 +1,215 @@
+{
+  "version": 1,
+  "name": "Kestrel Interceptor",
+  "label": "Kestrel / Interceptor",
+  "description": "Six small thrusters, four wings in an X configuration and paired forward cannons.",
+  "parts": [
+    {
+      "id": "c2408231-7227-43df-bca1-1b15eead9b44",
+      "type": "hull",
+      "name": "Hull",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.8,
+        0.65,
+        1.1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#9aaec3",
+      "mirror": false,
+      "hullProfile": "arrow",
+      "deckTaper": 0.75
+    },
+    {
+      "id": "b54cc1c2-99cb-44a9-bd29-8392780250a1",
+      "type": "cockpit",
+      "name": "Cockpit",
+      "position": [
+        0,
+        0.2,
+        -0.5
+      ],
+      "scale": [
+        0.8,
+        0.75,
+        1.05
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#64ddd5",
+      "mirror": false
+    },
+    {
+      "id": "3836fe21-31e4-40eb-8d0a-66cfd268ca6c",
+      "type": "wing",
+      "name": "Lower interceptor wing",
+      "position": [
+        0.4,
+        -0.18,
+        0.25
+      ],
+      "scale": [
+        0.85,
+        1,
+        0.85
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#d0a357",
+      "mirror": true,
+      "wingProfile": "swept",
+      "wingDihedral": -20
+    },
+    {
+      "id": "e67625c9-8702-4bf2-9cde-dc5c1ec31590",
+      "type": "wing",
+      "name": "Upper interceptor wing",
+      "position": [
+        0.4,
+        0.18,
+        0.25
+      ],
+      "scale": [
+        0.85,
+        1,
+        0.85
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#d0a357",
+      "mirror": true,
+      "wingProfile": "swept",
+      "wingDihedral": 20
+    },
+    {
+      "id": "45cd505c-42b0-46e8-8e53-14d0472375a0",
+      "type": "engine",
+      "name": "Small interceptor thruster",
+      "position": [
+        0.4,
+        0,
+        1.4
+      ],
+      "scale": [
+        0.55,
+        0.55,
+        0.65
+      ],
+      "rotation": [
+        -5,
+        0,
+        0
+      ],
+      "color": "#5b7d8a",
+      "mirror": true,
+      "thrusterProfile": "speeder"
+    },
+    {
+      "id": "14c3d029-3f4b-4061-b989-758d2d8569e1",
+      "type": "engine",
+      "name": "Small interceptor thruster",
+      "position": [
+        1.2,
+        0.5,
+        1.1
+      ],
+      "scale": [
+        0.55,
+        0.55,
+        0.65
+      ],
+      "rotation": [
+        0,
+        0,
+        20
+      ],
+      "color": "#5b7d8a",
+      "mirror": true,
+      "thrusterProfile": "drone"
+    },
+    {
+      "id": "5709c46c-c874-4fcc-bb81-aa300d65b4c9",
+      "type": "engine",
+      "name": "Small interceptor thruster",
+      "position": [
+        1.2,
+        -0.6,
+        1.1
+      ],
+      "scale": [
+        0.55,
+        0.55,
+        0.65
+      ],
+      "rotation": [
+        0,
+        0,
+        -20
+      ],
+      "color": "#5b7d8a",
+      "mirror": true,
+      "thrusterProfile": "drone"
+    },
+    {
+      "id": "0ad69fd9-4c14-4961-a6c1-6400e0d5d964",
+      "type": "cannon",
+      "name": "Cannon",
+      "position": [
+        0.5,
+        0,
+        -0.2
+      ],
+      "scale": [
+        0.65,
+        0.65,
+        0.85
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#ced5d4",
+      "mirror": true
+    },
+    {
+      "id": "b76be5c2-e6e5-46cc-99ad-74f0f4fca170",
+      "type": "fin",
+      "name": "Dorsal fin",
+      "position": [
+        0,
+        0,
+        0.7
+      ],
+      "scale": [
+        2.55,
+        0.55,
+        0.95
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#adbecc",
+      "mirror": false
+    }
+  ]
+}

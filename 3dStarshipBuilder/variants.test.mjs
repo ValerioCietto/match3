@@ -1,10 +1,22 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {part,mesh,validateProject,gltf,objFiles,cockpitProfiles} from './model.js';
+import {part,mesh,validateProject,gltf,objFiles,cockpitProfiles,finProfiles} from './model.js';
 import {thrusterLayouts} from './blocks.js';
 import {moduleVolume} from './stats.js';
 const variants=[...['research','swan','axe'].map(hullProfile=>({...part('hull'),hullProfile})),...Object.keys(thrusterLayouts).map(thrusterProfile=>({...part('engine'),thrusterProfile}))];
 variants.push(...Object.keys(cockpitProfiles).filter(key=>key!=='classic').map(cockpitProfile=>({...part('cockpit'),cockpitProfile})));
+variants.push(...Object.keys(cockpitProfiles).flatMap(cockpitProfile=>[.02,.2,.4].map(cockpitBevel=>({...part('cockpit'),cockpitProfile,cockpitBevel}))));
+test('cockpit bevel preserves old defaults and validates its range',()=>{
+  const p=part('cockpit');assert.deepEqual(mesh(p),mesh({...p,cockpitBevel:0}));
+  for(const value of [-.1,.5,null,'0.2'])assert.throws(()=>validateProject({version:1,name:'Bad',parts:[{...p,cockpitBevel:value}]}));
+  const beveled={...p,cockpitBevel:.4};assert.ok(mesh(beveled).faces.length>mesh(p).faces.length);assert.ok(moduleVolume(beveled)<moduleVolume(p));
+});
+variants.push(...Object.keys(finProfiles).flatMap(finProfile=>[-1,1].map(sign=>({...part('fin'),finProfile,finSweep:sign*35,finCant:sign*45,finThickness:sign<0?.04:.4}))));
+test('fin options retain classic geometry and reject invalid values',()=>{
+  const p=part('fin');assert.deepEqual(mesh(p).vertices,mesh({...p,finProfile:'classic',finSweep:0,finCant:0,finThickness:.16}).vertices);
+  for(const bad of [{finProfile:'missing'},{finProfile:'__proto__'},{finSweep:36},{finCant:-46},{finThickness:0}])assert.throws(()=>validateProject({version:1,name:'Bad',parts:[{...p,...bad}]}));
+  for(const finProfile of Object.keys(finProfiles)){const model=mesh({...p,finProfile}),root=model.vertices.filter(v=>v[1]===-.55),changed=mesh({...p,finProfile,finSweep:35,finCant:45});assert.deepEqual(changed.vertices.filter(v=>v[1]===-.55),root);}
+});
 test('hull, cockpit and thruster variants are closed, nondegenerate, exportable and scalable',()=>{
   for(const p of variants)for(const reflected of [false,true]){
     const m=mesh(p,reflected),edges=new Map();
@@ -25,4 +37,14 @@ test('thruster layouts contain 1, 1, 2, 3 and 4 complete exhaust assemblies',()=
   for(const [profile,count] of Object.entries({drone:1,reverseDrone:1,speeder:2,hauler:3,carrier:4})){assert.equal(thrusterLayouts[profile].exhausts.length,count);const m=mesh({...part('engine'),thrusterProfile:profile});assert.ok(m.faceColors.includes('#7ce9ec'));const scaled=mesh({...part('engine'),thrusterProfile:profile,scale:[2,3,4]});m.vertices.forEach((v,i)=>v.forEach((n,j)=>assert.equal(scaled.vertices[i][j],n*[2,3,4][j])));}
   const p=part('engine'),normal=mesh({...p,thrusterProfile:'drone'}),reverse=mesh({...p,thrusterProfile:'reverseDrone'});normal.vertices.forEach(([x,y,z],i)=>assert.deepEqual(reverse.vertices[i],[-x,y,-z]));
   assert.throws(()=>validateProject({version:1,name:'Bad',parts:[{...p,thrusterProfile:'invalid'}]}));
+});
+test('thruster housings and collars are octagonal along Z with shortened bodies',()=>{
+  const originalHalfLengths={drone:.45,reverseDrone:.45,speeder:1.3,hauler:.85,carrier:1.65};
+  for(const [profile,spec] of Object.entries(thrusterLayouts)){
+    const m=mesh({...part('engine'),thrusterProfile:profile});
+    assert.equal(m.faces[0].length,8);assert.equal(m.faces[1].length,8);assert.equal(m.faces[10].length,8);
+    const body=m.vertices.slice(0,16),zs=body.map(v=>v[2]);
+    assert.ok(Math.abs(Math.max(...zs)-Math.min(...zs)-originalHalfLengths[profile]*2*.6)<1e-9);
+    assert.equal(new Set(zs).size,2);assert.equal(new Set(body.slice(0,8).map(v=>v.slice(0,2).join(','))).size,8);
+  }
 });

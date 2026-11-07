@@ -1,10 +1,22 @@
 # Starship builder
 
+Hull Options includes independent **Upper chamfer** and **Lower chamfer** sliders (0–40%) for the six extruded hull profiles. Each adds a band of beveled faces and insets its cap; the percentage controls the band's share of hull height, with proportional cap inset. They combine with upper-deck taper, update volume-based stats, and persist through saves, JSON/glTF/OBJ exports and undo/redo. Zero preserves the original hull geometry. Like taper, these controls are hidden for the sculpted Research, Swan and Axe hulls.
+
+## Dorsal fin options
+
+Select a Dorsal fin to choose **Classic**, **Swept**, **Shark**, **Delta**, **Clipped** or **Sail**. Adjust additional sweep (−35° to +35°), sideways cant (−45° to +45°), and thickness (0.04–0.4 units before scaling). Sweep and cant keep the root fixed; Scale Y changes height and Z changes length. Options persist through configuration exports, saves, duplication and undo/redo, and update geometry, stats and Test Flight. Existing presets keep the Classic shape until edited.
+
 ## Editable configuration export
+
+**Copy JSON configuration**, beside the export controls, copies the current editable project to the clipboard. If the browser blocks clipboard access, a dialog provides selected JSON for manual copying.
+
+Each starting preset now lives in its own file under `presets/`: `fighter.json`, `interceptor.json`, `hauler.json`, `scout.json`, `carrier.json`, `megaCargo.json`, `explorer.json`, `cruise.json`, and `empty.json`. Edit the relevant JSON to update a preset; its `name`, `label`, and `description` populate the editor menu. Each file is also directly importable through **Open project**. `presets.js` imports the files and clones their parts with fresh IDs on every load. Geometry and preset configuration are kept separate.
 
 Click **Export configuration JSON** beneath Ship assembly to download `<ship-name>.starship.json`. It contains the project name and all editable modules, including their shapes, transforms, colors, mirroring and custom hull/wing/cockpit/thruster settings. Use **Open project** in this editor to import the file and continue editing. Import replaces the current assembly and can be undone. **Save project** also downloads compatible editable JSON; glTF and OBJ remain geometry exports.
 
 ## Cockpit options
+
+The **Bevel** slider (0–40%) adds actual beveled edges and closed corner faces to any cockpit profile, including the framing. Zero preserves the original mesh. Bevel scales proportionally with each face and is included in configuration files, geometry exports, volume-based stats and undo/redo.
 
 Select a Cockpit in Ship assembly to choose **Capsule**, **Fighter jet canopy**, **Almond shape**, **Industrial diamond**, or **Luxury diamond**, alongside the original Classic cockpit. Capsule is a rounded elongated pod; the canopy has a narrow armored sill; Almond has pointed ends and a raised central ridge; Industrial diamond has heavy structural framing; Luxury diamond has additional facets and gold trim. The complete cockpit follows scale, rotation and mirroring, with surface color applied to the glazing. Shapes persist through saves, duplication and undo/redo, update volume-based stats, and appear in exports and Test Flight.
 
@@ -14,13 +26,13 @@ Hull Options also includes **Research ship** (connected spherical laboratories),
 
 Select an **Engine** in the assembly to open **Thruster Module** options:
 
-- **Drone:** compact box housing and one flared conical exhaust.
+- **Drone:** compact octagonal housing and one flared conical exhaust.
 - **Reverse drone:** the entire Drone assembly turned 180° for front mounting.
 - **Speeder:** elongated housing with two parallel exhausts.
 - **Hauler:** broad, tall housing with three exhausts in a triangle.
 - **Carrier:** a longer heavy housing with four exhausts in a square.
 
-Changing a thruster profile replaces the complete selected engine mesh, including its housing, collars, bells and exhaust faces. Scaling, rotation and mirroring transform all of it together. Body color changes the housing while exhaust trim keeps its accent colors. Standalone thruster cores are no longer available in the parts library or any preset. Saved projects containing legacy cores still load without losing those parts. New profiles persist in saves, duplicates, undo/redo, exports and Test Flight. Their recommended stats use their full composite volume. The handling sandbox still aggregates engine thrust without simulating individual thrust directions.
+All five thruster variants have octagonal housings and collars when viewed along Z. Their housings are 40% shorter along Z, with exhausts attached to the shortened rear face; widths, heights and exhaust lengths are preserved. Volume-based stats update accordingly. Changing a thruster profile replaces the complete selected engine mesh, including its housing, collars, bells and exhaust faces. Scaling, rotation and mirroring transform all of it together. Body color changes the housing while exhaust trim keeps its accent colors. Standalone thruster cores are no longer available in the parts library or any preset. Saved projects containing legacy cores still load without losing those parts. New profiles persist in saves, duplicates, undo/redo, exports and Test Flight. Their recommended stats use their full composite volume. The handling sandbox still aggregates engine thrust without simulating individual thrust directions.
 
 ## Test Flight
 

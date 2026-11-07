@@ -5,3 +5,5 @@
 .recommended-stats>summary{color:#c3ed9e;font-size:15px;font-weight:500;cursor:pointer}.recommended-stats>summary:focus-visible{outline:2px solid #87edd3;outline-offset:4px}.assembly-title{display:flex;align-items:center;gap:14px;flex-wrap:wrap}.assembly-title h2{font-size:10px;letter-spacing:1.7px}.flight-ready{font-size:11px;color:#e0b78a}.flight-ready[data-ready=true]{color:#baf17d}.assembly-head{gap:12px}.assembly-head>span{white-space:nowrap}
 
 .workspace footer{flex-wrap:wrap;gap:8px}.workspace footer #status{flex:1 1 180px}
+
+.copy-json-dialog{width:min(700px,90vw);background:#131f28;color:#deebee;border:1px solid #4b6777;border-radius:8px;padding:20px}.copy-json-dialog::backdrop{background:#03080edd}.copy-json-dialog p{font-size:12px;line-height:1.6}.copy-json-dialog textarea{display:block;width:100%;height:45vh;resize:vertical;margin:12px 0;background:#0c1117;color:#d9e2e7;font:12px monospace;padding:12px;border:1px solid #34424e}

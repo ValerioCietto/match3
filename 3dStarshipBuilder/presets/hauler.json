@@ -1,0 +1,144 @@
+{
+  "version": 1,
+  "name": "Atlas MK I",
+  "label": "Atlas / Hauler",
+  "description": "A light hauler with two cargo pods.",
+  "parts": [
+    {
+      "id": "459762c0-25b4-4107-8243-e0f75d52fdc1",
+      "type": "hull",
+      "name": "Hull",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1.3,
+        1.4,
+        1.4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#91a6b5",
+      "mirror": false,
+      "hullProfile": "freighter",
+      "deckTaper": 0.8
+    },
+    {
+      "id": "5d460422-5ff4-48bd-a22b-c726a50eeeb1",
+      "type": "cockpit",
+      "name": "Cockpit",
+      "position": [
+        0,
+        0.48,
+        -0.55
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#64ddd5",
+      "mirror": false
+    },
+    {
+      "id": "8ee3758e-d64b-4cba-86f5-54748983a58a",
+      "type": "wing",
+      "name": "Swept wing",
+      "position": [
+        0.5,
+        -0.05,
+        0.9
+      ],
+      "scale": [
+        0.95,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#afc3cd",
+      "mirror": true,
+      "wingProfile": "tapered"
+    },
+    {
+      "id": "4a16cab2-8714-42ce-b6bc-9b202dfbbc52",
+      "type": "engine",
+      "name": "Engine",
+      "position": [
+        1,
+        0,
+        1.8
+      ],
+      "scale": [
+        1,
+        1.05,
+        1.05
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#5b7d8a",
+      "mirror": true,
+      "thrusterProfile": "hauler"
+    },
+    {
+      "id": "9bf2a7f7-ef0d-48ca-b25a-54af25eea28e",
+      "type": "cargo",
+      "name": "Cargo pod",
+      "position": [
+        1,
+        0.1,
+        0.4
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#bb975d",
+      "mirror": true
+    },
+    {
+      "id": "53a49578-ba43-4e78-85d9-e460ec6efb55",
+      "type": "fin",
+      "name": "Dorsal fin",
+      "position": [
+        0,
+        0.65,
+        1
+      ],
+      "scale": [
+        1,
+        0.65,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#adbecc",
+      "mirror": false
+    }
+  ]
+}
