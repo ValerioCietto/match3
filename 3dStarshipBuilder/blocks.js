@@ -124,7 +124,7 @@ export function thrusterGeometry(profile,color){
   if(spec.reverse)result.vertices=result.vertices.map(([vx,vy,vz])=>[-vx,vy,-vz]);
   return result;
 }
-export function blockGeometry(type,color){
+export function blockGeometry(type,color,{passengerSide}={}){
   const dark='#344756',metal='#b7c8d2',glass='#73e3ed';
   if(type==='cargo'){
     // Keep the original 1.1 x .85 x 1.8 envelope so saved placements still fit.
@@ -167,6 +167,6 @@ export function blockGeometry(type,color){
   }
   if(type==='fuelPod')return join([cylinder(.42,1.45,16,color,'z'),move(sphere(.42,color),[0,0,-.725]),move(sphere(.42,color),[0,0,.725]),...[-.5,.5].map(z=>move(cylinder(.455,.14,16,dark,'z'),[0,0,z])),move(cylinder(.15,.25,8,metal,'z'),[0,0,-1.19]),move(box(.16,.09,.22,dark),[0,.45,-.72])]);
   if(type==='shieldGenerator')return join([cylinder(.85,.25,20,color),move(cylinder(.69,.07,20,dark),[0,.16,0]),move(cylinder(.56,.09,20,glass),[0,.23,0]),move(sphere(.22,color),[0,.27,0])]);
-  if(type==='passengerModule')return join([box(.65,.48,1.25,color),...[-1,1].flatMap(side=>[-.8,0,.8].flatMap(z=>[move(sphere(.23,dark),[side*.64,0,z],[.5,1,1]),move(sphere(.18,glass),[side*.72,0,z],[.5,1,1])]))]);
+  if(type==='passengerModule')return join([box(.65,.48,1.25,color),...(passengerSide?[passengerSide]:[-1,1]).flatMap(side=>[-.8,0,.8].flatMap(z=>[move(sphere(.23,dark),[side*.64,0,z],[.5,1,1]),move(sphere(.18,glass),[side*.72,0,z],[.5,1,1])]))]);
   throw Error('Unknown composite block: '+type);
 }

@@ -22,7 +22,7 @@ const neutral = {position:[0,0,0],rotation:[0,0,0],scale:[1,1,1],mirror:false};
 // Signed tetrahedra measure the actual closed surfaces, not the bounding box.
 // For composite blocks this sums component solids, including intersecting components.
 export function moduleVolume(p){
-  const m=mesh({...p,...neutral});let volume=0;
+  const m=mesh({...p,...neutral,mirror:!!p.mirror});let volume=0;
   for(const face of m.faces)for(let i=1;i<face.length-1;i++){
     const [a,b,c]=[face[0],face[i],face[i+1]].map(index=>m.vertices[index]);
     volume+=a[0]*(b[1]*c[2]-b[2]*c[1])+a[1]*(b[2]*c[0]-b[0]*c[2])+a[2]*(b[0]*c[1]-b[1]*c[0]);
@@ -30,9 +30,10 @@ export function moduleVolume(p){
   return Math.abs(volume/6)*p.scale.reduce((a,b)=>a*b,1)*(p.mirror?2:1);
 }
 const defaultVolumes=Object.fromEntries(Object.keys(library).map(type=>[type,moduleVolume({type,name:type,color:library[type].color,...neutral})]));
+const mirroredPassengerVolume=moduleVolume({type:'passengerModule',name:'Cabin',color:library.passengerModule.color,...neutral,mirror:true})/2;
 
 export function moduleStats(p){
-  const volume=moduleVolume(p),r=moduleRates[p.type],capacity=volume/defaultVolumes[p.type];
+  const volume=moduleVolume(p),r=moduleRates[p.type],capacity=volume/(p.type==='passengerModule'&&p.mirror?mirroredPassengerVolume:defaultVolumes[p.type]);
   const passengers=p.type==='passengerModule'?capacity*8:0;
   return {
     volume,massEmpty:volume*r.mass,massFull:volume*(r.mass+(r.payload||0))+passengers*.1,

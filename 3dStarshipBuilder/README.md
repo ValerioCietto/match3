@@ -1,5 +1,7 @@
 # Starship builder
 
+Mirrored passenger modules show porthole domes only on the outer side of each cabin, away from the X mirror plane; unmirrored cabins retain both rows. This follows placement on either side of X and reversed cabin orientation. Removing the inner domes slightly reduces geometry-based mass and cost; nominal passenger capacity is unchanged.
+
 Cargo pods use container-style geometry: corrugated walls and roof, reinforced rails, eight corner blocks, twin doors with locking rods and hinges, identification plates and visibility markings. Details retain the original 1.1 × 0.85 × 1.8 footprint before scaling, so existing placements remain compatible. Body color applies to the panels and ribs; framing and hardware retain accent colors. All details are included in mirrored copies, exports and Test Flight, with volume-based stats recalculated from the detailed mesh.
 
 ## Cannon options

@@ -77,9 +77,12 @@ function hullGeometry(spec,p){
 }
 export function mesh(p,reflected=false){
   const base=library[p.type];
+  // Choose the side whose transformed normal points away from the X mirror plane.
+  const lateralDirection=Math.cos(p.rotation[1]*Math.PI/180)*Math.cos(p.rotation[2]*Math.PI/180);
+  const passengerSide=p.type==='passengerModule'&&p.mirror?((p.position[0]||1)*(Math.abs(lateralDirection)<1e-9?1:lateralDirection)<0?-1:1):undefined;
   const hull=p.type==='hull'?hullProfiles[p.hullProfile||'standard']:null;
   const spec=hull?{...base,shape:hull.shape}:p.type==='wing'?{...base,shape:wingProfiles[p.wingProfile||'swept'].shape,height:p.wingThickness??.16}:base;
-  const geometry=p.type==='cockpit'&&p.cockpitProfile&&p.cockpitProfile!=='classic'?cockpitGeometry(p.cockpitProfile,p.color):hull?.composite?specialHullGeometry(p.hullProfile,p.color):p.type==='engine'&&p.thrusterProfile&&p.thrusterProfile!=='classic'?thrusterGeometry(p.thrusterProfile,p.color):spec.composite?blockGeometry(p.type,p.color):extruded(spec);
+  const geometry=p.type==='cockpit'&&p.cockpitProfile&&p.cockpitProfile!=='classic'?cockpitGeometry(p.cockpitProfile,p.color):hull?.composite?specialHullGeometry(p.hullProfile,p.color):p.type==='engine'&&p.thrusterProfile&&p.thrusterProfile!=='classic'?thrusterGeometry(p.thrusterProfile,p.color):spec.composite?blockGeometry(p.type,p.color,{passengerSide}):extruded(spec);
   const selectedGeometry=p.type==='cannon'&&p.cannonBarrel&&p.cannonBarrel!=='classic'?cannonGeometry(p):hull&&!hull.composite?hullGeometry(spec,p):p.type==='fin'&&p.finProfile&&p.finProfile!=='classic'?finGeometry(finProfiles[p.finProfile].outline,p.color):geometry;
   const {vertices,faces,faceColors}=p.type==='cockpit'?bevelGeometry(selectedGeometry,p.cockpitBevel??0,p.color):selectedGeometry;
   if(p.type==='fin')for(const v of vertices){const height=v[1]+.55;v[0]=v[0]*(p.finThickness??.16)/.16+height*Math.tan((p.finCant??0)*Math.PI/180);v[2]+=height*Math.tan((p.finSweep??0)*Math.PI/180);}
