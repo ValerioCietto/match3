@@ -1,11 +1,9 @@
 {
   "version": 1,
   "name": "Bastion Carrier",
-  "label": "Bastion / Carrier",
-  "description": "Four side-facing fighter bays, four defense turrets and a shield generator.",
   "parts": [
     {
-      "id": "a42f7842-6a1b-47ac-8f01-42dd7fd84835",
+      "id": "71e4d630-f104-42af-aa03-2f010644af53",
       "type": "hull",
       "name": "Hull",
       "position": [
@@ -25,17 +23,17 @@
       ],
       "color": "#697f99",
       "mirror": false,
-      "hullProfile": "freighter",
+      "hullProfile": "capsule",
       "deckTaper": 0.8
     },
     {
-      "id": "e8434b69-cdc1-45f0-96f3-0da933ff2af1",
+      "id": "ccd78694-e35d-4935-9a23-8a1a3131fd23",
       "type": "cockpit",
       "name": "Cockpit",
       "position": [
         0,
-        1,
-        -2.6
+        -0.1,
+        -3.6
       ],
       "scale": [
         1.6,
@@ -43,20 +41,22 @@
         1.5
       ],
       "rotation": [
-        0,
+        -60,
         0,
         0
       ],
       "color": "#64ddd5",
-      "mirror": false
+      "mirror": false,
+      "cockpitProfile": "classic",
+      "cockpitBevel": 0.26
     },
     {
-      "id": "7f708cae-ac4e-4c45-8723-b2e1f6674244",
+      "id": "fbfa7d01-62a5-4fb6-9393-e26ac811c2ef",
       "type": "fighterBay",
       "name": "Fighter bay",
       "position": [
-        2.1,
-        0,
+        2,
+        -0.9,
         -1.7
       ],
       "scale": [
@@ -73,12 +73,12 @@
       "mirror": true
     },
     {
-      "id": "6edf4559-baad-4b75-bd63-1d252770daf1",
+      "id": "78220a0b-8d72-45f2-8e76-3d3dcfa4c26e",
       "type": "fighterBay",
       "name": "Fighter bay",
       "position": [
-        2.1,
-        0,
+        2,
+        -0.9,
         1.7
       ],
       "scale": [
@@ -95,13 +95,13 @@
       "mirror": true
     },
     {
-      "id": "f840f399-3e21-4d40-a702-d12059353a4c",
+      "id": "f7c3bf3b-1198-45be-8b64-e4c796b8fddd",
       "type": "turret",
       "name": "Turret slot",
       "position": [
-        0.8,
-        0.85,
-        -2
+        1,
+        0.3,
+        -2.2
       ],
       "scale": [
         0.8,
@@ -111,18 +111,18 @@
       "rotation": [
         0,
         0,
-        0
+        -80
       ],
       "color": "#91a6b5",
       "mirror": true
     },
     {
-      "id": "870ce7ef-8258-40bd-a2a2-f19f75470f71",
+      "id": "d32a772f-db3b-4d09-9d49-d7953d27fb45",
       "type": "turret",
       "name": "Turret slot",
       "position": [
-        0.8,
-        0.85,
+        1,
+        0.4,
         2
       ],
       "scale": [
@@ -132,14 +132,14 @@
       ],
       "rotation": [
         0,
-        0,
-        0
+        180,
+        -80
       ],
       "color": "#91a6b5",
       "mirror": true
     },
     {
-      "id": "4a32b23b-c615-4511-a502-29a23d94f33a",
+      "id": "89a577f0-6ec2-44eb-b933-d788e1ada3bd",
       "type": "shieldGenerator",
       "name": "Shield generator",
       "position": [
@@ -161,18 +161,18 @@
       "mirror": false
     },
     {
-      "id": "4dbd16c6-7943-42c4-ad0e-e66d774d0b3d",
-      "type": "wing",
-      "name": "Swept wing",
+      "id": "a7c37b12-7952-4f65-98f6-44053c4af095",
+      "type": "hull",
+      "name": "Hull",
       "position": [
-        1.2,
-        -0.35,
-        2.4
+        0,
+        -1.4,
+        0
       ],
       "scale": [
-        0.65,
         1.5,
-        1
+        2.2,
+        2.4
       ],
       "rotation": [
         0,
@@ -180,44 +180,47 @@
         0
       ],
       "color": "#697f99",
-      "mirror": true,
-      "wingProfile": "clipped"
+      "mirror": false,
+      "hullProfile": "capsule",
+      "lowerChamfer": 0.22
     },
     {
-      "id": "6d59c233-eed8-4e14-8e34-b3a3999dba64",
-      "type": "fuelPod",
-      "name": "Fuel pod",
+      "id": "ca9e1d31-eb24-4e58-bb43-4968187e9ac9",
+      "type": "wing",
+      "name": "Swept wing",
       "position": [
-        0.75,
-        -1,
-        1
+        0.6,
+        -1.9,
+        -0.4
       ],
       "scale": [
-        1,
-        1,
-        1
+        1.45,
+        1.65,
+        2.45
       ],
       "rotation": [
         0,
         0,
         0
       ],
-      "color": "#a16bd4",
-      "mirror": true
+      "color": "#afc3cd",
+      "mirror": true,
+      "wingProfile": "clipped",
+      "wingDihedral": -10
     },
     {
-      "id": "d152de09-6932-4762-9b9e-b94fa2fb91ff",
+      "id": "6807270f-5a2b-48c5-befc-e788eba019f8",
       "type": "engine",
       "name": "Engine",
       "position": [
-        0.85,
         0,
-        4.2
+        -0.8,
+        3
       ],
       "scale": [
-        1.4,
-        1.4,
-        1.5
+        1,
+        1,
+        1
       ],
       "rotation": [
         0,
@@ -225,7 +228,8 @@
         0
       ],
       "color": "#5b7d8a",
-      "mirror": true
+      "mirror": false,
+      "thrusterProfile": "carrier"
     }
   ]
 }

@@ -1,7 +1,7 @@
 import {WebGLRenderer} from './webgl-renderer.js';
 import {openTestFlight} from './flight.js';
 import {recommendedStats,statFields} from './stats.js';
-import {library,hullProfiles,wingProfiles,thrusterProfiles,cockpitProfiles,finProfiles,presetCatalog,part,preset,combined,validateProject,objFiles,gltf} from './model.js';
+import {library,hullProfiles,wingProfiles,thrusterProfiles,cockpitProfiles,finProfiles,cannonOptions,presetCatalog,part,preset,combined,validateProject,objFiles,gltf} from './model.js';
 const $=id=>document.getElementById(id),key='orbital-foundry-v1';
 let project={version:1,name:'Peregrine MK I',parts:preset('fighter')},selected,undo=[],redo=[],renderer,dirty=true,yaw=-.65,pitch=.55,distance=3.5;
 const canvas=$('scene'),pointers=new Map();let width=1,height=1,last=0;
@@ -35,6 +35,13 @@ for(const [id,title] of [['upperChamfer','Upper chamfer'],['lowerChamfer','Lower
   input.onchange=()=>{if(current()?.type==='hull')change(()=>current()[id]=Number(input.value));};label.append(input,output);hullOptions.querySelector('.hint').before(label);
 }
 const wingOptions=document.createElement('div');wingOptions.id='wingOptions';wingOptions.hidden=true;
+const cannonPanel=document.createElement('div');cannonPanel.id='cannonOptions';cannonPanel.hidden=true;cannonPanel.innerHTML='<p class="eyebrow">CANNON OPTIONS</p>';$('transforms').before(cannonPanel);
+for(const [id,title] of [['cannonBarrel','Barrel'],['cannonMuzzle','Muzzle'],['cannonReceiver','Receiver']]){
+  const label=document.createElement('label');label.className='field';label.textContent=title;const select=document.createElement('select');select.id=id;
+  for(const [value,text] of Object.entries(cannonOptions[id])){const option=document.createElement('option');option.value=value;option.textContent=text;select.append(option);}
+  select.onchange=()=>{if(current()?.type!=='cannon')return;change(()=>{const p=current();p[id]=select.value;if(id!=='cannonBarrel'&&(!p.cannonBarrel||p.cannonBarrel==='classic'))p.cannonBarrel='hexagonal';});};label.append(select);cannonPanel.append(label);
+}
+const cannonHint=document.createElement('p');cannonHint.className='hint';cannonHint.textContent='Combine barrel, muzzle and receiver shapes. Scale and mirror affect the complete cannon. Changing muzzle or receiver activates the modular barrel; Classic restores the original mesh.';cannonPanel.append(cannonHint);
 const finOptions=document.createElement('div');finOptions.id='finOptions';finOptions.hidden=true;
 finOptions.innerHTML='<p class="eyebrow">DORSAL FIN OPTIONS</p><label class="field">Fin shape<select id="finProfile"></select></label><p class="hint">Sweep moves the tip forward or back; cant leans it sideways. The root stays fixed. Scale Y adjusts height and Z adjusts length.</p>';
 $('transforms').before(finOptions);
@@ -77,6 +84,7 @@ function refresh(){
   const p=current();$('controls').hidden=!p;$('selectedName').textContent=p?.name||'Select a part';
   hullOptions.hidden=p?.type!=='hull';
   wingOptions.hidden=p?.type!=='wing';
+  cannonPanel.hidden=p?.type!=='cannon';if(p?.type==='cannon')for(const [id,fallback] of [['cannonBarrel','classic'],['cannonMuzzle','none'],['cannonReceiver','square']])$(id).value=p[id]??fallback;
   finOptions.hidden=p?.type!=='fin';if(p?.type==='fin'){$('finProfile').value=p.finProfile||'classic';for(const [id,,,,,fallback,unit] of finFields){$(id).value=p[id]??fallback;$(id+'Value').textContent=(p[id]??fallback)+unit;}}
   cockpitOptions.hidden=p?.type!=='cockpit';if(p?.type==='cockpit')$('cockpitProfile').value=p.cockpitProfile||'classic';
   if(p?.type==='cockpit'){$('cockpitBevel').value=p.cockpitBevel??0;$('cockpitBevelValue').textContent=Math.round((p.cockpitBevel??0)*100)+'%';}

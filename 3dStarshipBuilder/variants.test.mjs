@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {part,mesh,validateProject,gltf,objFiles,cockpitProfiles,finProfiles} from './model.js';
+import {part,mesh,validateProject,gltf,objFiles,cockpitProfiles,finProfiles,cannonOptions} from './model.js';
 import {thrusterLayouts} from './blocks.js';
 import {moduleVolume} from './stats.js';
 const variants=[...['research','swan','axe'].map(hullProfile=>({...part('hull'),hullProfile})),...Object.keys(thrusterLayouts).map(thrusterProfile=>({...part('engine'),thrusterProfile}))];
@@ -12,6 +12,12 @@ test('cockpit bevel preserves old defaults and validates its range',()=>{
   const beveled={...p,cockpitBevel:.4};assert.ok(mesh(beveled).faces.length>mesh(p).faces.length);assert.ok(moduleVolume(beveled)<moduleVolume(p));
 });
 variants.push(...Object.keys(finProfiles).flatMap(finProfile=>[-1,1].map(sign=>({...part('fin'),finProfile,finSweep:sign*35,finCant:sign*45,finThickness:sign<0?.04:.4}))));
+for(const cannonBarrel of ['hexagonal','square','octagonal'])for(const cannonMuzzle of Object.keys(cannonOptions.cannonMuzzle))for(const cannonReceiver of Object.keys(cannonOptions.cannonReceiver))variants.push({...part('cannon'),cannonBarrel,cannonMuzzle,cannonReceiver});
+test('cannon components are independently configurable and preserve classic projects',()=>{
+  const p=part('cannon');assert.deepEqual(mesh(p),mesh({...p,cannonBarrel:'classic'}));
+  const configurations=variants.filter(p=>p.type==='cannon');assert.equal(configurations.length,48);assert.equal(new Set(configurations.map(p=>JSON.stringify(mesh(p).vertices))).size,48);
+  for(const key of Object.keys(cannonOptions))for(const value of ['invalid','__proto__',null])assert.throws(()=>validateProject({version:1,name:'Bad',parts:[{...p,[key]:value}]}));
+});
 test('fin options retain classic geometry and reject invalid values',()=>{
   const p=part('fin');assert.deepEqual(mesh(p).vertices,mesh({...p,finProfile:'classic',finSweep:0,finCant:0,finThickness:.16}).vertices);
   for(const bad of [{finProfile:'missing'},{finProfile:'__proto__'},{finSweep:36},{finCant:-46},{finThickness:0}])assert.throws(()=>validateProject({version:1,name:'Bad',parts:[{...p,...bad}]}));

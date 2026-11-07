@@ -1,5 +1,9 @@
 # Starship builder
 
+## Cannon options
+
+Select a Cannon to combine **Barrel** (hexagonal, square, octagonal), **Muzzle** (none, hexagonal, octagonal, square) and **Receiver** (square, beveled square, beveled parallelepiped, cylinder). All 48 combinations are complete assemblies pointing along −Z, with the receiver at the rear. Color, transforms and mirroring apply to the assembly; muzzle trim and the dark bore face retain accent colors. Options update volume-based stats and persist through JSON, glTF/OBJ, duplication and undo/redo. Classic preserves the original cannon geometry for older projects; changing muzzle or receiver automatically activates a hexagonal modular barrel if Classic was selected.
+
 Hull Options includes independent **Upper chamfer** and **Lower chamfer** sliders (0–40%) for the six extruded hull profiles. Each adds a band of beveled faces and insets its cap; the percentage controls the band's share of hull height, with proportional cap inset. They combine with upper-deck taper, update volume-based stats, and persist through saves, JSON/glTF/OBJ exports and undo/redo. Zero preserves the original hull geometry. Like taper, these controls are hidden for the sculpted Research, Swan and Axe hulls.
 
 ## Dorsal fin options

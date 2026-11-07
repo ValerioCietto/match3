@@ -1,3 +1,4 @@
+import {bevelGeometry} from './bevel.js';
 // Composite parts use convex faces, including separate wall segments around openings.
 function solid(vertices,faces,color){
   const center=[0,1,2].map(a=>vertices.reduce((s,v)=>s+v[a],0)/vertices.length);
@@ -20,6 +21,19 @@ function sphere(radius,color){
   return solid(vertices,faces,color);
 }
 function box(x,y,z,color){return solid([[-x,-y,-z],[x,-y,-z],[x,y,-z],[-x,y,-z],[-x,-y,z],[x,-y,z],[x,y,z],[-x,y,z]],[[0,1,2,3],[4,5,6,7],[0,4,5,1],[3,2,6,7],[0,3,7,4],[1,5,6,2]],color);}
+export function cannonGeometry(p){
+  const color=p.color,trim='#526676',bore='#17232c';
+  const barrel=p.cannonBarrel||'hexagonal',receiver=p.cannonReceiver||'square',muzzle=p.cannonMuzzle||'none';
+  const tube=(shape,radius,length,tint)=>shape==='square'?box(radius,radius,length/2,tint):cylinder(radius,length,shape==='hexagonal'?6:8,tint,'z');
+  let body;
+  if(receiver==='cylinder')body=cylinder(.25,.8,16,color,'z');
+  else {body=box(receiver==='beveledParallelepiped'?.28:.23,receiver==='beveledParallelepiped'?.18:.23,receiver==='beveledParallelepiped'?.475:.4,color);if(receiver!=='square')body=bevelGeometry(body,.3,color);}
+  const parts=[move(body,[0,0,receiver==='beveledParallelepiped'?.175:.25]),move(tube(barrel,.13,1.5,color),[0,0,-.65])];
+  if(muzzle!=='none')parts.push(move(tube(muzzle,.205,.3,trim),[0,0,-1.35]));
+  // The contrasting inset marks the bore, with a visible rim around it.
+  parts.push(move(tube(barrel,.085,.015,bore),[0,0,muzzle==='none'?-1.405:-1.505]));
+  return join(parts);
+}
 function prism(outline,height,color){
   const n=outline.length,vertices=[-height/2,height/2].flatMap(y=>outline.map(([x,z])=>[x,y,z]));
   const faces=[Array.from({length:n},(_,i)=>i),Array.from({length:n},(_,i)=>i+n)];

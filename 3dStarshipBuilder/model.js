@@ -1,4 +1,9 @@
-import {blockGeometry,specialHullGeometry,thrusterGeometry,cockpitGeometry,finGeometry} from './blocks.js';
+import {blockGeometry,specialHullGeometry,thrusterGeometry,cockpitGeometry,finGeometry,cannonGeometry} from './blocks.js';
+export const cannonOptions={
+  cannonBarrel:{classic:'Classic / original cannon',hexagonal:'Hexagonal',square:'Square',octagonal:'Octagonal'},
+  cannonMuzzle:{none:'None',hexagonal:'Hexagonal',octagonal:'Octagonal',square:'Square'},
+  cannonReceiver:{square:'Square',beveledSquare:'Beveled square',beveledParallelepiped:'Beveled parallelepiped',cylinder:'Cylinder'}
+};
 import {bevelGeometry} from './bevel.js';
 export const finProfiles={
   classic:{name:'Classic / rectangular'},
@@ -75,7 +80,7 @@ export function mesh(p,reflected=false){
   const hull=p.type==='hull'?hullProfiles[p.hullProfile||'standard']:null;
   const spec=hull?{...base,shape:hull.shape}:p.type==='wing'?{...base,shape:wingProfiles[p.wingProfile||'swept'].shape,height:p.wingThickness??.16}:base;
   const geometry=p.type==='cockpit'&&p.cockpitProfile&&p.cockpitProfile!=='classic'?cockpitGeometry(p.cockpitProfile,p.color):hull?.composite?specialHullGeometry(p.hullProfile,p.color):p.type==='engine'&&p.thrusterProfile&&p.thrusterProfile!=='classic'?thrusterGeometry(p.thrusterProfile,p.color):spec.composite?blockGeometry(p.type,p.color):extruded(spec);
-  const selectedGeometry=hull&&!hull.composite?hullGeometry(spec,p):p.type==='fin'&&p.finProfile&&p.finProfile!=='classic'?finGeometry(finProfiles[p.finProfile].outline,p.color):geometry;
+  const selectedGeometry=p.type==='cannon'&&p.cannonBarrel&&p.cannonBarrel!=='classic'?cannonGeometry(p):hull&&!hull.composite?hullGeometry(spec,p):p.type==='fin'&&p.finProfile&&p.finProfile!=='classic'?finGeometry(finProfiles[p.finProfile].outline,p.color):geometry;
   const {vertices,faces,faceColors}=p.type==='cockpit'?bevelGeometry(selectedGeometry,p.cockpitBevel??0,p.color):selectedGeometry;
   if(p.type==='fin')for(const v of vertices){const height=v[1]+.55;v[0]=v[0]*(p.finThickness??.16)/.16+height*Math.tan((p.finCant??0)*Math.PI/180);v[2]+=height*Math.tan((p.finSweep??0)*Math.PI/180);}
   if(p.type==='wing')for(const v of vertices){v[2]+=v[0]*Math.tan((p.wingSweep??0)*Math.PI/180);v[1]+=v[0]*Math.tan((p.wingDihedral??0)*Math.PI/180);}
@@ -97,6 +102,7 @@ export function validateProject(data){
   if(data?.version!==1||typeof data.name!=='string'||!Array.isArray(data.parts)||data.parts.length>150)throw Error('Invalid project or more than 150 parts.');
   for(const p of data.parts){
     if(!Object.hasOwn(library,p.type)||typeof p.name!=='string'||!/^#[0-9a-f]{6}$/i.test(p.color)||typeof p.mirror!=='boolean')throw Error('Invalid part data.');
+    if(p.type==='cannon')for(const [key,options] of Object.entries(cannonOptions))if(p[key]!==undefined&&!Object.hasOwn(options,p[key]))throw Error('Invalid cannon option.');
     if(p.type==='engine'&&p.thrusterProfile!==undefined&&!Object.hasOwn(thrusterProfiles,p.thrusterProfile))throw Error('Invalid thruster profile.');
     if(p.type==='cockpit'&&p.cockpitProfile!==undefined&&!Object.hasOwn(cockpitProfiles,p.cockpitProfile))throw Error('Invalid cockpit profile.');
     if(p.type==='cockpit'&&p.cockpitBevel!==undefined&&(!Number.isFinite(p.cockpitBevel)||p.cockpitBevel<0||p.cockpitBevel>.4))throw Error('Invalid cockpit bevel.');

@@ -9,7 +9,7 @@ import cruise from './presets/cruise.json' with {type:'json'};
 import empty from './presets/empty.json' with {type:'json'};
 
 const configurations={fighter,interceptor,hauler,scout,carrier,megaCargo,explorer,cruise,empty};
-export const presetCatalog=Object.fromEntries(Object.entries(configurations).map(([id,{name,label,description}])=>[id,{name,label,description}]));
+export const presetCatalog=Object.fromEntries(Object.entries(configurations).map(([id,{name,label,description}])=>[id,{name,label:label||name,description:description||''}]));
 export function preset(id){
   const configuration=configurations[id];
   if(!configuration)throw Error('Unknown preset: '+id);
