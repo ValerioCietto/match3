@@ -1,0 +1,262 @@
+{
+  "version": 1,
+  "name": "Shark - Destroyer",
+  "parts": [
+    {
+      "id": "9a475b1f-fe08-41e4-977d-9c6863b950dc",
+      "type": "hull",
+      "name": "Hull",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        2,
+        2,
+        2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#91a6b5",
+      "mirror": false,
+      "hullProfile": "wedge",
+      "deckTaper": 0.75,
+      "upperChamfer": 0.1
+    },
+    {
+      "id": "3d3c1bfb-935b-4bf3-9188-e015b3a40360",
+      "type": "wing",
+      "name": "Swept wing",
+      "position": [
+        0.6,
+        0,
+        1
+      ],
+      "scale": [
+        1.5,
+        1.5,
+        1.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#afc3cd",
+      "mirror": true,
+      "wingProfile": "forward"
+    },
+    {
+      "id": "5b8e7032-1cd9-41c2-8f0d-c0bff9b0a611",
+      "type": "engine",
+      "name": "Engine",
+      "position": [
+        1,
+        0,
+        2.2
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#5b7d8a",
+      "mirror": true,
+      "thrusterProfile": "carrier"
+    },
+    {
+      "id": "e7d8c4c9-f47b-4d13-9655-387c0cd177e7",
+      "type": "cannon",
+      "name": "Cannon",
+      "position": [
+        2,
+        -0.3,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#ced5d4",
+      "mirror": true,
+      "cannonBarrel": "hexagonal"
+    },
+    {
+      "id": "624cd193-8d8e-43f3-8868-94bcc27f3c1d",
+      "type": "cockpit",
+      "name": "Cockpit",
+      "position": [
+        0.6,
+        0,
+        -2
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        -15,
+        0,
+        -80
+      ],
+      "color": "#ff0000",
+      "mirror": true,
+      "cockpitBevel": 0.28
+    },
+    {
+      "id": "579083be-8f5b-493f-873b-a2ca4f527015",
+      "type": "cannon",
+      "name": "Cannon",
+      "position": [
+        2.5,
+        -0.3,
+        -0.3
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#ced5d4",
+      "mirror": true,
+      "cannonBarrel": "hexagonal"
+    },
+    {
+      "id": "c97aa85c-1ac5-4c04-933b-14678345f5d2",
+      "type": "cannon",
+      "name": "Cannon",
+      "position": [
+        2,
+        0.3,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#ced5d4",
+      "mirror": true,
+      "cannonBarrel": "hexagonal"
+    },
+    {
+      "id": "e985bbdd-6930-4be4-9243-42e03cff1903",
+      "type": "cannon",
+      "name": "Cannon",
+      "position": [
+        2.5,
+        0.3,
+        -0.3
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#ced5d4",
+      "mirror": true,
+      "cannonBarrel": "hexagonal"
+    },
+    {
+      "id": "cb44c2be-56a5-4d04-9db4-8e1d94c4391b",
+      "type": "fin",
+      "name": "Dorsal fin",
+      "position": [
+        0,
+        1,
+        1.5
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#adbecc",
+      "mirror": false,
+      "finProfile": "shark"
+    },
+    {
+      "id": "3d61dec9-db11-419f-9ae1-26da7f9f1e80",
+      "type": "shieldGenerator",
+      "name": "Shield generator",
+      "position": [
+        0,
+        0.7,
+        0.5
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#6aaec9",
+      "mirror": false
+    },
+    {
+      "id": "96130118-233f-4de8-a09f-bce9c2d9a60a",
+      "type": "cannon",
+      "name": "Cannon",
+      "position": [
+        0,
+        -0.9,
+        0
+      ],
+      "scale": [
+        1.5,
+        1.5,
+        2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#ced5d4",
+      "mirror": false,
+      "cannonBarrel": "octagonal",
+      "cannonMuzzle": "square",
+      "cannonReceiver": "beveledParallelepiped"
+    }
+  ]
+}

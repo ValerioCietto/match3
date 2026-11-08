@@ -6,9 +6,10 @@ import carrier from './presets/carrier.json' with {type:'json'};
 import megaCargo from './presets/megaCargo.json' with {type:'json'};
 import explorer from './presets/explorer.json' with {type:'json'};
 import cruise from './presets/cruise.json' with {type:'json'};
+import sharkDestroyer from './presets/sharkDestroyer.json' with {type:'json'};
 import empty from './presets/empty.json' with {type:'json'};
 
-const configurations={fighter,interceptor,hauler,scout,carrier,megaCargo,explorer,cruise,empty};
+const configurations={fighter,interceptor,hauler,scout,carrier,megaCargo,explorer,cruise,sharkDestroyer,empty};
 export const presetCatalog=Object.fromEntries(Object.entries(configurations).map(([id,{name,label,description}])=>[id,{name,label:label||name,description:description||''}]));
 export function preset(id){
   const configuration=configurations[id];
