@@ -124,41 +124,31 @@ export function thrusterGeometry(profile,color){
   if(spec.reverse)result.vertices=result.vertices.map(([vx,vy,vz])=>[-vx,vy,-vz]);
   return result;
 }
-export function blockGeometry(type,color,{passengerSide}={}){
+function armorPlate(color){
+  const outline=[[-.7,-1],[.7,-1],[.7,1],[-.7,1]];
+  const vertices=[[-.12,1],[.04,1],[.12,.85]].flatMap(([y,s])=>outline.map(([x,z])=>[x*s,y,z*s]));
+  const faces=[[3,2,1,0],[8,9,10,11]];
+  for(let r=0;r<2;r++)for(let i=0;i<4;i++){const a=r*4+i,b=r*4+(i+1)%4;faces.push([a,b,b+4,a+4]);}
+  return solid(vertices,faces,color);
+}
+export function blockGeometry(type,color,{passengerSide,armorProfile='darkAlloy'}={}){
   const dark='#344756',metal='#b7c8d2',glass='#73e3ed';
-  if(type==='cargo'){
-    // Keep the original 1.1 x .85 x 1.8 envelope so saved placements still fit.
-    const pieces=[box(.505,.375,.85,color)];
-    for(const x of [-.5,.5])for(const y of [-.375,.375])pieces.push(move(box(.04,.04,.86,dark),[x,y,0]));
-    for(const z of [-.85,.85]){
-      for(const y of [-.375,.375])pieces.push(move(box(.5,.04,.035,dark),[0,y,z]));
-      for(const x of [-.5,.5])pieces.push(move(box(.04,.375,.035,dark),[x,0,z]));
-      for(const x of [-.5,.5])for(const y of [-.375,.375]){
-        pieces.push(move(box(.05,.05,.05,metal),[x,y,z]));
-        pieces.push(move(box(.022,.014,.002,dark),[x,y,z+Math.sign(z)*.048]));
-      }
+  if(type==='armor'){
+    if(armorProfile==='solar'){
+      const centers=[[0,0],...Array.from({length:6},(_,i)=>{const a=(i+.5)*Math.PI/3;return [Math.cos(a)*.59,Math.sin(a)*.59];})];
+      return join(centers.flatMap(([x,z])=>[move(cylinder(.34,.16,6,metal),[x,0,z]),move(cylinder(.30,.025,6,color),[x,.0925,z])]));
     }
-    // Raised corrugations on both long walls and the roof.
-    for(let i=0;i<10;i++){const z=-.72+i*.16;
-      for(const side of [-1,1])pieces.push(move(box(.018,.315,.025,color),[side*.52,0,z]));
-      pieces.push(move(box(.44,.018,.025,color),[0,.39,z]));
+    const plate=armorPlate(color);
+    if(armorProfile!=='highTech')return plate;
+    const traces=[];
+    for(const side of [-1,1])for(const z of [-.55,0,.55]){
+      traces.push(move(box(.18,.008,.012,'#49e9df'),[side*.24,.128,z]));
+      traces.push(move(box(.012,.008,.10,'#49e9df'),[side*.42,.128,z+.09]));
+      traces.push(move(cylinder(.04,.018,6,'#b18aff'),[side*.42,.13,z+.2]));
     }
-    // Two recessed door leaves at the forward end, with a dark central seam.
-    pieces.push(move(box(.465,.33,.012,dark),[0,0,-.866]));
-    for(const side of [-1,1]){
-      pieces.push(move(box(.218,.315,.012,color),[side*.235,0,-.879]));
-      for(const x of [.14,.33]){
-        pieces.push(move(cylinder(.009,.57,6,metal),[side*x,0,-.89]));
-        pieces.push(move(box(.035,.009,.009,metal),[side*x,-.08,-.89]));
-      }
-      for(const y of [-.22,0,.22])pieces.push(move(box(.027,.022,.009,metal),[side*.46,y,-.89]));
-      // Identification plate and high-visibility corner markings on each side.
-      pieces.push(move(box(.003,.055,.12,dark),[side*.542,.2,.32]));
-      for(let i=0;i<3;i++)pieces.push(move(box(.002,.004,.08,metal),[side*.546,.225-i*.022,.32]));
-      for(const z of [-.68,.68])pieces.push(move(box(.003,.028,.045,'#e9c761'),[side*.542,-.27,z]));
-    }
-    return join(pieces);
+    return join([plate,...traces]);
   }
+  if(type==='cargo')return bevelGeometry(box(.55,.425,.9,color),.12,color);
   if(type==='turret')return join([cylinder(.65,.22,8,color),move(cylinder(.42,.16,12,dark),[0,.15,0]),move(sphere(.44,color),[0,.48,0]),move(cylinder(.12,1.15,12,metal,'z'),[0,.5,-.75]),move(cylinder(.16,.16,12,dark,'z'),[0,.5,-1.3])]);
   if(type==='fighterBay'){
     const walls=[];

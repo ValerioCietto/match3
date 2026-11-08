@@ -4,6 +4,13 @@ export const cannonOptions={
   cannonMuzzle:{none:'None',hexagonal:'Hexagonal',octagonal:'Octagonal',square:'Square'},
   cannonReceiver:{square:'Square',beveledSquare:'Beveled square',beveledParallelepiped:'Beveled parallelepiped',cylinder:'Cylinder'}
 };
+export const armorProfiles={
+  darkAlloy:{name:'Dark Alloy',color:'#41474f',description:'Heavy armor with high hull resistance.'},
+  stealth:{name:'Stealth',color:'#000000',description:'Black radar-absorbing armor. Reduces radar signature.'},
+  solar:{name:'Solar',color:'#1769be',description:'Seven blue solar cells with silver hexagonal frames. Generates energy.'},
+  shield:{name:'Shield',color:'#36d9e8',description:'Shield capacity and regeneration, with a small hull boost.'},
+  highTech:{name:'High Tech',color:'#252e43',description:'Very expensive. Per unit volume: half the Stealth, Solar, Shield and Dark Alloy bonuses, plus small gun, turret and fighter slot bonuses.'}
+};
 import {bevelGeometry} from './bevel.js';
 export const finProfiles={
   classic:{name:'Classic / rectangular'},
@@ -35,6 +42,7 @@ export const hullProfiles = {
   capsule: {name:'Capsule / cruiser',shape:[[-.45,1.6],[.45,1.6],[.8,1.15],[.8,-1.25],[.45,-1.7],[-.45,-1.7],[-.8,-1.25],[-.8,1.15]]}
 };
 export const library = {
+  armor: {name:'Armor',icon:'⬟',color:'#41474f',composite:true},
   turret: {name:'Turret slot',icon:'⊕',color:'#91a6b5',composite:true},
   fighterBay: {name:'Fighter bay',icon:'⬡',color:'#8c9eac',composite:true},
   fuelPod: {name:'Fuel pod',icon:'◉',color:'#a16bd4',composite:true},
@@ -82,7 +90,7 @@ export function mesh(p,reflected=false){
   const passengerSide=p.type==='passengerModule'&&p.mirror?((p.position[0]||1)*(Math.abs(lateralDirection)<1e-9?1:lateralDirection)<0?-1:1):undefined;
   const hull=p.type==='hull'?hullProfiles[p.hullProfile||'standard']:null;
   const spec=hull?{...base,shape:hull.shape}:p.type==='wing'?{...base,shape:wingProfiles[p.wingProfile||'swept'].shape,height:p.wingThickness??.16}:base;
-  const geometry=p.type==='cockpit'&&p.cockpitProfile&&p.cockpitProfile!=='classic'?cockpitGeometry(p.cockpitProfile,p.color):hull?.composite?specialHullGeometry(p.hullProfile,p.color):p.type==='engine'&&p.thrusterProfile&&p.thrusterProfile!=='classic'?thrusterGeometry(p.thrusterProfile,p.color):spec.composite?blockGeometry(p.type,p.color,{passengerSide}):extruded(spec);
+  const geometry=p.type==='cockpit'&&p.cockpitProfile&&p.cockpitProfile!=='classic'?cockpitGeometry(p.cockpitProfile,p.color):hull?.composite?specialHullGeometry(p.hullProfile,p.color):p.type==='engine'&&p.thrusterProfile&&p.thrusterProfile!=='classic'?thrusterGeometry(p.thrusterProfile,p.color):spec.composite?blockGeometry(p.type,p.color,{passengerSide,armorProfile:p.armorProfile}):extruded(spec);
   const selectedGeometry=p.type==='cannon'&&p.cannonBarrel&&p.cannonBarrel!=='classic'?cannonGeometry(p):hull&&!hull.composite?hullGeometry(spec,p):p.type==='fin'&&p.finProfile&&p.finProfile!=='classic'?finGeometry(finProfiles[p.finProfile].outline,p.color):geometry;
   const {vertices,faces,faceColors}=p.type==='cockpit'?bevelGeometry(selectedGeometry,p.cockpitBevel??0,p.color):selectedGeometry;
   if(p.type==='fin')for(const v of vertices){const height=v[1]+.55;v[0]=v[0]*(p.finThickness??.16)/.16+height*Math.tan((p.finCant??0)*Math.PI/180);v[2]+=height*Math.tan((p.finSweep??0)*Math.PI/180);}
@@ -106,6 +114,7 @@ export function validateProject(data){
   for(const p of data.parts){
     if(!Object.hasOwn(library,p.type)||typeof p.name!=='string'||!/^#[0-9a-f]{6}$/i.test(p.color)||typeof p.mirror!=='boolean')throw Error('Invalid part data.');
     if(p.type==='cannon')for(const [key,options] of Object.entries(cannonOptions))if(p[key]!==undefined&&!Object.hasOwn(options,p[key]))throw Error('Invalid cannon option.');
+    if(p.type==='armor'&&p.armorProfile!==undefined&&!Object.hasOwn(armorProfiles,p.armorProfile))throw Error('Invalid armor profile.');
     if(p.type==='engine'&&p.thrusterProfile!==undefined&&!Object.hasOwn(thrusterProfiles,p.thrusterProfile))throw Error('Invalid thruster profile.');
     if(p.type==='cockpit'&&p.cockpitProfile!==undefined&&!Object.hasOwn(cockpitProfiles,p.cockpitProfile))throw Error('Invalid cockpit profile.');
     if(p.type==='cockpit'&&p.cockpitBevel!==undefined&&(!Number.isFinite(p.cockpitBevel)||p.cockpitBevel<0||p.cockpitBevel>.4))throw Error('Invalid cockpit bevel.');

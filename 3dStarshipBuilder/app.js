@@ -1,7 +1,7 @@
 import {WebGLRenderer} from './webgl-renderer.js';
 import {openTestFlight} from './flight.js';
 import {recommendedStats,statFields} from './stats.js';
-import {library,hullProfiles,wingProfiles,thrusterProfiles,cockpitProfiles,finProfiles,cannonOptions,presetCatalog,part,preset,combined,validateProject,objFiles,gltf} from './model.js';
+import {library,armorProfiles,hullProfiles,wingProfiles,thrusterProfiles,cockpitProfiles,finProfiles,cannonOptions,presetCatalog,part,preset,combined,validateProject,objFiles,gltf} from './model.js';
 const $=id=>document.getElementById(id),key='orbital-foundry-v1';
 let project={version:1,name:'Peregrine MK I',parts:preset('fighter')},selected,undo=[],redo=[],renderer,dirty=true,yaw=-.65,pitch=.55,distance=3.5;
 const canvas=$('scene'),pointers=new Map();let width=1,height=1,last=0;
@@ -17,13 +17,18 @@ $('preset').replaceChildren();for(const [id,spec] of Object.entries(presetCatalo
 $('preset').onchange=()=>presetDescription.textContent=presetCatalog[$('preset').value].description;$('preset').onchange();
 const statsPanel=document.createElement('details');statsPanel.open=true;statsPanel.id='recommendedStats';statsPanel.className='recommended-stats';statsPanel.setAttribute('aria-labelledby','recommendedStatsTitle');
 statsPanel.innerHTML='<summary id="recommendedStatsTitle">Recommended stats</summary><p class="stats-subtitle">VOLUME-BASED ESTIMATES</p><dl id="recommendedStatsValues"></dl><details><summary>How stats work</summary><p>Module contributions scale with volume. Half size on all three axes means ⅛ the contribution. Mirrored copies count twice.</p><p>Movement uses full mass. Wings add steering power and reduce turn inertia. Fuel, cargo, fighters and passengers add loaded mass.</p><p>Fractional capacities are slot or passenger equivalents, not whole occupants. These are game-balance recommendations. Composite volumes sum their solids, including overlaps.</p></details>';
-$('shipName').closest('label').before(statsPanel);
+document.querySelector('.library').prepend(statsPanel);
 for(const [id,label,unit] of statFields){const row=document.createElement('div'),term=document.createElement('dt'),value=document.createElement('dd');term.textContent=label;value.id='stat-'+id;value.dataset.unit=unit;row.append(term,value);$('recommendedStatsValues').append(row);}
 const statsNumber=new Intl.NumberFormat('en',{maximumFractionDigits:2});
 function updateStats(){const values=recommendedStats(project.parts);for(const [id,,unit] of statFields){const value=values[id],text=value>0&&value<.01?value.toPrecision(2):statsNumber.format(value);$('stat-'+id).textContent=text+(unit?' '+unit:'');$('stat-'+id).dataset.value=String(value);}}
+const armorOptions=document.createElement('div');armorOptions.id='armorOptions';armorOptions.hidden=true;
+armorOptions.innerHTML='<p class="eyebrow">ARMOR OPTIONS</p><label class="field">Armor type<select id="armorProfile"></select></label><p id="armorDescription" class="hint"></p>';
+$('partProperties').append(armorOptions);
+for(const [value,profile] of Object.entries(armorProfiles)){const option=document.createElement('option');option.value=value;option.textContent=profile.name;$('armorProfile').append(option);}
+$('armorProfile').onchange=()=>{if(current()?.type==='armor')change(()=>{const p=current();p.armorProfile=$('armorProfile').value;p.color=armorProfiles[p.armorProfile].color;});};
 const hullOptions=document.createElement('div');hullOptions.id='hullOptions';hullOptions.hidden=true;
 hullOptions.innerHTML='<p class="eyebrow">HULL OPTIONS</p><label class="field">Hull shape<select id="hullProfile"></select></label><label class="field">Upper deck taper<input id="deckTaper" type="range" min="0.35" max="1" step="0.05"><output id="deckTaperValue"></output></label><p class="hint">Lower values slope the armor inward. Use Scale below to adjust width (X), height (Y) and length (Z).</p>';
-$('transforms').before(hullOptions);
+$('partProperties').append(hullOptions);
 for(const [value,profile] of Object.entries(hullProfiles).filter(([,profile])=>!profile.legacy)){const option=document.createElement('option');option.value=value;option.textContent=profile.name;$('hullProfile').append(option);}
 $('hullProfile').onchange=()=>{if(current()?.type==='hull')change(()=>current().hullProfile=$('hullProfile').value);};
 $('deckTaper').oninput=()=>{$('deckTaperValue').textContent=Math.round(Number($('deckTaper').value)*100)+'% upper deck';};
@@ -35,7 +40,7 @@ for(const [id,title] of [['upperChamfer','Upper chamfer'],['lowerChamfer','Lower
   input.onchange=()=>{if(current()?.type==='hull')change(()=>current()[id]=Number(input.value));};label.append(input,output);hullOptions.querySelector('.hint').before(label);
 }
 const wingOptions=document.createElement('div');wingOptions.id='wingOptions';wingOptions.hidden=true;
-const cannonPanel=document.createElement('div');cannonPanel.id='cannonOptions';cannonPanel.hidden=true;cannonPanel.innerHTML='<p class="eyebrow">CANNON OPTIONS</p>';$('transforms').before(cannonPanel);
+const cannonPanel=document.createElement('div');cannonPanel.id='cannonOptions';cannonPanel.hidden=true;cannonPanel.innerHTML='<p class="eyebrow">CANNON OPTIONS</p>';$('partProperties').append(cannonPanel);
 for(const [id,title] of [['cannonBarrel','Barrel'],['cannonMuzzle','Muzzle'],['cannonReceiver','Receiver']]){
   const label=document.createElement('label');label.className='field';label.textContent=title;const select=document.createElement('select');select.id=id;
   for(const [value,text] of Object.entries(cannonOptions[id])){const option=document.createElement('option');option.value=value;option.textContent=text;select.append(option);}
@@ -44,14 +49,14 @@ for(const [id,title] of [['cannonBarrel','Barrel'],['cannonMuzzle','Muzzle'],['c
 const cannonHint=document.createElement('p');cannonHint.className='hint';cannonHint.textContent='Combine barrel, muzzle and receiver shapes. Scale and mirror affect the complete cannon. Changing muzzle or receiver activates the modular barrel; Classic restores the original mesh.';cannonPanel.append(cannonHint);
 const finOptions=document.createElement('div');finOptions.id='finOptions';finOptions.hidden=true;
 finOptions.innerHTML='<p class="eyebrow">DORSAL FIN OPTIONS</p><label class="field">Fin shape<select id="finProfile"></select></label><p class="hint">Sweep moves the tip forward or back; cant leans it sideways. The root stays fixed. Scale Y adjusts height and Z adjusts length.</p>';
-$('transforms').before(finOptions);
+$('partProperties').append(finOptions);
 for(const [value,profile] of Object.entries(finProfiles)){const option=document.createElement('option');option.value=value;option.textContent=profile.name;$('finProfile').append(option);}
 $('finProfile').onchange=()=>{if(current()?.type==='fin')change(()=>current().finProfile=$('finProfile').value);};
 const finFields=[['finSweep','Additional sweep',-35,35,5,0,'°'],['finCant','Sideways cant',-45,45,5,0,'°'],['finThickness','Thickness',.04,.4,.02,.16,' units']];
 for(const [id,label,min,max,step,,unit] of finFields){const field=document.createElement('label');field.className='field';field.textContent=label;const input=document.createElement('input');input.type='range';input.id=id;input.min=min;input.max=max;input.step=step;const output=document.createElement('output');output.id=id+'Value';input.oninput=()=>output.textContent=input.value+unit;input.onchange=()=>{if(current()?.type==='fin')change(()=>current()[id]=Number(input.value));};field.append(input,output);finOptions.append(field);}
 const cockpitOptions=document.createElement('div');cockpitOptions.id='cockpitOptions';cockpitOptions.hidden=true;
 cockpitOptions.innerHTML='<p class="eyebrow">COCKPIT OPTIONS</p><label class="field">Cockpit shape<select id="cockpitProfile"></select></label><p class="hint">Scale and rotate the complete cockpit below. Surface color changes the glazing; structural trim retains its accent color.</p>';
-$('transforms').before(cockpitOptions);
+$('partProperties').append(cockpitOptions);
 for(const [value,profile] of Object.entries(cockpitProfiles)){const option=document.createElement('option');option.value=value;option.textContent=profile.name;$('cockpitProfile').append(option);}
 $('cockpitProfile').onchange=()=>{if(current()?.type==='cockpit')change(()=>current().cockpitProfile=$('cockpitProfile').value);};
 const bevelField=document.createElement('label');bevelField.className='field';bevelField.innerHTML='Bevel<input id="cockpitBevel" type="range" min="0" max="0.4" step="0.02"><output id="cockpitBevelValue"></output>';cockpitOptions.querySelector('.hint').before(bevelField);
@@ -59,11 +64,11 @@ $('cockpitBevel').oninput=()=>$('cockpitBevelValue').textContent=Math.round(Numb
 $('cockpitBevel').onchange=()=>{if(current()?.type==='cockpit')change(()=>current().cockpitBevel=Number($('cockpitBevel').value));};
 const thrusterOptions=document.createElement('div');thrusterOptions.id='thrusterOptions';thrusterOptions.hidden=true;
 thrusterOptions.innerHTML='<p class="eyebrow">THRUSTER MODULE</p><label class="field">Complete module<select id="thrusterProfile"></select></label><p class="hint">Changes the housing and every exhaust together. Scale, rotate, mirror and recolor the complete assembly below. Reverse drone faces forward for mounting at the nose. Separate legacy thruster cores remain independent parts.</p>';
-$('transforms').before(thrusterOptions);
+$('partProperties').append(thrusterOptions);
 for(const [value,profile] of Object.entries(thrusterProfiles)){const option=document.createElement('option');option.value=value;option.textContent=profile.name;$('thrusterProfile').append(option);}
 $('thrusterProfile').onchange=()=>{if(current()?.type==='engine')change(()=>current().thrusterProfile=$('thrusterProfile').value);};
 wingOptions.innerHTML='<p class="eyebrow">WING OPTIONS</p><label class="field">Wing shape<select id="wingProfile"></select></label><p class="hint">Sweep moves the tip forward or back. Dihedral raises or lowers it. Use Scale X for span and Z for chord. Enable Mirror for a matching pair.</p>';
-$('transforms').before(wingOptions);
+$('partProperties').append(wingOptions);
 for(const [value,profile] of Object.entries(wingProfiles)){const option=document.createElement('option');option.value=value;option.textContent=profile.name;$('wingProfile').append(option);}
 $('wingProfile').onchange=()=>{if(current()?.type==='wing')change(()=>current().wingProfile=$('wingProfile').value);};
 const wingFields=[['wingSweep','Additional sweep',-35,35,5,0,'°'],['wingDihedral','Dihedral / tip angle',-45,45,5,0,'°'],['wingThickness','Thickness',.04,.6,.02,.16,' units']];
@@ -82,6 +87,7 @@ function refresh(){
   $('shipName').value=project.name;$('undo').disabled=!undo.length;$('redo').disabled=!redo.length;$('export').disabled=$('obj').disabled=!project.parts.length;
   $('assembly').replaceChildren();for(const p of project.parts){const button=document.createElement('button');button.textContent=`${p.name}${p.mirror?' ×2':''}`;button.setAttribute('aria-pressed',String(p.id===selected));button.onclick=()=>{selected=p.id;refresh();};$('assembly').append(button);}
   const p=current();$('controls').hidden=!p;$('selectedName').textContent=p?.name||'Select a part';
+  armorOptions.hidden=p?.type!=='armor';if(p?.type==='armor'){$('armorProfile').value=p.armorProfile||'darkAlloy';$('armorDescription').textContent=armorProfiles[p.armorProfile||'darkAlloy'].description;}
   hullOptions.hidden=p?.type!=='hull';
   wingOptions.hidden=p?.type!=='wing';
   cannonPanel.hidden=p?.type!=='cannon';if(p?.type==='cannon')for(const [id,fallback] of [['cannonBarrel','classic'],['cannonMuzzle','none'],['cannonReceiver','square']])$(id).value=p[id]??fallback;
@@ -102,7 +108,7 @@ function refresh(){
 }
 function change(fn){remember();fn();refresh();persist();}
 for(const [type,spec] of Object.entries(library).filter(([,spec])=>!spec.legacy)){const button=document.createElement('button'),icon=document.createElement('strong'),name=document.createElement('small');icon.textContent=spec.icon;name.textContent=spec.name;button.append(icon,name);button.onclick=()=>{if(project.parts.length>=150)return status('Maximum 150 parts.');change(()=>{const p=part(type,type==='cockpit'?[0,.5,-.5]:type==='wing'?[.6,0,0]:[0,0,0],[1,1,1],type==='wing');project.parts.push(p);selected=p.id;});};$('parts').append(button);}
-for(const field of ['position','rotation','scale']){const group=document.createElement('div');group.className='transform';const label=document.createElement('span');label.textContent=field.toUpperCase()+(field==='rotation'?' / DEGREES':'');const axes=document.createElement('div');axes.className='axes';['X','Y','Z'].forEach((axis,i)=>{const wrap=document.createElement('label');wrap.textContent=axis;const input=document.createElement('input');input.type='number';input.step=field==='rotation'?'5':'.1';input.min=field==='scale'?'.05':field==='rotation'?'-360':'-100';input.max=field==='rotation'?'360':'100';input.dataset.field=field;input.dataset.axis=i;input.setAttribute('aria-label',`${field} ${axis}`);input.onchange=()=>{const value=Number(input.value);if(input.value===''||!Number.isFinite(value)||value<Number(input.min)||value>Number(input.max)){refresh();return status('Transform is outside its allowed range.');}change(()=>current()[field][i]=value);};wrap.append(input);axes.append(wrap);});group.append(label,axes);$('transforms').append(group);}
+for(const field of ['position','rotation','scale']){const group=document.createElement('details');group.className='transform';group.open=true;const label=document.createElement('summary');label.textContent=field.toUpperCase()+(field==='rotation'?' / DEGREES':'');const axes=document.createElement('div');axes.className='axes';['X','Y','Z'].forEach((axis,i)=>{const wrap=document.createElement('label');wrap.textContent=axis;const input=document.createElement('input');input.type='number';input.step=field==='rotation'?'5':'.1';input.min=field==='scale'?'.05':field==='rotation'?'-360':'-100';input.max=field==='rotation'?'360':'100';input.dataset.field=field;input.dataset.axis=i;input.setAttribute('aria-label',`${field} ${axis}`);input.onchange=()=>{const value=Number(input.value);if(input.value===''||!Number.isFinite(value)||value<Number(input.min)||value>Number(input.max)){refresh();return status('Transform is outside its allowed range.');}change(()=>current()[field][i]=value);};wrap.append(input);axes.append(wrap);});group.append(label,axes);$('transforms').append(group);}
 $('shipName').onchange=()=>change(()=>project.name=$('shipName').value.trim()||'Untitled ship');
 $('partName').onchange=()=>change(()=>current().name=$('partName').value.trim()||library[current().type].name);
 $('color').onchange=()=>change(()=>current().color=$('color').value);
