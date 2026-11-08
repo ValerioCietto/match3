@@ -1,0 +1,13 @@
+<!doctype html><html><body><pre id="result">RUNNING</pre><iframe src="index.html" style="width:1100px;height:850px"></iframe><script type="module">
+const frame=document.querySelector('iframe');await new Promise(r=>frame.onload=r);const d=frame.contentDocument,w=frame.contentWindow,$=id=>d.getElementById(id),wait=()=>new Promise(r=>setTimeout(r,200)),check=(ok,msg)=>{if(!ok)throw Error(msg);};
+try{
+ await wait();$('preset').value='fighter';$('build').click();const design=$('shipName').value;
+ $('testFlight').click();check($('chooseFlight3D')&&$('chooseFlight25'),'mode chooser');await new Promise(r=>{const choice=$('chooseFlight25');choice.closest('dialog').addEventListener('close',r,{once:true});choice.click();});await wait();check($('flight25Dialog')?.open,'2.5D opens');check(!$('battleStatus').textContent.includes('unavailable'),'WebGL available');
+ $('startBattle').click();await wait();check($('opponentHealth').textContent.includes('ENEMY'),'battle starts');check($('arena25').getContext('webgl').getError()===0,'valid WebGL');
+ $('arena25').dispatchEvent(new w.KeyboardEvent('keydown',{code:'KeyW',bubbles:true}));await wait();$('arena25').dispatchEvent(new w.KeyboardEvent('keyup',{code:'KeyW',bubbles:true}));
+ $('pause25').click();check($('pause25').textContent==='Resume','pause');$('reset25').click();await wait();check(!$('opponentHealth').textContent,'free flight resets opponent');
+ await new Promise(r=>{$('flight25Dialog').addEventListener('close',r,{once:true});$('exit25').click();});check(!$('flight25Dialog'),'2.5D cleans up');check($('shipName').value===design,'design preserved');
+ $('testFlight').click();await new Promise(r=>{const choice=$('chooseFlight3D');choice.closest('dialog').addEventListener('close',r,{once:true});choice.click();});await wait();check($('testFlightDialog')?.open,'3D opens');check(!$('flightError').textContent,'3D renders');await new Promise(r=>{$('testFlightDialog').addEventListener('close',r,{once:true});$('flightClose').click();});
+ document.getElementById('result').textContent='PASS: chooser, WebGL, opponent battle, pause/reset, cleanup and 3D regression';
+}catch(e){document.getElementById('result').textContent='FAIL: '+e.stack;}
+</script></body></html>

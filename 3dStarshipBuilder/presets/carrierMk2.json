@@ -1,0 +1,123 @@
+{
+  "version": 1,
+  "name": "carrier mk2",
+  "parts": [
+    {
+      "id": "0bae97b2-d005-4f80-8eee-37fda9462ad5",
+      "type": "hull",
+      "name": "Hull",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        2,
+        2,
+        2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#91a6b5",
+      "mirror": false,
+      "hullProfile": "diamond",
+      "upperChamfer": 0.28,
+      "lowerChamfer": 0.18
+    },
+    {
+      "id": "604a67f4-034b-430a-9994-6f5c7004cb8c",
+      "type": "cockpit",
+      "name": "Cockpit",
+      "position": [
+        0,
+        0.5,
+        -2
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#f31212",
+      "mirror": false,
+      "cockpitBevel": 0.22
+    },
+    {
+      "id": "c0d158e6-4311-48b2-9276-e0ede731b675",
+      "type": "cockpit",
+      "name": "Cockpit copy",
+      "position": [
+        0.5,
+        0.3,
+        -2.3
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        -25,
+        0,
+        -30
+      ],
+      "color": "#f31212",
+      "mirror": true,
+      "cockpitBevel": 0.22
+    },
+    {
+      "id": "a477d8a8-b477-43cf-b211-d4564e5eae1a",
+      "type": "wing",
+      "name": "Swept wing",
+      "position": [
+        0.6,
+        0,
+        -1.2
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#afc3cd",
+      "mirror": true,
+      "wingProfile": "tapered"
+    },
+    {
+      "id": "3f648220-c3e1-48bf-b8a3-c30f85a213d7",
+      "type": "engine",
+      "name": "Engine",
+      "position": [
+        1,
+        0,
+        2
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#5b7d8a",
+      "mirror": true,
+      "thrusterProfile": "carrier"
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 import {WebGLRenderer} from './webgl-renderer.js';
 import {openTestFlight} from './flight.js';
+import {openFlight25} from './flight25.js';
 import {recommendedStats,statFields} from './stats.js';
 import {library,armorProfiles,hullProfiles,wingProfiles,thrusterProfiles,cockpitProfiles,finProfiles,cannonOptions,presetCatalog,part,preset,combined,validateProject,objFiles,gltf} from './model.js';
 const $=id=>document.getElementById(id),key='orbital-foundry-v1';
@@ -11,7 +12,15 @@ try{renderer=new WebGLRenderer(canvas,{onError:message=>{$('renderError').hidden
 const current=()=>project.parts.find(p=>p.id===selected);
 document.head.append(Object.assign(document.createElement('link'),{rel:'stylesheet',href:new URL('./flight.css',import.meta.url).href}));
 const testFlightButton=document.createElement('button');testFlightButton.id='testFlight';testFlightButton.textContent='Test Flight';$('export').before(testFlightButton);
-testFlightButton.onclick=()=>openTestFlight(project);
+testFlightButton.onclick=()=>{
+  const dialog=document.createElement('dialog');dialog.className='flight-mode-dialog';dialog.setAttribute('aria-labelledby','flightModeTitle');
+  dialog.innerHTML='<h2 id="flightModeTitle">Choose flight mode</h2><button id="chooseFlight3D"><strong>3D flight</strong><span>Current mode · free flight with pitch and yaw</span></button><button id="chooseFlight25"><strong>2.5D flight</strong><span>Top-down view · car-like steering · battle presets</span></button><button id="cancelFlightMode">Cancel</button>';
+  document.body.append(dialog);let mode;
+  dialog.querySelector('#chooseFlight3D').onclick=()=>{mode='3d';dialog.close();};
+  dialog.querySelector('#chooseFlight25').onclick=()=>{mode='25';dialog.close();};
+  dialog.querySelector('#cancelFlightMode').onclick=()=>dialog.close();
+  dialog.addEventListener('close',()=>{dialog.remove();if(mode==='3d')openTestFlight(project);else if(mode==='25')openFlight25(project);else testFlightButton.focus();},{once:true});dialog.showModal();
+};
 const presetDescription=document.createElement('p');presetDescription.id='presetDescription';presetDescription.className='hint';$('preset').after(presetDescription);
 $('preset').replaceChildren();for(const [id,spec] of Object.entries(presetCatalog)){const option=document.createElement('option');option.value=id;option.textContent=spec.label;$('preset').append(option);}
 $('preset').onchange=()=>presetDescription.textContent=presetCatalog[$('preset').value].description;$('preset').onchange();

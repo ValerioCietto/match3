@@ -1,0 +1,285 @@
+{
+  "version": 1,
+  "name": "Ares / Armored Fighter",
+  "parts": [
+    {
+      "id": "9ceab672-2f9b-43d4-b94c-720d23d36f8a",
+      "type": "hull",
+      "name": "Hull",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#91a6b5",
+      "mirror": false,
+      "upperChamfer": 0.4,
+      "lowerChamfer": 0.4
+    },
+    {
+      "id": "a5ca70cd-4208-4175-9f32-08e5de3daa01",
+      "type": "wing",
+      "name": "Swept wing",
+      "position": [
+        0.6,
+        0,
+        0
+      ],
+      "scale": [
+        0.35,
+        1,
+        0.65
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#afc3cd",
+      "mirror": true,
+      "wingProfile": "straight"
+    },
+    {
+      "id": "2213faed-b7f6-48b7-8aa1-1c6d24cd25a5",
+      "type": "armor",
+      "name": "Central Armor Plate",
+      "position": [
+        -1.4,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        90
+      ],
+      "color": "#41474f",
+      "mirror": true,
+      "armorProfile": "darkAlloy"
+    },
+    {
+      "id": "c2329128-2877-4fff-a12e-d6b7018f9982",
+      "type": "armor",
+      "name": "Upper Armor Plate",
+      "position": [
+        -1.15,
+        1,
+        0
+      ],
+      "scale": [
+        0.65,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        55
+      ],
+      "color": "#41474f",
+      "mirror": true,
+      "armorProfile": "darkAlloy"
+    },
+    {
+      "id": "d8615fe7-3f42-421b-9f56-7f5467e12832",
+      "type": "armor",
+      "name": "Lower Armor Plate",
+      "position": [
+        -1.15,
+        -1,
+        0
+      ],
+      "scale": [
+        0.65,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        125
+      ],
+      "color": "#41474f",
+      "mirror": true
+    },
+    {
+      "id": "d36512ad-1918-4011-a514-9deda73771e4",
+      "type": "engine",
+      "name": "Speeder Engine",
+      "position": [
+        0,
+        0,
+        1.1
+      ],
+      "scale": [
+        1,
+        1,
+        0.65
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#5b7d8a",
+      "mirror": false,
+      "thrusterProfile": "speeder"
+    },
+    {
+      "id": "b81ae0da-ab2c-4ebb-9af5-ab08cf48b4a6",
+      "type": "cockpit",
+      "name": "Cockpit",
+      "position": [
+        0,
+        0.3,
+        -0.8
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        -5,
+        0,
+        0
+      ],
+      "color": "#f50a0a",
+      "mirror": false,
+      "cockpitBevel": 0.4
+    },
+    {
+      "id": "053e803a-f685-473a-9be1-1b303b49763f",
+      "type": "cannon",
+      "name": "Cannon",
+      "position": [
+        0.9,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#ced5d4",
+      "mirror": true,
+      "cannonBarrel": "hexagonal",
+      "cannonReceiver": "beveledSquare"
+    },
+    {
+      "id": "555d47d2-9300-4845-8dfa-c3faa0535c60",
+      "type": "fin",
+      "name": "Upper Dorsal fin",
+      "position": [
+        0.5,
+        0.5,
+        0.4
+      ],
+      "scale": [
+        1,
+        0.35,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#adbecc",
+      "mirror": true,
+      "finProfile": "shark",
+      "finCant": 10,
+      "finThickness": 0.08
+    },
+    {
+      "id": "63c7fc63-eddb-472b-ace4-159425387873",
+      "type": "fin",
+      "name": "Lower Dorsal Fin",
+      "position": [
+        0.5,
+        -0.5,
+        0.4
+      ],
+      "scale": [
+        1,
+        0.35,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        180
+      ],
+      "color": "#adbecc",
+      "mirror": true,
+      "finProfile": "shark",
+      "finCant": -10,
+      "finThickness": 0.08
+    },
+    {
+      "id": "73f62ce0-bd77-4cf6-9f64-f76f27c358a5",
+      "type": "shieldGenerator",
+      "name": "Shield generator",
+      "position": [
+        0,
+        0.3,
+        0.3
+      ],
+      "scale": [
+        0.55,
+        0.55,
+        0.55
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#6aaec9",
+      "mirror": false
+    },
+    {
+      "id": "92b33b9c-ee0f-4a37-91aa-cab6d2562eec",
+      "type": "fuelPod",
+      "name": "Fuel pod",
+      "position": [
+        0,
+        -0.6,
+        0.1
+      ],
+      "scale": [
+        0.55,
+        0.55,
+        0.55
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#a16bd4",
+      "mirror": false
+    }
+  ]
+}
