@@ -3,7 +3,7 @@
   "name": "Atlas MK I",
   "parts": [
     {
-      "id": "ea0798ba-7dfd-4214-a7ab-5a99e7350252",
+      "id": "e9cd4005-86fb-480b-af01-2e75df19b6bf",
       "type": "hull",
       "name": "Hull",
       "position": [
@@ -23,18 +23,18 @@
       ],
       "color": "#91a6b5",
       "mirror": false,
-      "hullProfile": "freighter",
+      "hullProfile": "wedge",
       "deckTaper": 0.8,
       "lowerChamfer": 0.28
     },
     {
-      "id": "44d38e9a-305f-4c19-b406-9beb790e9fc2",
+      "id": "1b9f673d-cbef-4007-991e-20a981c1c61c",
       "type": "cockpit",
       "name": "Cockpit",
       "position": [
         0,
-        0.3,
-        -1.8
+        0.4,
+        -1.5
       ],
       "scale": [
         1,
@@ -48,10 +48,10 @@
       ],
       "color": "#64ddd5",
       "mirror": false,
-      "cockpitBevel": 0.2
+      "cockpitBevel": 0.3
     },
     {
-      "id": "c763e710-ea71-4a58-b5fb-464785a2c17e",
+      "id": "67b583a8-91e4-4e96-8f3a-7a2f2367992e",
       "type": "wing",
       "name": "Swept wing",
       "position": [
@@ -74,7 +74,7 @@
       "wingProfile": "tapered"
     },
     {
-      "id": "2a4cecc0-386d-4463-b433-f520f0d357e2",
+      "id": "a14686e6-2acd-4d3c-9f3c-b836bb85e533",
       "type": "engine",
       "name": "Engine",
       "position": [
@@ -97,7 +97,7 @@
       "thrusterProfile": "hauler"
     },
     {
-      "id": "86439f89-d982-442e-95fa-4b14f8b06f88",
+      "id": "af0555ac-2372-4e27-bf0b-92310b45f56e",
       "type": "cargo",
       "name": "Cargo pod",
       "position": [
@@ -119,7 +119,7 @@
       "mirror": true
     },
     {
-      "id": "9b56d0fc-b734-4a42-8ade-3647c966415a",
+      "id": "b4019c85-c20a-48ef-9e08-b68032aea561",
       "type": "cargo",
       "name": "Cargo pod",
       "position": [
@@ -141,7 +141,7 @@
       "mirror": true
     },
     {
-      "id": "749902f7-fa00-46ac-94d9-e355b855bb34",
+      "id": "824c3e8b-26ad-4636-8f25-4469bba1ccd3",
       "type": "fuelPod",
       "name": "Fuel pod",
       "position": [
@@ -163,13 +163,13 @@
       "mirror": false
     },
     {
-      "id": "0c21c1d6-b6c3-4d5b-ba45-b920881b006d",
+      "id": "f0e0ee85-f922-48fa-95c1-c4a8d01cdb95",
       "type": "fuelPod",
       "name": "Fuel pod",
       "position": [
         0,
         -0.9,
-        0
+        1.1
       ],
       "scale": [
         1,
@@ -183,6 +183,52 @@
       ],
       "color": "#a16bd4",
       "mirror": false
+    },
+    {
+      "id": "3a703e17-e78d-43f3-acce-67c90ec92305",
+      "type": "shieldGenerator",
+      "name": "Shield generator",
+      "position": [
+        0,
+        0.5,
+        -0.4
+      ],
+      "scale": [
+        0.55,
+        0.55,
+        0.55
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#6aaec9",
+      "mirror": false
+    },
+    {
+      "id": "6dbd137a-190b-4990-a9cd-77089a1daf24",
+      "type": "cannon",
+      "name": "Cannon",
+      "position": [
+        0,
+        -0.7,
+        -0.9
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#ced5d4",
+      "mirror": false,
+      "cannonBarrel": "hexagonal",
+      "cannonReceiver": "beveledSquare"
     }
   ]
 }
