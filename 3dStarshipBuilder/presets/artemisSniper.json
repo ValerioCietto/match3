@@ -1,0 +1,148 @@
+{
+  "version": 1,
+  "name": "Artemis / Sniper",
+  "parts": [
+    {
+      "id": "cb363563-908e-47fe-afce-75ca660fe6b6",
+      "type": "hull",
+      "name": "Hull",
+      "position": [
+        0.8,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        -90
+      ],
+      "color": "#91a6b5",
+      "mirror": true,
+      "deckTaper": 0.65,
+      "upperChamfer": 0.34
+    },
+    {
+      "id": "e29a8371-62d3-4566-9b67-c90155d219c3",
+      "type": "cannon",
+      "name": "Cannon",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1.5,
+        1.5,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#ced5d4",
+      "mirror": false,
+      "cannonBarrel": "octagonal",
+      "cannonReceiver": "beveledParallelepiped",
+      "cannonMuzzle": "octagonal"
+    },
+    {
+      "id": "645fea32-cae1-491b-b534-8da1700dc015",
+      "type": "engine",
+      "name": "Engine",
+      "position": [
+        0,
+        -0.5,
+        0.2
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#5b7d8a",
+      "mirror": false,
+      "thrusterProfile": "speeder"
+    },
+    {
+      "id": "b795b58a-6888-45c1-8115-f857a7b2361e",
+      "type": "engine",
+      "name": "Engine",
+      "position": [
+        0,
+        0.5,
+        0.2
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#5b7d8a",
+      "mirror": false,
+      "thrusterProfile": "speeder"
+    },
+    {
+      "id": "361e26d9-01b8-448a-9149-a668ed26a313",
+      "type": "wing",
+      "name": "Swept wing",
+      "position": [
+        0.6,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        0.5,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#d7a028",
+      "mirror": true,
+      "wingProfile": "delta",
+      "wingSweep": 10
+    },
+    {
+      "id": "f3824271-22d9-4a20-8bf0-92da61f7126b",
+      "type": "cockpit",
+      "name": "Cockpit",
+      "position": [
+        0,
+        0.5,
+        -0.5
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#ea344f",
+      "mirror": false,
+      "cockpitBevel": 0.28
+    }
+  ]
+}
