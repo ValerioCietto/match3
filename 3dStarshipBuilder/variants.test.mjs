@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {part,mesh,validateProject,gltf,objFiles,cockpitProfiles,finProfiles,cannonOptions} from './model.js';
 import {thrusterLayouts} from './blocks.js';
 import {moduleVolume} from './stats.js';
-const variants=[...['research','swan','axe'].map(hullProfile=>({...part('hull'),hullProfile})),...Object.keys(thrusterLayouts).map(thrusterProfile=>({...part('engine'),thrusterProfile}))];
+const variants=[...['sphere','cylinder','research','swan','axe'].map(hullProfile=>({...part('hull'),hullProfile})),...Object.keys(thrusterLayouts).map(thrusterProfile=>({...part('engine'),thrusterProfile}))];
 variants.push(...Object.keys(cockpitProfiles).filter(key=>key!=='classic').map(cockpitProfile=>({...part('cockpit'),cockpitProfile})));
 variants.push(...Object.keys(cockpitProfiles).flatMap(cockpitProfile=>[.02,.2,.4].map(cockpitBevel=>({...part('cockpit'),cockpitProfile,cockpitBevel}))));
 test('cockpit bevel preserves old defaults and validates its range',()=>{

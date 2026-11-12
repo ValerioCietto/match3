@@ -23,7 +23,7 @@ function sphere(radius,color){
 function box(x,y,z,color){return solid([[-x,-y,-z],[x,-y,-z],[x,y,-z],[-x,y,-z],[-x,-y,z],[x,-y,z],[x,y,z],[-x,y,z]],[[0,1,2,3],[4,5,6,7],[0,4,5,1],[3,2,6,7],[0,3,7,4],[1,5,6,2]],color);}
 export function cannonGeometry(p){
   const color=p.color,trim='#526676',bore='#17232c';
-  const barrel=p.cannonBarrel||'hexagonal',receiver=p.cannonReceiver||'square',muzzle=p.cannonMuzzle||'none';
+  const barrel=!p.cannonBarrel||p.cannonBarrel==='classic'?'hexagonal':p.cannonBarrel,receiver=p.cannonReceiver||'square',muzzle=p.cannonMuzzle||'none';
   const tube=(shape,radius,length,tint)=>shape==='square'?box(radius,radius,length/2,tint):cylinder(radius,length,shape==='hexagonal'?6:8,tint,'z');
   let body;
   if(receiver==='cylinder')body=cylinder(.25,.8,16,color,'z');
@@ -72,6 +72,8 @@ export function cockpitGeometry(profile,color){
   throw Error('Unknown cockpit profile: '+profile);
 }
 export function specialHullGeometry(profile,color){
+  if(profile==='sphere')return sphere(1,color);
+  if(profile==='cylinder')return cylinder(.75,3.2,16,color,'z');
   if(profile==='research')return join([
     move(sphere(.8,color),[0,0,0],[1,1,1.3]),
     ...[-1,1].flatMap(side=>[move(box(.65,.15,.15,'#637b8b'),[side*.8,0,0]),move(sphere(.65,color),[side*1.35,0,0])]),
@@ -160,3 +162,5 @@ export function blockGeometry(type,color,{passengerSide,armorProfile='darkAlloy'
   if(type==='passengerModule')return join([box(.65,.48,1.25,color),...(passengerSide?[passengerSide]:[-1,1]).flatMap(side=>[-.8,0,.8].flatMap(z=>[move(sphere(.23,dark),[side*.64,0,z],[.5,1,1]),move(sphere(.18,glass),[side*.72,0,z],[.5,1,1])]))]);
   throw Error('Unknown composite block: '+type);
 }
+
+export {solid,join,move,cylinder,sphere};

@@ -1,3 +1,4 @@
+import {hasJaredPlasma} from './jared.js';
 import {combined} from './model.js';
 import {recommendedStats} from './stats.js';
 import {WebGLRenderer} from './webgl-renderer.js';
@@ -25,7 +26,7 @@ export function openTestFlight(project){
   const stats=recommendedStats(project.parts),dialog=document.createElement('dialog');dialog.className='flight-dialog';dialog.id='testFlightDialog';dialog.setAttribute('aria-labelledby','flightTitle');
   dialog.innerHTML='<div class="flight-header"><div><span class="eyebrow">TEST FLIGHT / HANDLING SANDBOX</span><h2 id="flightTitle"></h2></div><button id="flightClose">Back to builder ×</button></div><div class="flight-stage"><canvas id="flightStars" aria-hidden="true"></canvas><canvas id="flightShip" tabindex="0" aria-label="Test flight. Arrow keys steer; W and S change throttle; Space brakes; Escape returns to the builder."></canvas><div class="flight-hud" aria-live="off"><span id="flightSpeed"></span><span id="flightDistance"></span><span id="flightHeading"></span></div><p id="flightError" role="status"></p><span class="flight-reticle" aria-hidden="true">+</span></div><div class="flight-controls"><label>Throttle <input id="flightThrottle" aria-label="Flight throttle" type="range" min="0" max="100" value="65"><output id="flightThrottleValue">65%</output></label><button id="flightPause">Pause</button><button id="flightReset">Restart</button><div class="flight-steering" aria-label="Flight controls"><button data-flight="left" aria-label="Turn left">←</button><button data-flight="up" aria-label="Pitch up">↑</button><button data-flight="down" aria-label="Pitch down">↓</button><button data-flight="right" aria-label="Turn right">→</button><button data-flight="brake">Brake</button></div><p>Arrow keys steer · W/S throttle · Space brake · Esc exit<br>Full-load handling. Free flight only; no combat or collisions. Your design stays unchanged.</p></div>';
   document.body.append(dialog);const $=id=>dialog.querySelector('#'+id);$('flightTitle').textContent=project.name;
-  let state=flightState(),paused=false,last=0,frameId=0,renderer,closed=false;
+  let plasmaTime=0,lastPlasma=0;let state=flightState(),paused=false,last=0,frameId=0,renderer,closed=false;
   const keys=new Set(),held=new Set(),abort=new AbortController(),listen={signal:abort.signal};
   const canvas=$('flightShip'),starsCanvas=$('flightStars'),ctx=starsCanvas.getContext('2d');let width=1,height=1;
   // Deterministic star positions make comparisons between ships consistent.
@@ -58,6 +59,7 @@ export function openTestFlight(project){
     if(ctx){ctx.clearRect(0,0,width,height);const basis=flightBasis(state),focal=Math.min(width,height)*.9;
       for(const star of stars){const delta=star.map((v,i)=>((v-state.position[i]+800)%1600+1600)%1600-800),dot=a=>a.reduce((sum,v,i)=>sum+v*delta[i],0),depth=dot(basis.forward);if(depth<2)continue;const x=width/2+dot(basis.right)*focal/depth,y=height/2-dot(basis.up)*focal/depth;if(x<0||x>width||y<0||y>height)continue;ctx.fillStyle=`rgba(179,218,239,${Math.min(.9,.2+150/depth)})`;const size=Math.min(3,1+70/depth);ctx.fillRect(x,y,size,size);}
     }
+    if(!paused)plasmaTime+=dt;if(now-lastPlasma>80&&hasJaredPlasma(project.parts)){renderer?.setModel(combined(project.parts,plasmaTime));lastPlasma=now;}
     renderer?.render({yaw:-state.yawRate*.15,pitch:.22-state.pitchRate*.12,distance:3.7,width,height,wireframe:false,grid:false});
     $('flightSpeed').textContent=`${state.speed.toFixed(1)} / ${stats.maxSpeed.toFixed(1)} m/s`;$('flightSpeed').dataset.speed=state.speed;
     $('flightDistance').textContent=`${state.distance.toFixed(0)} m traveled`;$('flightHeading').textContent=`Heading ${((state.yaw*180/Math.PI%360+360)%360).toFixed(0)}°`;

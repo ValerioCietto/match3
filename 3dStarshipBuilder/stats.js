@@ -41,7 +41,7 @@ const defaultVolumes=Object.fromEntries(Object.keys(library).map(type=>[type,mod
 const mirroredPassengerVolume=moduleVolume({type:'passengerModule',name:'Cabin',color:library.passengerModule.color,...neutral,mirror:true})/2;
 
 export function moduleStats(p){
-  const volume=moduleVolume(p),r=p.type==='armor'?armorRates[p.armorProfile||'darkAlloy']:moduleRates[p.type],capacity=volume/(p.type==='passengerModule'&&p.mirror?mirroredPassengerVolume:defaultVolumes[p.type]);
+  const volume=moduleVolume(p),r=p.type==='armor'?armorRates[p.armorProfile||'darkAlloy']:p.designStyle==='jared'&&p.type==='passengerModule'?{...moduleRates.passengerModule,payload:1.5}:moduleRates[p.type],capacity=volume/(p.type==='passengerModule'&&p.mirror&&p.designStyle!=='jared'?mirroredPassengerVolume:defaultVolumes[p.type]);
   const passengers=p.type==='passengerModule'?capacity*8:0;
   return {
     volume,massEmpty:volume*r.mass,massFull:volume*(r.mass+(r.payload||0))+passengers*.1,

@@ -35,7 +35,7 @@ uniform float uOverride;
 uniform vec3 uColor;
 void main() {
   float light=1.0;
-  if(uLit>0.5) light=0.4+0.6*abs(dot(normalize(vNormal),normalize(vec3(-0.3,0.7,0.64))));
+  if(uLit>0.5 && length(vNormal)>0.01) light=0.4+0.6*abs(dot(normalize(vNormal),normalize(vec3(-0.3,0.7,0.64))));
   gl_FragColor=vec4(mix(vColor,uColor,uOverride)*light,1.0);
 }`;
 
@@ -50,7 +50,7 @@ export function meshBuffers(model) {
     const u=b.map((v,i)=>v-a[i]),v=c.map((n,i)=>n-a[i]);
     const normal=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];
     const length=Math.hypot(...normal)||1;
-    const n=normal.map(value=>value/length),color=rgb(model.faceColors?.[index]||model.color);
+    const n=model.emissiveColors?.includes(model.faceColors?.[index]||model.color)?[0,0,0]:normal.map(value=>value/length),color=rgb(model.faceColors?.[index]||model.color);
     for(let i=1;i<face.length-1;i++)for(const id of [face[0],face[i],face[i+1]])vertex(triangles,positions[id],n,color);
   });
   for(const edge of edgesOf(model))for(const id of edge)vertex(lines,positions[id],[0,0,1],[1,1,1]);

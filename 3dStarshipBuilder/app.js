@@ -1,14 +1,26 @@
+import {hasJaredPlasma} from './jared.js';
+import {factions,resolveFaction} from './factions.js';
+import {catalogForFaction} from './presets.js';
 import {WebGLRenderer} from './webgl-renderer.js';
 import {openTestFlight} from './flight.js';
 import {openFlight25} from './flight25.js';
 import {recommendedStats,statFields} from './stats.js';
-import {library,armorProfiles,hullProfiles,wingProfiles,thrusterProfiles,cockpitProfiles,finProfiles,cannonOptions,presetCatalog,part,preset,combined,validateProject,objFiles,gltf} from './model.js';
-const $=id=>document.getElementById(id),key='orbital-foundry-v1';
-let project={version:1,name:'Peregrine MK I',parts:preset('fighter')},selected,undo=[],redo=[],renderer,dirty=true,yaw=-.65,pitch=.55,distance=3.5;
+import {library,armorProfiles,hullProfiles,wingProfiles,thrusterProfiles,cockpitProfiles,finProfiles,cannonOptions,part,preset,combined,validateProject,objFiles,gltf} from './model.js';
+const faction=resolveFaction(new URL(location.href).searchParams.get('faction')),factionSpec=factions[faction],presetCatalog=catalogForFaction(faction);
+const $=id=>document.getElementById(id),key=faction==='human'?'orbital-foundry-v1':'starship-builder-'+faction;
+document.documentElement.dataset.faction=faction;
+const factionField=document.createElement('label');factionField.className='field toolbar-faction';factionField.textContent='Faction';
+const factionSelect=document.createElement('select');factionSelect.id='faction';
+for(const [id,spec] of Object.entries(factions))factionSelect.add(new Option(spec.name,id));
+factionSelect.value=faction;factionField.append(factionSelect);$('shipName').closest('label').after(factionField);
+factionSelect.onchange=()=>{persist();const url=new URL(location.href);url.searchParams.set('faction',factionSelect.value);location.assign(url.href);};
+const starter=faction==='human'?'fighter':Object.keys(presetCatalog)[0];
+let project={version:1,name:presetCatalog[starter].name,faction,parts:preset(starter)},selected,undo=[],redo=[],renderer,dirty=true,yaw=-.65,pitch=.55,distance=3.5;
 const canvas=$('scene'),pointers=new Map();let width=1,height=1,last=0;
 const status=message=>{$('status').textContent=message;};
 try{const saved=localStorage.getItem(key);if(saved)project=validateProject(JSON.parse(saved));}catch{status('Could not restore autosave. A starter ship is ready.');}
 try{renderer=new WebGLRenderer(canvas,{onError:message=>{$('renderError').hidden=false;$('renderError').textContent=message;},onRestore:()=>{$('renderError').hidden=true;dirty=true;}});}catch(error){$('renderError').hidden=false;$('renderError').textContent=error.message;}
+project.faction=faction;
 const current=()=>project.parts.find(p=>p.id===selected);
 document.head.append(Object.assign(document.createElement('link'),{rel:'stylesheet',href:new URL('./flight.css',import.meta.url).href}));
 const testFlightButton=document.createElement('button');testFlightButton.id='testFlight';testFlightButton.textContent='Test Flight';$('export').before(testFlightButton);
@@ -55,7 +67,7 @@ for(const [id,title] of [['cannonBarrel','Barrel'],['cannonMuzzle','Muzzle'],['c
   for(const [value,text] of Object.entries(cannonOptions[id])){const option=document.createElement('option');option.value=value;option.textContent=text;select.append(option);}
   select.onchange=()=>{if(current()?.type!=='cannon')return;change(()=>{const p=current();p[id]=select.value;if(id!=='cannonBarrel'&&(!p.cannonBarrel||p.cannonBarrel==='classic'))p.cannonBarrel='hexagonal';});};label.append(select);cannonPanel.append(label);
 }
-const cannonHint=document.createElement('p');cannonHint.className='hint';cannonHint.textContent='Combine barrel, muzzle and receiver shapes. Scale and mirror affect the complete cannon. Changing muzzle or receiver activates the modular barrel; Classic restores the original mesh.';cannonPanel.append(cannonHint);
+const cannonHint=document.createElement('p');cannonHint.className='hint';cannonHint.textContent='Combine barrel, muzzle and receiver shapes. Scale and mirror affect the complete cannon.';cannonPanel.append(cannonHint);
 const finOptions=document.createElement('div');finOptions.id='finOptions';finOptions.hidden=true;
 finOptions.innerHTML='<p class="eyebrow">DORSAL FIN OPTIONS</p><label class="field">Fin shape<select id="finProfile"></select></label><p class="hint">Sweep moves the tip forward or back; cant leans it sideways. The root stays fixed. Scale Y adjusts height and Z adjusts length.</p>';
 $('partProperties').append(finOptions);
@@ -66,7 +78,7 @@ for(const [id,label,min,max,step,,unit] of finFields){const field=document.creat
 const cockpitOptions=document.createElement('div');cockpitOptions.id='cockpitOptions';cockpitOptions.hidden=true;
 cockpitOptions.innerHTML='<p class="eyebrow">COCKPIT OPTIONS</p><label class="field">Cockpit shape<select id="cockpitProfile"></select></label><p class="hint">Scale and rotate the complete cockpit below. Surface color changes the glazing; structural trim retains its accent color.</p>';
 $('partProperties').append(cockpitOptions);
-for(const [value,profile] of Object.entries(cockpitProfiles)){const option=document.createElement('option');option.value=value;option.textContent=profile.name;$('cockpitProfile').append(option);}
+for(const [value,profile] of Object.entries(cockpitProfiles).filter(([,profile])=>!profile.legacy)){const option=document.createElement('option');option.value=value;option.textContent=profile.name;$('cockpitProfile').append(option);}
 $('cockpitProfile').onchange=()=>{if(current()?.type==='cockpit')change(()=>current().cockpitProfile=$('cockpitProfile').value);};
 const bevelField=document.createElement('label');bevelField.className='field';bevelField.innerHTML='Bevel<input id="cockpitBevel" type="range" min="0" max="0.4" step="0.02"><output id="cockpitBevelValue"></output>';cockpitOptions.querySelector('.hint').before(bevelField);
 $('cockpitBevel').oninput=()=>$('cockpitBevelValue').textContent=Math.round(Number($('cockpitBevel').value)*100)+'%';
@@ -82,6 +94,13 @@ for(const [value,profile] of Object.entries(wingProfiles)){const option=document
 $('wingProfile').onchange=()=>{if(current()?.type==='wing')change(()=>current().wingProfile=$('wingProfile').value);};
 const wingFields=[['wingSweep','Additional sweep',-35,35,5,0,'°'],['wingDihedral','Dihedral / tip angle',-45,45,5,0,'°'],['wingThickness','Thickness',.04,.6,.02,.16,' units']];
 for(const [id,label,min,max,step,,unit] of wingFields){const field=document.createElement('label');field.className='field';field.textContent=label;const input=document.createElement('input');input.type='range';input.id=id;input.min=min;input.max=max;input.step=step;const output=document.createElement('output');output.id=id+'Value';input.oninput=()=>output.textContent=input.value+unit;input.onchange=()=>{if(current()?.type==='wing')change(()=>current()[id]=Number(input.value));};field.append(input,output);wingOptions.append(field);}
+const jaredHullOptions=document.createElement('div');jaredHullOptions.hidden=true;jaredHullOptions.innerHTML='<label class="field">Jared hull shape<select id="jaredHullProfile"><option value="curved">Curved</option><option value="blockier">Blockier / SVG</option></select></label><label class="field" id="moduleBevelField">Bevel<input id="moduleBevel" type="range" min="0" max="0.5" step="0.01"><output id="moduleBevelValue"></output></label>';$('partProperties').append(jaredHullOptions);
+$('jaredHullProfile').onchange=()=>{if(current()?.type==='hull'&&current()?.designStyle==='jared')change(()=>current().jaredHullProfile=$('jaredHullProfile').value);};
+$('moduleBevel').oninput=()=>$('moduleBevelValue').textContent=Math.round(Number($('moduleBevel').value)*100)+'%';
+$('moduleBevel').onchange=()=>{if(current()?.jaredHullProfile==='blockier')change(()=>current().moduleBevel=Number($('moduleBevel').value));};
+const spikeField=document.createElement('label');spikeField.className='field';spikeField.hidden=true;spikeField.innerHTML='Spike length<input id="spikeLength" type="range" min="0.2" max="5" step="0.1"><output id="spikeLengthValue"></output>';$('partProperties').append(spikeField);
+$('spikeLength').oninput=()=>$('spikeLengthValue').textContent=$('spikeLength').value+' units';
+$('spikeLength').onchange=()=>{if(current()?.designStyle==='jared'&&current().type==='cannon')change(()=>current().spikeLength=Number($('spikeLength').value));};
 function remember(){undo.push(JSON.stringify(project));if(undo.length>60)undo.shift();redo=[];}
 function persist(){try{localStorage.setItem(key,JSON.stringify(project));status('All changes saved locally.');}catch{status('Autosave unavailable. Use Save project to keep your work.');}}
 function refresh(){
@@ -99,11 +118,16 @@ function refresh(){
   armorOptions.hidden=p?.type!=='armor';if(p?.type==='armor'){$('armorProfile').value=p.armorProfile||'darkAlloy';$('armorDescription').textContent=armorProfiles[p.armorProfile||'darkAlloy'].description;}
   hullOptions.hidden=p?.type!=='hull';
   wingOptions.hidden=p?.type!=='wing';
-  cannonPanel.hidden=p?.type!=='cannon';if(p?.type==='cannon')for(const [id,fallback] of [['cannonBarrel','classic'],['cannonMuzzle','none'],['cannonReceiver','square']])$(id).value=p[id]??fallback;
+  cannonPanel.hidden=p?.type!=='cannon';if(p?.type==='cannon')for(const [id,fallback] of [['cannonBarrel','hexagonal'],['cannonMuzzle','none'],['cannonReceiver','square']])$(id).value=p[id]??fallback;
   finOptions.hidden=p?.type!=='fin';if(p?.type==='fin'){$('finProfile').value=p.finProfile||'classic';for(const [id,,,,,fallback,unit] of finFields){$(id).value=p[id]??fallback;$(id+'Value').textContent=(p[id]??fallback)+unit;}}
-  cockpitOptions.hidden=p?.type!=='cockpit';if(p?.type==='cockpit')$('cockpitProfile').value=p.cockpitProfile||'classic';
+  cockpitOptions.hidden=p?.type!=='cockpit';
+  $('cockpitProfile').querySelector('[data-legacy]')?.remove();
+  if(p?.type==='cockpit'){
+    if(cockpitProfiles[p.cockpitProfile]?.legacy){const option=document.createElement('option');option.value=p.cockpitProfile;option.textContent=cockpitProfiles[p.cockpitProfile].name+' (legacy)';option.disabled=true;option.dataset.legacy='true';$('cockpitProfile').append(option);}
+    $('cockpitProfile').value=p.cockpitProfile||'classic';
+  }
   if(p?.type==='cockpit'){$('cockpitBevel').value=p.cockpitBevel??0;$('cockpitBevelValue').textContent=Math.round((p.cockpitBevel??0)*100)+'%';}
-  thrusterOptions.hidden=p?.type!=='engine';if(p?.type==='engine')$('thrusterProfile').value=p.thrusterProfile||'classic';
+  thrusterOptions.hidden=p?.type!=='engine';if(p?.type==='engine')$('thrusterProfile').value=!p.thrusterProfile||p.thrusterProfile==='classic'?'drone':p.thrusterProfile;
   $('deckTaper').closest('label').hidden=p?.type==='hull'&&!!hullProfiles[p.hullProfile||'standard'].composite;
   for(const id of ['upperChamfer','lowerChamfer']){$(id).closest('label').hidden=p?.type==='hull'&&!!hullProfiles[p.hullProfile||'standard'].composite;if(p?.type==='hull'){$(id).value=p[id]??0;$(id+'Value').textContent=Math.round((p[id]??0)*100)+'%';}}
   if(p?.type==='wing'){$('wingProfile').value=p.wingProfile||'swept';for(const [id,,,,,fallback,unit] of wingFields){$(id).value=p[id]??fallback;$(id+'Value').textContent=(p[id]??fallback)+unit;}}
@@ -113,10 +137,16 @@ function refresh(){
     $('hullProfile').value=p.hullProfile||'standard';$('deckTaper').value=p.deckTaper??1;$('deckTaperValue').textContent=Math.round((p.deckTaper??1)*100)+'% upper deck';
   }
   if(p){$('partName').value=p.name;$('color').value=p.color;$('mirror').checked=p.mirror;document.querySelectorAll('[data-axis]').forEach(input=>input.value=p[input.dataset.field][Number(input.dataset.axis)]);}
+  if(p?.designStyle==='jared')for(const panel of [hullOptions,cockpitOptions,thrusterOptions,wingOptions,cannonPanel])panel.hidden=true;
+  jaredHullOptions.hidden=!(p?.type==='hull'&&p?.designStyle==='jared');if(!jaredHullOptions.hidden){$('jaredHullProfile').value=p.jaredHullProfile||'curved';$('moduleBevelField').hidden=p.jaredHullProfile!=='blockier';$('moduleBevel').value=p.moduleBevel??.15;$('moduleBevelValue').textContent=Math.round((p.moduleBevel??.15)*100)+'%';}
+  spikeField.hidden=!(p?.designStyle==='jared'&&p?.type==='cannon');if(!spikeField.hidden){$('spikeLength').value=p.spikeLength??1.6;$('spikeLengthValue').textContent=(p.spikeLength??1.6)+' units';}
   dirty=true;
 }
 function change(fn){remember();fn();refresh();persist();}
-for(const [type,spec] of Object.entries(library).filter(([,spec])=>!spec.legacy)){const button=document.createElement('button'),icon=document.createElement('strong'),name=document.createElement('small');icon.textContent=spec.icon;name.textContent=spec.name;button.append(icon,name);button.onclick=()=>{if(project.parts.length>=150)return status('Maximum 150 parts.');change(()=>{const p=part(type,type==='cockpit'?[0,.5,-.5]:type==='wing'?[.6,0,0]:[0,0,0],[1,1,1],type==='wing');project.parts.push(p);selected=p.id;});};$('parts').append(button);}
+for(const [type,spec] of Object.entries(library).filter(([type,spec])=>!spec.legacy&&factionSpec.parts.includes(type))){const button=document.createElement('button'),icon=document.createElement('strong'),name=document.createElement('small');icon.textContent=spec.icon;name.textContent=factionSpec.defaults[type]?.name||spec.name;button.append(icon,name);button.onclick=()=>{if(project.parts.length>=150)return status('Maximum 150 parts.');change(()=>{const p=part(type,type==='cockpit'?[0,.5,-.5]:type==='wing'?[.6,0,0]:[0,0,0],[1,1,1],type==='wing');Object.assign(p,factionSpec.defaults[type]);project.parts.push(p);selected=p.id;});};$('parts').append(button);}
+if(faction==='jared'){
+ const button=document.createElement('button');button.innerHTML='<strong>⬡</strong><small>Blockier hull</small>';button.onclick=()=>{if(project.parts.length>=150)return status('Maximum 150 parts.');change(()=>{const p={...part('hull'),...factionSpec.defaults.hull,name:'Blockier hull',jaredHullProfile:'blockier',moduleBevel:.15};project.parts.push(p);selected=p.id;});};$('parts').append(button);
+}
 for(const field of ['position','rotation','scale']){const group=document.createElement('details');group.className='transform';group.open=true;const label=document.createElement('summary');label.textContent=field.toUpperCase()+(field==='rotation'?' / DEGREES':'');const axes=document.createElement('div');axes.className='axes';['X','Y','Z'].forEach((axis,i)=>{const wrap=document.createElement('label');wrap.textContent=axis;const input=document.createElement('input');input.type='number';input.step=field==='rotation'?'5':'.1';input.min=field==='scale'?'.05':field==='rotation'?'-360':'-100';input.max=field==='rotation'?'360':'100';input.dataset.field=field;input.dataset.axis=i;input.setAttribute('aria-label',`${field} ${axis}`);input.onchange=()=>{const value=Number(input.value);if(input.value===''||!Number.isFinite(value)||value<Number(input.min)||value>Number(input.max)){refresh();return status('Transform is outside its allowed range.');}change(()=>current()[field][i]=value);};wrap.append(input);axes.append(wrap);});group.append(label,axes);$('transforms').append(group);}
 $('shipName').onchange=()=>change(()=>project.name=$('shipName').value.trim()||'Untitled ship');
 $('partName').onchange=()=>change(()=>current().name=$('partName').value.trim()||library[current().type].name);
@@ -146,7 +176,7 @@ $('load').title='Import an editable project or .starship.json configuration';
 $('save').onclick=()=>{download(filename()+'.json',JSON.stringify(project,null,2),'application/json');status('Project downloaded.');};
 $('export').onclick=()=>{download(filename()+'.gltf',JSON.stringify(gltf(project.parts)),'model/gltf+json');status('glTF exported with materials and separate part meshes.');};
 $('obj').onclick=()=>{const files=objFiles(project.parts);download(filename()+'.obj',files.obj,'text/plain');download('starship.mtl',files.mtl,'text/plain');status('OBJ + MTL exported. Keep both files together; allow multiple downloads if prompted.');};
-$('load').onclick=()=>$('file').click();$('file').onchange=async()=>{const file=$('file').files[0];if(!file)return;try{if(file.size>1000000)throw Error('Project must be smaller than 1 MB.');const incoming=validateProject(JSON.parse(await file.text()));change(()=>project=incoming);status('Project loaded.');}catch(error){status('Could not open project: '+error.message);}finally{$('file').value='';}};
+$('load').onclick=()=>$('file').click();$('file').onchange=async()=>{const file=$('file').files[0];if(!file)return;try{if(file.size>1000000)throw Error('Project must be smaller than 1 MB.');const incoming=validateProject(JSON.parse(await file.text()));change(()=>project={...incoming,faction});status('Project loaded.');}catch(error){status('Could not open project: '+error.message);}finally{$('file').value='';}};
 const views={perspective:[-.65,.55],top:[0,Math.PI/2],front:[Math.PI,0],side:[Math.PI/2,0]};
 function view(name){[yaw,pitch]=views[name];distance=3.5;document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===name)));dirty=true;}
 function free(){document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed','false'));dirty=true;}
@@ -159,5 +189,6 @@ for(const name of ['pointerup','pointercancel','lostpointercapture'])canvas.addE
 canvas.onkeydown=e=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','+','=','-','0'].includes(e.key))return;e.preventDefault();if(e.key==='0')view('perspective');else if(['+','=','-'].includes(e.key))zoom(e.key==='-'?1.1:.9);else{yaw+=e.key==='ArrowLeft'?-.1:e.key==='ArrowRight'?.1:0;pitch=Math.max(-1.57,Math.min(1.57,pitch+(e.key==='ArrowUp'?-.1:e.key==='ArrowDown'?.1:0)));free();}};
 for(const id of ['grid','wireframe','rotate'])$(id).onchange=()=>dirty=true;
 new ResizeObserver(()=>{const rect=canvas.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2);width=rect.width;height=rect.height;canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);dirty=true;}).observe(canvas);
-function frame(now){if($('rotate').checked&&!pointers.size&&!document.hidden){yaw+=Math.min((now-last)/1000,.05)*.35;free();}last=now;if(dirty){if(renderer?.model)renderer.render({yaw,pitch,distance,width,height,wireframe:$('wireframe').checked,grid:$('grid').checked});else if(renderer){renderer.gl.clear(renderer.gl.COLOR_BUFFER_BIT|renderer.gl.DEPTH_BUFFER_BIT);}dirty=false;}requestAnimationFrame(frame);}
+let lastPlasma=0;
+function frame(now){if(!document.hidden&&now-lastPlasma>80&&hasJaredPlasma(project.parts)){renderer?.setModel(combined(project.parts,now/1000));lastPlasma=now;dirty=true;}if($('rotate').checked&&!pointers.size&&!document.hidden){yaw+=Math.min((now-last)/1000,.05)*.35;free();}last=now;if(dirty){if(renderer?.model)renderer.render({yaw,pitch,distance,width,height,wireframe:$('wireframe').checked,grid:$('grid').checked});else if(renderer){renderer.gl.clear(renderer.gl.COLOR_BUFFER_BIT|renderer.gl.DEPTH_BUFFER_BIT);}dirty=false;}requestAnimationFrame(frame);}
 refresh();view('perspective');requestAnimationFrame(frame);

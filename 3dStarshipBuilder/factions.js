@@ -1,0 +1,6 @@
+export const factions={
+  human:{name:'Human',parts:['armor','turret','fighterBay','fuelPod','shieldGenerator','passengerModule','hull','wing','engine','cockpit','cannon','cargo','fin'],defaults:{}},
+  jared:{name:'Jared',parts:['hull','cockpit','engine','wing','shieldGenerator','cannon','passengerModule'],defaults:{hull:{designStyle:'jared',color:'#91464d'},cockpit:{designStyle:'jared',color:'#ff8467'},engine:{designStyle:'jared',color:'#73343f',name:'Plasma engine'},wing:{designStyle:'jared',color:'#d58391',name:'Blade'},shieldGenerator:{designStyle:'jared',color:'#8f5363',name:'Enershield cell'},cannon:{designStyle:'jared',color:'#a85a60',name:'Spike cannon',spikeLength:1.6},passengerModule:{designStyle:'jared',color:'#a45c75',name:'Cargo / passenger sphere'}}},
+  technician:{name:'Technician',parts:['hull','cockpit','engine','wing','shieldGenerator','armor','fuelPod','cargo','passengerModule','fighterBay'],defaults:{hull:{color:'#9274b8',hullProfile:'research'},cockpit:{color:'#c8a1ff',cockpitProfile:'almond'},engine:{color:'#72588f',thrusterProfile:'speeder'},wing:{color:'#ad8ccc',wingProfile:'tapered'},armor:{color:'#252e43',armorProfile:'highTech'},shieldGenerator:{color:'#ad78e0'}}}
+};
+export function resolveFaction(value){return typeof value==='string'&&Object.hasOwn(factions,value.toLowerCase())?value.toLowerCase():'human';}

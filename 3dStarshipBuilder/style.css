@@ -13,3 +13,15 @@
 .library-accordion>summary{display:list-item;cursor:pointer;padding:8px 0}.library-accordion>summary span{float:right;line-height:14px}.library-accordion>summary:hover{color:#baf17d}.library-accordion>summary:focus-visible{outline:2px solid #87edd3;outline-offset:2px}
 
 header{height:auto;min-height:76px;flex-wrap:wrap;gap:16px;padding:12px 26px}header .toolbar-ship-name{margin:0;gap:4px;flex:1 1 180px;max-width:280px}header>div{flex-wrap:wrap}@media(max-width:650px){header{padding:15px}header .toolbar-ship-name{max-width:none}header>div{width:100%}}
+header .toolbar-faction{margin:0;gap:4px;min-width:120px}
+:root[data-faction=jared]{--faction-accent:#ff9494;--faction-bg:#190e12;--faction-panel:#28151c;--faction-border:#65333c;--faction-active:#49232b;--faction-glow:#4c2633}
+:root[data-faction=technician]{--faction-accent:#d4a2ff;--faction-bg:#140f20;--faction-panel:#23192f;--faction-border:#533c6d;--faction-active:#39244e;--faction-glow:#3c2853}
+:root:is([data-faction=jared],[data-faction=technician]){background:var(--faction-bg)}
+[data-faction]:not([data-faction=human]) :is(.workspace,.inspector,.recommended-stats,.flight-dialog,.flight-mode-dialog){background:var(--faction-panel);border-color:var(--faction-border)}
+[data-faction]:not([data-faction=human]) :is(button,select,input:not([type=checkbox])){background:var(--faction-bg);border-color:var(--faction-border)}
+[data-faction]:not([data-faction=human]) :is(.brand b,.parts strong,.library-foot,.recommended-stats>summary,.flight-hud,.assembly [aria-pressed=true],.flight-ready[data-ready=true],.views [aria-pressed=true]){color:var(--faction-accent)}
+[data-faction]:not([data-faction=human]) :is(button:hover,.assembly [aria-pressed=true]){background:var(--faction-active);border-color:var(--faction-accent)}
+[data-faction]:not([data-faction=human]) .primary{background:var(--faction-accent);color:var(--faction-bg)}
+[data-faction]:not([data-faction=human]) :is(.scene,.flight-stage){background:radial-gradient(ellipse at center,var(--faction-glow),var(--faction-bg))}
+[data-faction]:not([data-faction=human]) input{accent-color:var(--faction-accent)}
+[data-faction]:not([data-faction=human]) i{background:var(--faction-accent)}

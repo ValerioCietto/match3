@@ -1,0 +1,69 @@
+<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Jared — Lama 3D</title><style>body{margin:0;background:#151922;color:#eee;font:14px system-ui}#ui{position:absolute;top:15px;left:15px;background:#222b;padding:16px;border:1px solid #596070;border-radius:10px;z-index:1}label{display:block;margin:9px 0}input{vertical-align:middle}#msg{max-width:280px;color:#ccc}canvas{display:block}</style></head><body><div id="ui"><b>Jared — profilo a lama</b><label>Spessore centrale <input id="thick" type="range" min="2" max="25" value="20" step=".5"> <span id="thickval">20</span> mm</label><label>Larghezza filo lama <input id="width" type="range" min="2" max="22" value="20" step=".5"> <span id="widthval">20</span> mm</label><label>Risoluzione scafo <input id="hullResolution" type="range" min="1" max="10" value="3" step="1"> <output id="hullResolutionValue">3 / 10</output></label><label>Risoluzione cabina <input id="cockpitResolution" type="range" min="1" max="10" value="3" step="1"> <output id="cockpitResolutionValue">3 / 10</output></label><label><input type="checkbox" id="showCockpit" checked> Cabina di pilotaggio</label><label><input type="checkbox" id="wire"> Reticolo</label><label>Apri profilo SVG <input id="svgFile" type="file" accept=".svg,image/svg+xml"></label><p id="triangleCount" aria-live="polite"></p><div id="msg" role="status">Caricamento modello…</div></div><script type="importmap">{"imports":{"three":"./vendor/three/three.module.js"}}</script><script>window.addEventListener("error",e=>{document.getElementById("msg").textContent="Errore: "+(e.message||"impossibile caricare il renderer");});</script><script type="module">
+// Avvio: npx serve .  (aprire jared_3d_lama.html, con jared1.svg nella stessa cartella)
+import * as THREE from 'three';
+import {bladeSurface} from './blade-surface.js';
+import {simplifyContour,resolutionSettings} from './mesh-resolution.js';
+import {cockpitProfile} from './cockpit-revolution.js';
+import {OrbitControls} from './vendor/three/OrbitControls.js';
+import {SVGLoader} from './vendor/three/SVGLoader.js';
+const scene=new THREE.Scene();scene.background=new THREE.Color('#151922');
+const camera=new THREE.PerspectiveCamera(45,innerWidth/innerHeight,.1,2000);camera.position.set(0,-35,255);
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));document.body.appendChild(renderer.domElement);
+const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;
+scene.add(new THREE.HemisphereLight(0xffffff,0x343b50,2));const light=new THREE.DirectionalLight(0xffffff,2.2);light.position.set(-50,-40,100);scene.add(light);const light2=new THREE.DirectionalLight(0xffb45c,1);light2.position.set(70,40,-50);scene.add(light2);
+const group=new THREE.Group();scene.add(group);
+const status=document.querySelector('#msg');let paths=[];
+function makeBlade(shape,thickness,bladeWidth,drop=false,contours=[]){
+ const bounds=new THREE.Box2().setFromPoints(shape.getPoints(80)),size=bounds.getSize(new THREE.Vector2());
+ const bevel=Math.min(bladeWidth,Math.min(size.x,size.y)*.025);
+ const bevelThickness=Math.min(thickness*.4,bevel);
+ let geom=new THREE.ExtrudeGeometry(shape,{depth:thickness-2*bevelThickness,steps:1,bevelEnabled:true,bevelThickness,bevelSize:bevel,bevelSegments:4,curveSegments:32});
+  geom.translate(0,0,-(thickness-2*bevelThickness)/2);
+ if(!drop){geom.dispose();geom=new THREE.BufferGeometry();const surface=bladeSurface(contours,thickness,bladeWidth,true,resolutionSettings(+document.getElementById('hullResolution').value));geom.setAttribute('position',new THREE.Float32BufferAttribute(surface.positions,3));geom.setAttribute('normal',new THREE.Float32BufferAttribute(surface.normals,3));}
+ const pos=geom.getAttribute('position'),colors=[],a=new THREE.Color(drop?'#00ffff':'#ff1600'),b=new THREE.Color(drop?'#f8ffff':'#edff00');
+ for(let i=0;i<pos.count;i++){const t=drop?.3:THREE.MathUtils.clamp((pos.getY(i)+100)/200,0,1),c=a.clone().lerp(b,t);colors.push(c.r,c.g,c.b);}
+ geom.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
+ const mat=new THREE.MeshStandardMaterial({vertexColors:true,metalness:.22,roughness:.36,side:THREE.DoubleSide,wireframe:document.querySelector('#wire').checked});
+ const mesh=new THREE.Mesh(geom,mat);if(drop)mesh.position.z=thickness+1;return mesh;
+}
+function updateTriangleCount(){let hull=0,cockpit=0;for(const mesh of group.children){if(!mesh.visible)continue;const count=(mesh.geometry.index?.count??mesh.geometry.getAttribute('position').count)/3;if(mesh.name==='Cabina di pilotaggio')cockpit+=count;else hull+=count;}const output=document.getElementById('triangleCount');output.textContent=`Triangoli: ${(hull+cockpit).toLocaleString('it-IT')} (scafo ${hull.toLocaleString('it-IT')}, cabina ${cockpit.toLocaleString('it-IT')})`;output.dataset.total=hull+cockpit;output.dataset.hull=hull;output.dataset.cockpit=cockpit;}
+function rebuild(){
+ for(const child of [...group.children]){child.geometry?.dispose();child.material?.dispose();}group.clear();
+ const thickness=+document.querySelector('#thick').value,bladeWidth=+document.querySelector('#width').value;
+ document.querySelector('#thickval').textContent=thickness;document.querySelector('#widthval').textContent=bladeWidth;
+ const resolution=+document.getElementById('hullResolution').value,settings=resolutionSettings(resolution);document.getElementById('hullResolutionValue').textContent=resolution+' / 10';
+ const cockpitResolution=+document.getElementById('cockpitResolution').value,cockpitSettings=resolutionSettings(cockpitResolution);document.getElementById('cockpitResolutionValue').textContent=cockpitResolution+' / 10';
+ const body=paths.filter(p=>!p.drop);
+ if(body.length)group.add(makeBlade(body[0].shape,thickness,bladeWidth,false,body.flatMap(p=>[p.shape.getPoints(24),...p.shape.holes.map(h=>h.getPoints(24))]).map(points=>simplifyContour(points,settings.tolerance))));
+ const cabin=paths.filter(p=>p.drop);
+ if(cabin.length){
+   const {centerX,profile}=cockpitProfile(cabin.map(p=>p.shape.getPoints(80)),cockpitSettings.cabinRows);
+   const geometry=new THREE.LatheGeometry(profile.map(p=>new THREE.Vector2(p.radius,p.y)),cockpitSettings.radial);
+   const material=new THREE.MeshStandardMaterial({color:'#63e7f2',metalness:.2,roughness:.22,wireframe:document.querySelector('#wire').checked});
+   const mesh=new THREE.Mesh(geometry,material);mesh.name='Cabina di pilotaggio';mesh.visible=document.getElementById('showCockpit').checked;mesh.position.set(centerX,0,thickness*.5);group.add(mesh);
+ }
+ updateTriangleCount();
+}
+const fallbackSVG='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 180"><path fill="#ff1600" d="M 50 5 C 58 54 105 92 92 145 C 85 166 65 172 50 175 C 62 150 69 125 55 103 C 44 85 27 92 24 113 C 3 83 26 40 50 5 Z"/></svg>';
+function loadProfile(svg){
+ const data=new SVGLoader().parse(svg),all=[];
+ for(const path of data.paths){const style=path.userData?.style||{};if(style.fill==='none')continue;const drop=(style.fill||'').includes('linearGradient661');for(const shape of SVGLoader.createShapes(path))all.push({shape,drop});}
+ if(!all.length)throw Error('Nessun tracciato SVG pieno trovato');
+ // Sample each contour once: adjacent Bezier curves share endpoint objects.
+ const bounds=new THREE.Box2();for(const {shape} of all)for(const p of shape.getPoints(120))bounds.expandByPoint(p);
+ const center=bounds.getCenter(new THREE.Vector2()),size=bounds.getSize(new THREE.Vector2()),factor=100/Math.max(size.x,1);
+ const convert=points=>points.map(p=>new THREE.Vector2((p.x-center.x)*factor,-(p.y-center.y)*factor));
+ paths=all.map(({shape,drop})=>{const normalized=new THREE.Shape(convert(shape.getPoints(24)));normalized.holes=shape.holes.map(h=>new THREE.Path(convert(h.getPoints(24))));return {shape:normalized,drop};});
+ rebuild();
+ const box=new THREE.Box3().setFromObject(group),extent=box.getSize(new THREE.Vector3()),target=box.getCenter(new THREE.Vector3());
+ const fit=Math.max(extent.y,extent.x/camera.aspect)/(2*Math.tan(THREE.MathUtils.degToRad(camera.fov/2)))*1.3;
+ camera.position.copy(target).add(new THREE.Vector3(0,-fit*.12,fit));camera.near=Math.max(.01,fit/1000);camera.far=Math.max(2000,fit*10);camera.updateProjectionMatrix();controls.target.copy(target);controls.update();
+ document.body.dataset.modelReady='true';
+}
+loadProfile(fallbackSVG);
+status.textContent='Profilo dimostrativo: jared1.svg non è disponibile. Puoi aprire il tuo SVG qui sopra. Trascina per ruotare; rotella per zoom.';
+try{const response=await fetch('./jared1.svg');if(!response.ok)throw Error('SVG non presente');loadProfile(await response.text());status.textContent='Trascina per ruotare; rotella per zoom.';}catch(err){console.info('Uso del profilo dimostrativo:',err.message);}
+document.getElementById('svgFile').onchange=async event=>{const file=event.target.files[0];if(!file)return;try{loadProfile(await file.text());status.textContent=file.name+' — trascina per ruotare; rotella per zoom.';}catch(err){status.textContent='Impossibile aprire SVG: '+err.message;}event.target.value='';};
+document.getElementById('showCockpit').addEventListener('change',event=>{const cabin=group.getObjectByName('Cabina di pilotaggio');if(cabin)cabin.visible=event.target.checked;updateTriangleCount();});
+for(const id of ['thick','width','wire','hullResolution','cockpitResolution'])document.getElementById(id).addEventListener('input',()=>{if(paths.length)rebuild();});window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});renderer.setAnimationLoop(()=>{controls.update();renderer.render(scene,camera);});
+</script></body></html>

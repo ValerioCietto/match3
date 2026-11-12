@@ -1,0 +1,106 @@
+{
+  "asset": {
+    "version": "2.0",
+    "generator": "Starship builder cockpit shape exporter"
+  },
+  "scene": 0,
+  "scenes": [
+    {
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "Jared cockpit",
+      "mesh": 0
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Jared cockpit",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1
+          },
+          "indices": 2,
+          "material": 0
+        }
+      ]
+    }
+  ],
+  "materials": [
+    {
+      "name": "Cyan cockpit",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.12477181755144427,
+          0.7991027380100881,
+          0.8879231178794776,
+          1
+        ],
+        "metallicFactor": 0.2,
+        "roughnessFactor": 0.22
+      }
+    }
+  ],
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5126,
+      "count": 58,
+      "type": "VEC3",
+      "min": [
+        -0.007219672679901123,
+        -0.007219672679901123,
+        -0.02231525063669582
+      ],
+      "max": [
+        0.007219672679901123,
+        0.007219672679901123,
+        0.022315250156761213
+      ]
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 58,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "componentType": 5123,
+      "count": 336,
+      "type": "SCALAR"
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteOffset": 0,
+      "byteLength": 696,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 696,
+      "byteLength": 696,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1392,
+      "byteLength": 672,
+      "target": 34963
+    }
+  ],
+  "buffers": [
+    {
+      "byteLength": 2064,
+      "uri": "data:application/octet-stream;base64,AAAAAAAAAAB5zrY8AAAAALsqtTvbGok8AAAAAIir6Tt5zjY8AAAAAAGT7Dt5zrY7AAAAAM5q5Dt4OIIvAAAAAP0LwTt5zra7AAAAAMMHjDt5zja8AAAAANiDFjvbGom8AAAAAAAAAAB5zra8uBqAO7gagDvbGok8zDqlO8w6pTt5zjY8g0inO4NIpzt5zrY77oOhO+6DoTt4OIIvNYGIOzWBiDt5zra7YwhGO2MIRjt5zja8QtzUOkLc1DrbGom8uyq1O7PWxyDbGok8iKvpO2HgACF5zjY8AZPsO256AiF5zrY7zmrkO3D1+yB4OIIv/QvBO2bx1CB5zra7wweMO112miB5zja82IMWOxQHJiDbGom8uBqAO7gagLvbGok8zDqlO8w6pbt5zjY8g0inO4NIp7t5zrY77oOhO+6Dobt4OIIvNYGIOzWBiLt5zra7YwhGO2MIRrt5zja8QtzUOkLc1LrbGom8s9ZHIbsqtbvbGok8YeCAIYir6bt5zjY8bnqCIQGT7Lt5zrY7cPV7Ic5q5Lt4OIIvZvFUIf0Lwbt5zra7XXYaIcMHjLt5zja8FAemINiDFrvbGom8uBqAu7gagLvbGok8zDqlu8w6pbt5zjY8g0inu4NIp7t5zrY77oOhu+6Dobt4OIIvNYGIuzWBiLt5zra7YwhGu2MIRrt5zja8QtzUukLc1LrbGom8uyq1uwbhlaHbGok8iKvpu5FQwaF5zjY8AZPsu6W3w6F5zrY7zmrkuxP4vKF4OIIv/QvBuwy1n6F5zra7wweMu4yxZ6F5zja82IMWu6AK+aDbGom8uBqAu7gagDvbGok8zDqlu8w6pTt5zjY8g0inu4NIpzt5zrY77oOhu+6DoTt4OIIvNYGIuzWBiDt5zra7YwhGu2MIRjt5zja8QtzUukLc1DrbGom89LP7o3Av5D3yZ34/f/DtpDG1Vz/h3Ak/JpkLpSkcfT96bhk+dy0NpT35fz9QXmu8uzMMpXA0fj93HPK9IT0Jpf7UeD/OnnC+02MGpauqcz/9AJ2+LdoDpcYQbz/2H7e++imTpPFphT79J3e/R4cYP0eHGD/h3Ak/zvkyP875Mj96bhk+KwA1PysANT9QXmu8/b8zP/2/Mz94HPK9Z/MvP2fzLz/PnnC+YUwsP2FMLD/9AJ2+ewspP3sLKT/2H7e+MbVXP3/wbSTh3Ak/KRx9PyaZiyR6bhk+Pfl/P3ctjSRQXmu8cDR+P7szjCR3HPK9/tR4PyE9iSTOnnC+q6pzP9NjhiT9AJ2+xhBvPy3agyT2H7e+R4cYP0eHGL/h3Ak/zvkyP875Mr96bhk+KwA1PysANb9QXmu8/b8zP/2/M794HPK9Z/MvP2fzL7/PnnC+YUwsP2FMLL/9AJ2+ewspP3sLKb/2H7e+f/DtJDG1V7/h3Ak/JpkLJSkcfb96bhk+dy0NJT35f79QXmu8uzMMJXA0fr93HPK9IT0JJf7UeL/OnnC+02MGJauqc7/9AJ2+LdoDJcYQb7/2H7e+R4cYv0eHGL/h3Ak/zvkyv875Mr96bhk+KwA1vysANb9QXmu8/b8zv/2/M794HPK9Z/Mvv2fzL7/PnnC+YUwsv2FMLL/9AJ2+ewspv3sLKb/2H7e+MbVXv190MqXh3Ak/KRx9v7llUaV6bhk+Pfl/vzLEU6VQXmu8cDR+v5hNUqV3HPK9/tR4v7HbTaXOnnC+q6pzv72VSaX9AJ2+xhBvv0THRaX2H7e+R4cYv0eHGD/h3Ak/zvkyv875Mj96bhk+KwA1vysANT9QXmu8/b8zv/2/Mz94HPK9Z/Mvv2fzLz/PnnC+YUwsv2FMLD/9AJ2+ewspv3sLKT/2H7e+CQABAAAAAQAJAAIACgACAAkAAgAKAAMACwADAAoAAwALAAQADAAEAAsABAAMAAUADQAFAAwABQANAAYADgAGAA0ABgAOAAcADwAHAA4ABwAPAAgAEAAJAAAACQAQAAoAEQAKABAACgARAAsAEgALABEACwASAAwAEwAMABIADAATAA0AFAANABMADQAUAA4AFQAOABQADgAVAA8AFgAPABUADwAWAAgAFwAQAAAAEAAXABEAGAARABcAEQAYABIAGQASABgAEgAZABMAGgATABkAEwAaABQAGwAUABoAFAAbABUAHAAVABsAFQAcABYAHQAWABwAFgAdAAgAHgAXAAAAFwAeABgAHwAYAB4AGAAfABkAIAAZAB8AGQAgABoAIQAaACAAGgAhABsAIgAbACEAGwAiABwAIwAcACIAHAAjAB0AJAAdACMAHQAkAAgAJQAeAAAAHgAlAB8AJgAfACUAHwAmACAAJwAgACYAIAAnACEAKAAhACcAIQAoACIAKQAiACgAIgApACMAKgAjACkAIwAqACQAKwAkACoAJAArAAgALAAlAAAAJQAsACYALQAmACwAJgAtACcALgAnAC0AJwAuACgALwAoAC4AKAAvACkAMAApAC8AKQAwACoAMQAqADAAKgAxACsAMgArADEAKwAyAAgAMwAsAAAALAAzAC0ANAAtADMALQA0AC4ANQAuADQALgA1AC8ANgAvADUALwA2ADAANwAwADYAMAA3ADEAOAAxADcAMQA4ADIAOQAyADgAMgA5AAgAAQAzAAAAMwABADQAAgA0AAEANAACADUAAwA1AAIANQADADYABAA2AAMANgAEADcABQA3AAQANwAFADgABgA4AAUAOAAGADkABwA5AAYAOQAHAAgA"
+    }
+  ]
+}
