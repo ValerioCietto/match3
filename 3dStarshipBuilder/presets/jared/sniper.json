@@ -1,0 +1,327 @@
+{
+  "version": 1,
+  "faction": "jared",
+  "name": "Sniper",
+  "parts": [
+    {
+      "id": "6f96bfa5-bcdd-4815-8908-72691a732829",
+      "type": "hull",
+      "name": "Hull",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        3,
+        2,
+        3
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#91464d",
+      "mirror": false,
+      "designStyle": "jared",
+      "jaredHullProfile": "blockier",
+      "moduleBevel": 0.19
+    },
+    {
+      "id": "9472bae6-6811-421a-87e3-43f078355fc8",
+      "type": "cannon",
+      "cannonBarrel": "hexagonal",
+      "name": "Spike cannon",
+      "position": [
+        0,
+        0.5,
+        0.4
+      ],
+      "scale": [
+        3,
+        3,
+        3
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#a85a60",
+      "mirror": false,
+      "designStyle": "jared",
+      "spikeLength": 5
+    },
+    {
+      "id": "d8ac02ef-f54c-4332-8d4d-20718a34152e",
+      "type": "wing",
+      "name": "Blade",
+      "position": [
+        2.6,
+        0,
+        -0.5
+      ],
+      "scale": [
+        3,
+        3,
+        3
+      ],
+      "rotation": [
+        0,
+        -50,
+        0
+      ],
+      "color": "#d58391",
+      "mirror": true,
+      "designStyle": "jared"
+    },
+    {
+      "id": "ec11a23e-f6fc-40cf-b6aa-0b946398accc",
+      "type": "cockpit",
+      "name": "Cockpit",
+      "position": [
+        0.7,
+        0.4,
+        -0.5
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#63e7f2",
+      "mirror": false,
+      "designStyle": "jared"
+    },
+    {
+      "id": "a7038240-3869-4614-a333-51cd4c8fbcbc",
+      "type": "engine",
+      "thrusterProfile": "drone",
+      "name": "Plasma engine",
+      "position": [
+        0,
+        0,
+        3
+      ],
+      "scale": [
+        3,
+        3,
+        3
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#73343f",
+      "mirror": false,
+      "designStyle": "jared"
+    },
+    {
+      "id": "3398c1f4-200c-4449-92ff-3c75b7e79b0c",
+      "type": "cannon",
+      "cannonBarrel": "hexagonal",
+      "name": "Spike cannon",
+      "position": [
+        1.2,
+        0.3,
+        -0.8
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#a85a60",
+      "mirror": true,
+      "designStyle": "jared",
+      "spikeLength": 4.5
+    },
+    {
+      "id": "a215a1c6-e18b-46f6-8cf8-94ab89620683",
+      "type": "cannon",
+      "cannonBarrel": "hexagonal",
+      "name": "Spike cannon copy",
+      "position": [
+        1.5,
+        0.3,
+        -0.8
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#a85a60",
+      "mirror": true,
+      "designStyle": "jared",
+      "spikeLength": 4
+    },
+    {
+      "id": "88e40819-7d36-405d-9ebe-f5bf50f7c998",
+      "type": "cannon",
+      "cannonBarrel": "hexagonal",
+      "name": "Spike cannon copy copy",
+      "position": [
+        1.8,
+        0.3,
+        -0.8
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#a85a60",
+      "mirror": true,
+      "designStyle": "jared",
+      "spikeLength": 3.5
+    },
+    {
+      "id": "b0c7bc12-ffb7-4b78-a92a-d828b8b62c5f",
+      "type": "cannon",
+      "cannonBarrel": "hexagonal",
+      "name": "Spike cannon copy copy copy",
+      "position": [
+        2.1,
+        0.3,
+        -0.8
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#a85a60",
+      "mirror": true,
+      "designStyle": "jared",
+      "spikeLength": 3
+    },
+    {
+      "id": "174629f5-3d6c-44d7-bfb2-fc21266377a6",
+      "type": "cannon",
+      "cannonBarrel": "hexagonal",
+      "name": "Spike cannon copy copy copy copy",
+      "position": [
+        2.4,
+        0.3,
+        -0.8
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#a85a60",
+      "mirror": true,
+      "designStyle": "jared",
+      "spikeLength": 2.5
+    },
+    {
+      "id": "7af45a36-28ac-4458-9f4d-363a19e3d07f",
+      "type": "cannon",
+      "cannonBarrel": "hexagonal",
+      "name": "Spike cannon copy copy copy copy copy",
+      "position": [
+        2.6999999999999997,
+        0.3,
+        -0.8
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#a85a60",
+      "mirror": true,
+      "designStyle": "jared",
+      "spikeLength": 2
+    },
+    {
+      "id": "beec7ee2-6614-492c-b33f-d526c48dc2a0",
+      "type": "cannon",
+      "cannonBarrel": "hexagonal",
+      "name": "Spike cannon copy copy copy copy copy copy",
+      "position": [
+        2.9999999999999996,
+        0.3,
+        -0.8
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#a85a60",
+      "mirror": true,
+      "designStyle": "jared",
+      "spikeLength": 1.5
+    },
+    {
+      "id": "77230c1b-0297-4864-ad1e-0e2c80bfc25f",
+      "type": "cannon",
+      "cannonBarrel": "hexagonal",
+      "name": "Spike cannon copy copy copy copy copy copy copy",
+      "position": [
+        3.2999999999999994,
+        0.3,
+        -0.8
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#a85a60",
+      "mirror": true,
+      "designStyle": "jared",
+      "spikeLength": 1
+    }
+  ]
+}

@@ -1,0 +1,368 @@
+{
+  "version": 1,
+  "faction": "jared",
+  "name": "Warlord",
+  "parts": [
+    {
+      "id": "174a9767-1d9d-448e-9a7f-3ad8a3b9b4cc",
+      "type": "hull",
+      "name": "Hull",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        2,
+        2,
+        2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#91464d",
+      "mirror": false,
+      "designStyle": "jared",
+      "jaredHullProfile": "warlord",
+      "moduleBevel": 0.35
+    },
+    {
+      "id": "abedb7e9-af08-4690-b8a1-3a71e67ff635",
+      "type": "engine",
+      "thrusterProfile": "drone",
+      "name": "Plasma engine",
+      "position": [
+        1,
+        0,
+        0.7
+      ],
+      "scale": [
+        2.25,
+        2.25,
+        2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#73343f",
+      "mirror": true,
+      "designStyle": "jared"
+    },
+    {
+      "id": "2191e0c2-aa78-4cb6-ae50-04334c9ef4d4",
+      "type": "engine",
+      "thrusterProfile": "drone",
+      "name": "Plasma engine",
+      "position": [
+        2.6,
+        0,
+        1.1
+      ],
+      "scale": [
+        1.75,
+        1.75,
+        1.85
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#73343f",
+      "mirror": true,
+      "designStyle": "jared"
+    },
+    {
+      "id": "7dc04b56-a4c9-461d-8a22-d33f1a6140bc",
+      "type": "cannon",
+      "cannonBarrel": "hexagonal",
+      "name": "Spike cannon",
+      "position": [
+        0.6,
+        0,
+        -0.8
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#a85a60",
+      "mirror": true,
+      "designStyle": "jared",
+      "spikeLength": 2.5
+    },
+    {
+      "id": "f98ee563-7a87-47eb-ad76-caa42fc2ac1c",
+      "type": "cockpit",
+      "name": "Cockpit",
+      "position": [
+        0.3,
+        0.3,
+        -0.3
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        -5,
+        5,
+        0
+      ],
+      "color": "#63e7f2",
+      "mirror": true,
+      "designStyle": "jared"
+    },
+    {
+      "id": "fb2a8c00-a519-40cd-ae6f-e81d421fd4a6",
+      "type": "cannon",
+      "cannonBarrel": "hexagonal",
+      "name": "Spike cannon",
+      "position": [
+        1,
+        0,
+        -0.8
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        -5,
+        0
+      ],
+      "color": "#a85a60",
+      "mirror": true,
+      "designStyle": "jared",
+      "spikeLength": 1.6
+    },
+    {
+      "id": "211f293e-7ff9-42ab-922d-72c578004312",
+      "type": "wing",
+      "name": "Blade",
+      "position": [
+        -2.4,
+        0,
+        -0.5
+      ],
+      "scale": [
+        1.25,
+        2.35,
+        1.75
+      ],
+      "rotation": [
+        10,
+        -250,
+        0
+      ],
+      "color": "#d58391",
+      "mirror": true,
+      "designStyle": "jared"
+    },
+    {
+      "id": "c9bccd30-2f48-4659-879e-f29cf6001be8",
+      "type": "cannon",
+      "cannonBarrel": "hexagonal",
+      "name": "Spike cannon",
+      "position": [
+        0,
+        0.3,
+        -1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#a85a60",
+      "mirror": false,
+      "designStyle": "jared",
+      "spikeLength": 1.6
+    },
+    {
+      "id": "24e5477d-b443-49f7-a526-e509235ae827",
+      "type": "cannon",
+      "cannonBarrel": "hexagonal",
+      "name": "Spike cannon",
+      "position": [
+        2.9,
+        0,
+        -0.7
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        10,
+        0
+      ],
+      "color": "#a85a60",
+      "mirror": true,
+      "designStyle": "jared",
+      "spikeLength": 1.6
+    },
+    {
+      "id": "b6dfc8e9-ba76-40a4-8df3-37d833a92cb9",
+      "type": "wing",
+      "name": "Blade",
+      "position": [
+        3.2,
+        0,
+        2.3
+      ],
+      "scale": [
+        1,
+        2.05,
+        2.75
+      ],
+      "rotation": [
+        5,
+        160,
+        -175
+      ],
+      "color": "#d58391",
+      "mirror": true,
+      "designStyle": "jared"
+    },
+    {
+      "id": "793476d0-7fa2-4419-8671-1926d900d978",
+      "type": "shieldGenerator",
+      "name": "Enershield cell",
+      "position": [
+        0,
+        0.3,
+        0.5
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#8f5363",
+      "mirror": false,
+      "designStyle": "jared"
+    },
+    {
+      "id": "19f3b27a-1a5f-4b62-a6e0-3914758c3a8f",
+      "type": "shieldGenerator",
+      "name": "Enershield cell",
+      "position": [
+        0.3,
+        0.3,
+        1.2
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#8f5363",
+      "mirror": true,
+      "designStyle": "jared"
+    },
+    {
+      "id": "f6b0485b-b07f-4cf5-be6e-f231e4804316",
+      "type": "cannon",
+      "cannonBarrel": "hexagonal",
+      "name": "Spike cannon",
+      "position": [
+        0.3,
+        0,
+        1.8
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        -180,
+        0
+      ],
+      "color": "#a85a60",
+      "mirror": true,
+      "designStyle": "jared",
+      "spikeLength": 1.6
+    },
+    {
+      "id": "c9757b94-99ca-4a92-ba63-6fdec8da7b33",
+      "type": "cannon",
+      "cannonBarrel": "hexagonal",
+      "name": "Spike cannon",
+      "position": [
+        0.7,
+        0,
+        1.6
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        185,
+        0
+      ],
+      "color": "#a85a60",
+      "mirror": true,
+      "designStyle": "jared",
+      "spikeLength": 1.6
+    },
+    {
+      "id": "5f4cb16b-7be5-4dc0-bba4-ea6683106587",
+      "type": "shieldGenerator",
+      "name": "Enershield cell",
+      "position": [
+        1.9,
+        0.3,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#8f5363",
+      "mirror": true,
+      "designStyle": "jared"
+    }
+  ]
+}
