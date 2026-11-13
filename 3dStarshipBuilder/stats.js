@@ -3,6 +3,13 @@ import {library,mesh} from './model.js';
 // Game-balance coefficients per cubic unit. Mass is in tonnes; cost is credits.
 // Missing capabilities contribute zero. Every module contributes mass, hull and cost.
 export const moduleRates = {
+  laserLine:{mass:.7,hull:140,cost:1800},
+  pushOutside:{mass:.9,hull:180,cost:2200},
+  gravStop:{mass:1.1,hull:200,cost:2600},
+  sapRay:{mass:.6,hull:120,cost:2400},
+  teleportShield:{mass:.8,hull:150,shield:600,cost:4000},
+  shieldRegen:{mass:.6,hull:130,shield:200,shieldRegen:45,cost:2200},
+  nanitesSpray:{mass:.4,hull:100,cost:1600},
   armor: {mass: 1.4, hull: 1200, cost: 650},
   hull: {mass: .65, hull: 300, repair: 1.5, cost: 200, torque: 2},
   wing: {mass: .25, hull: 100, cost: 260, torque: 60},
@@ -52,7 +59,7 @@ export function moduleStats(p){
     shieldRegen:volume*(r.shieldRegen||0),shieldMax:volume*(r.shield||0),
     hullRegen:volume*(r.repair||0),hullMax:volume*r.hull,
     energyGeneration:volume*(r.energy||0),radarReduction:volume*(r.radarReduction||0),
-    maxPassengers:passengers,gunSlots:p.type==='cannon'?capacity:volume*(r.slots||0),
+    maxPassengers:passengers,gunSlots:['cannon','laserLine','pushOutside','gravStop','sapRay'].includes(p.type)?capacity:volume*(r.slots||0),
     turretSlots:p.type==='turret'?capacity:volume*(r.slots||0),fighterSlots:p.type==='fighterBay'?capacity:volume*(r.slots||0),
     expectedCost:volume*r.cost
   };

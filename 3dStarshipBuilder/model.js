@@ -1,3 +1,4 @@
+import {technicianGeometry,technicianLibrary,technicianTypes,octagonalTypes,technicianGlow} from './technician.js';
 import {jaredGeometry,jaredTypes} from './jared.js';
 import {blockGeometry,specialHullGeometry,thrusterGeometry,cockpitGeometry,finGeometry,cannonGeometry} from './blocks.js';
 export const cannonOptions={
@@ -45,6 +46,7 @@ export const hullProfiles = {
   capsule: {name:'Capsule / cruiser',shape:[[-.45,1.6],[.45,1.6],[.8,1.15],[.8,-1.25],[.45,-1.7],[-.45,-1.7],[-.8,-1.25],[-.8,1.15]]}
 };
 export const library = {
+  ...technicianLibrary,
   armor: {name:'Armor',icon:'⬟',color:'#41474f',composite:true},
   turret: {name:'Turret slot',icon:'⊕',color:'#91a6b5',composite:true},
   fighterBay: {name:'Fighter bay',icon:'⬡',color:'#8c9eac',composite:true},
@@ -60,7 +62,7 @@ export const library = {
   fin: {name:'Dorsal fin',icon:'◭',color:'#adbecc',shape:[[-.08,-.6],[.08,-.6],[.08,.8],[-.08,.8]],height:1.1},
   nozzle: {legacy:true,name:'Thruster core',icon:'◎',color:'#8ef1e4',shape:Array.from({length:8},(_,i)=>[Math.cos(i*Math.PI/4)*.3,Math.sin(i*Math.PI/4)*.3]).reverse(),height:.12}
 };
-export function part(type,position=[0,0,0],scale=[1,1,1],mirror=false){return {id:crypto.randomUUID(),type,...(type==='cannon'?{cannonBarrel:'hexagonal'}:{}),...(type==='engine'?{thrusterProfile:'drone'}:{}),name:library[type].name,position,scale,rotation:[0,0,0],color:library[type].color,mirror};}
+export function part(type,position=[0,0,0],scale=[1,1,1],mirror=false){return {id:crypto.randomUUID(),type,...(Object.hasOwn(technicianLibrary,type)?{designStyle:'technician',...(octagonalTypes.includes(type)?{octagonalSymmetry:true}:{})}:{}),...(type==='cannon'?{cannonBarrel:'hexagonal'}:{}),...(type==='engine'?{thrusterProfile:'drone'}:{}),name:library[type].name,position,scale,rotation:[0,0,0],color:library[type].color,mirror};}
 export {preset,presetCatalog} from './presets.js';
 function extruded(spec){
   const n=spec.shape.length;
@@ -93,8 +95,9 @@ export function mesh(p,reflected=false,time=0){
   const passengerSide=p.type==='passengerModule'&&p.mirror?((p.position[0]||1)*(Math.abs(lateralDirection)<1e-9?1:lateralDirection)<0?-1:1):undefined;
   const hull=p.type==='hull'?hullProfiles[p.hullProfile||'standard']:null;
   const spec=hull?{...base,shape:hull.shape}:p.type==='wing'?{...base,shape:wingProfiles[p.wingProfile||'swept'].shape,height:p.wingThickness??.16}:base;
-  const geometry=p.type==='cannon'?cannonGeometry(p):p.type==='cockpit'&&p.cockpitProfile&&p.cockpitProfile!=='classic'?cockpitGeometry(p.cockpitProfile,p.color):hull?.composite?specialHullGeometry(p.hullProfile,p.color):p.type==='engine'?thrusterGeometry(!p.thrusterProfile||p.thrusterProfile==='classic'?'drone':p.thrusterProfile,p.color):spec.composite?blockGeometry(p.type,p.color,{passengerSide,armorProfile:p.armorProfile}):extruded(spec);
-  const selectedGeometry=p.designStyle==='jared'?jaredGeometry(p,time):hull&&!hull.composite?hullGeometry(spec,p):p.type==='fin'&&p.finProfile&&p.finProfile!=='classic'?finGeometry(finProfiles[p.finProfile].outline,p.color):geometry;
+  const technician=p.designStyle==='technician'||Object.hasOwn(technicianLibrary,p.type);
+  const geometry=technician?technicianGeometry(p):p.type==='cannon'?cannonGeometry(p):p.type==='cockpit'&&p.cockpitProfile&&p.cockpitProfile!=='classic'?cockpitGeometry(p.cockpitProfile,p.color):hull?.composite?specialHullGeometry(p.hullProfile,p.color):p.type==='engine'?thrusterGeometry(!p.thrusterProfile||p.thrusterProfile==='classic'?'drone':p.thrusterProfile,p.color):spec.composite?blockGeometry(p.type,p.color,{passengerSide,armorProfile:p.armorProfile}):extruded(spec);
+  const selectedGeometry=technician?geometry:p.designStyle==='jared'?jaredGeometry(p,time):hull&&!hull.composite?hullGeometry(spec,p):p.type==='fin'&&p.finProfile&&p.finProfile!=='classic'?finGeometry(finProfiles[p.finProfile].outline,p.color):geometry;
   const {vertices,faces,faceColors}=p.type==='cockpit'&&p.designStyle!=='jared'?bevelGeometry(selectedGeometry,p.cockpitBevel??0,p.color):selectedGeometry;
   if(p.type==='fin')for(const v of vertices){const height=v[1]+.55;v[0]=v[0]*(p.finThickness??.16)/.16+height*Math.tan((p.finCant??0)*Math.PI/180);v[2]+=height*Math.tan((p.finSweep??0)*Math.PI/180);}
   if(p.type==='wing'&&p.designStyle!=='jared')for(const v of vertices){v[2]+=v[0]*Math.tan((p.wingSweep??0)*Math.PI/180);v[1]+=v[0]*Math.tan((p.wingDihedral??0)*Math.PI/180);}
@@ -108,14 +111,15 @@ export function mesh(p,reflected=false,time=0){
     if(reflected)vertices[i][0]*=-1;
   }
   if(reflected)faces.forEach(f=>f.reverse());
-  return {name:p.name+(reflected?' mirrored':''),vertices,faces,color:p.color,faceColors,...(p.designStyle==='jared'?{emissiveColors:['#ffe55c','#fff5af','#ffba54']}:{} )};
+  return {name:p.name+(reflected?' mirrored':''),vertices,faces,color:p.color,faceColors,...(technician?{emissiveColors:technicianGlow}:p.designStyle==='jared'?{emissiveColors:['#ffe55c','#fff5af','#ffba54']}:{} )};
 }
 export function meshes(parts,time=0){return parts.flatMap(p=>p.mirror?[mesh(p,false,time),mesh(p,true,time)]:[mesh(p,false,time)]);}
 export function combined(parts,time=0){const result={vertices:[],faces:[],faceColors:[],emissiveColors:[],color:'#91a6b5'};for(const m of meshes(parts,time)){result.emissiveColors=[...new Set([...result.emissiveColors,...(m.emissiveColors||[])])];const offset=result.vertices.length;result.vertices.push(...m.vertices);result.faces.push(...m.faces.map(f=>f.map(i=>i+offset)));result.faceColors.push(...m.faces.map((_,i)=>m.faceColors?.[i]||m.color));}return result;}
 export function validateProject(data){
   if(data?.version!==1||typeof data.name!=='string'||!Array.isArray(data.parts)||data.parts.length>150)throw Error('Invalid project or more than 150 parts.');
   for(const p of data.parts){
-    if(p.designStyle!==undefined&&(p.designStyle!=='jared'||!jaredTypes.includes(p.type)))throw Error('Invalid part design style.');
+    if(p.designStyle!==undefined&&!((p.designStyle==='jared'&&jaredTypes.includes(p.type))||(p.designStyle==='technician'&&technicianTypes.includes(p.type))))throw Error('Invalid part design style.');
+    if(p.octagonalSymmetry!==undefined&&(typeof p.octagonalSymmetry!=='boolean'||!octagonalTypes.includes(p.type)))throw Error('Invalid octagonal symmetry.');
     if(p.jaredHullProfile!==undefined&&!['curved','blockier','interceptor','warlord'].includes(p.jaredHullProfile))throw Error('Invalid Jared hull profile.');
     if(p.bladeProfile!==undefined&&!['standard','sustained'].includes(p.bladeProfile))throw Error('Invalid blade profile.');
     if(p.moduleBevel!==undefined&&(!Number.isFinite(p.moduleBevel)||p.moduleBevel<0||p.moduleBevel>1))throw Error('Invalid module bevel.');

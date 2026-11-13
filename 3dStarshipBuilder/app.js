@@ -6,6 +6,7 @@ import {openTestFlight} from './flight.js';
 import {openFlight25} from './flight25.js';
 import {recommendedStats,statFields} from './stats.js';
 import {library,armorProfiles,hullProfiles,wingProfiles,thrusterProfiles,cockpitProfiles,finProfiles,cannonOptions,part,preset,combined,validateProject,objFiles,gltf} from './model.js';
+import {octagonalTypes,technicianDescriptions} from './technician.js';
 const faction=resolveFaction(new URL(location.href).searchParams.get('faction')),factionSpec=factions[faction],presetCatalog=catalogForFaction(faction);
 const $=id=>document.getElementById(id),key=faction==='human'?'orbital-foundry-v1':'starship-builder-'+faction;
 document.documentElement.dataset.faction=faction;
@@ -101,6 +102,8 @@ $('jaredHullProfile').onchange=()=>{if(current()?.type==='hull'&&current()?.desi
 $('moduleBevel').oninput=()=>$('moduleBevelValue').textContent=Math.round(Number($('moduleBevel').value)*100)+'%';
 $('moduleBevel').onchange=()=>{if(current()?.type==='hull'&&current()?.designStyle==='jared')change(()=>current().moduleBevel=Number($('moduleBevel').value));};
 const spikeField=document.createElement('label');spikeField.className='field';spikeField.hidden=true;spikeField.innerHTML='Spike length<input id="spikeLength" type="range" min="0.2" max="5" step="0.1"><output id="spikeLengthValue"></output>';$('partProperties').append(spikeField);
+const technicianOptions=document.createElement('div');technicianOptions.hidden=true;technicianOptions.innerHTML='<p class="eyebrow">TECHNICIAN MODULE</p><p id="technicianDescription" class="hint"></p><label id="octagonalField"><input id="octagonalSymmetry" type="checkbox"> Octagonal symmetry (8 directions)</label><p class="hint">Laser, push wave, gravity, nanites and blink effects are active in 2.5D. Sap ray and predictive targeting are not simulated yet.</p>';$('partProperties').append(technicianOptions);
+$('octagonalSymmetry').onchange=()=>{if(current()?.designStyle==='technician'&&octagonalTypes.includes(current().type))change(()=>current().octagonalSymmetry=$('octagonalSymmetry').checked);};
 $('spikeLength').oninput=()=>$('spikeLengthValue').textContent=$('spikeLength').value+' units';
 $('spikeLength').onchange=()=>{if(current()?.designStyle==='jared'&&current().type==='cannon')change(()=>current().spikeLength=Number($('spikeLength').value));};
 function remember(){undo.push(JSON.stringify(project));if(undo.length>60)undo.shift();redo=[];}
@@ -140,6 +143,12 @@ function refresh(){
   }
   if(p){$('partName').value=p.name;$('color').value=p.color;$('mirror').checked=p.mirror;document.querySelectorAll('[data-axis]').forEach(input=>input.value=p[input.dataset.field][Number(input.dataset.axis)]);}
   if(p?.designStyle==='jared')for(const panel of [hullOptions,cockpitOptions,thrusterOptions,wingOptions,cannonPanel])panel.hidden=true;
+  technicianOptions.hidden=p?.designStyle!=='technician';
+  if(!technicianOptions.hidden){
+    for(const panel of [hullOptions,cockpitOptions,thrusterOptions,wingOptions,cannonPanel])panel.hidden=true;
+    $('technicianDescription').textContent=technicianDescriptions[p.type]||'';
+    $('octagonalField').hidden=!octagonalTypes.includes(p.type);$('octagonalSymmetry').checked=p.octagonalSymmetry!==false;
+  }
   bladeOptions.hidden=!(p?.type==='wing'&&p?.designStyle==='jared');if(!bladeOptions.hidden)$('bladeProfile').value=p.bladeProfile||'standard';
   jaredHullOptions.hidden=!(p?.type==='hull'&&p?.designStyle==='jared');if(!jaredHullOptions.hidden){$('jaredHullProfile').value=p.jaredHullProfile&&p.jaredHullProfile!=='curved'?p.jaredHullProfile:'blockier';$('moduleBevelField').hidden=false;$('moduleBevel').value=p.moduleBevel??1;$('moduleBevelValue').textContent=Math.round((p.moduleBevel??1)*100)+'%';}
   spikeField.hidden=!(p?.designStyle==='jared'&&p?.type==='cannon');if(!spikeField.hidden){$('spikeLength').value=p.spikeLength??1.6;$('spikeLengthValue').textContent=(p.spikeLength??1.6)+' units';}

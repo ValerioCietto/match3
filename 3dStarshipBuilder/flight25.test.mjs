@@ -5,6 +5,25 @@ import {meshBuffers} from './webgl-renderer.js';
 import {pilot,drive,fire,damage,advanceBullets,shotColor,arenaMotion} from './flight25.js';
 import {moduleStats} from './stats.js';
 const parts=[part('hull'),part('engine'),part('wing'),part('cannon')];
+test('Technician omni moves in eight world directions with equal speed and no reverse cap',()=>{
+ const parts=[part('hull'),{...part('engine'),designStyle:'technician'}];
+ let reference;
+ for(const [steer,throttle] of [[0,1],[1,1],[1,0],[1,-1],[0,-1],[-1,-1],[-1,0],[-1,1]]){
+  const ship=pilot(parts);ship.yaw=.73;
+  for(let i=0;i<600;i++)drive(ship,{steer,throttle},.05);
+  const length=Math.hypot(steer,throttle);
+  assert.ok(ship.omni);assert.equal(ship.yaw,.73);assert.equal(ship.roll,0);
+  assert.ok(Math.abs(ship.vx/ship.speed-steer/length)<1e-8);
+  assert.ok(Math.abs(ship.vz/ship.speed+throttle/length)<1e-8);
+  if(reference===undefined)reference=ship.speed;else assert.ok(Math.abs(ship.speed-reference)<1e-8);
+  assert.ok(ship.speed<=arenaMotion(ship.stats).forward);
+  if(throttle===-1&&steer===0)assert.ok(ship.speed>arenaMotion(ship.stats).reverse);
+  const before=ship.speed;for(let i=0;i<20;i++)drive(ship,{brake:true},.05);assert.ok(ship.speed<before*.001);
+ }
+ const stationary=pilot(parts);drive(stationary,{steer:0,throttle:0},.05);assert.equal(stationary.speed,0);
+ assert.equal(pilot([part('hull'),part('engine')]).omni,false);
+ assert.equal(pilot([{...part('hull'),designStyle:'technician'}]).omni,false);
+});
 test('spike length scales range, speed and independent reload from 1.6 units',()=>{
  const spike=length=>({...part('cannon'),designStyle:'jared',spikeLength:length});
  for(const length of [.2,.8,1.6,3.2,5]){
