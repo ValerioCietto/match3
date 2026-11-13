@@ -1,34 +1,75 @@
-import {hasJaredPlasma} from './jared.js';
+
 import {catalogForFaction} from './presets.js';
-import {combined,preset} from './model.js';
-import {recommendedStats} from './stats.js';
+import {factions} from './factions.js';
+import {combined,preset,mesh} from './model.js';
+import {recommendedStats,moduleStats} from './stats.js';
 import {meshBuffers} from './webgl-renderer.js';
 
+function shipBounds(parts){
+ const model=combined(parts),min=[Infinity,Infinity,Infinity],max=[-Infinity,-Infinity,-Infinity];
+ for(const v of model.vertices)v.forEach((n,i)=>{min[i]=Math.min(min[i],n);max[i]=Math.max(max[i],n);});
+ const center=min.map((n,i)=>(n+max[i])/2);let radius=0;for(const v of model.vertices)radius=Math.max(radius,Math.hypot(...v.map((n,i)=>n-center[i])));radius=radius||1;
+ return {center,radius};
+}
+export function weaponMounts(parts,stats){
+ const {center,radius}=shipBounds(parts);
+ const mounts=[];
+ for(const p of parts){if(!['cannon','turret'].includes(p.type))continue;
+  const kind=p.type==='turret'?'turret':'cannon',value=moduleStats({...p,mirror:false})[kind==='turret'?'turretSlots':'gunSlots'];
+  let [x,y,z]=[0,0,-1];const [rx,ry,rz]=p.rotation.map(v=>v*Math.PI/180);
+  [y,z]=[y*Math.cos(rx)-z*Math.sin(rx),y*Math.sin(rx)+z*Math.cos(rx)];[x,z]=[x*Math.cos(ry)+z*Math.sin(ry),-x*Math.sin(ry)+z*Math.cos(ry)];[x,y]=[x*Math.cos(rz)-y*Math.sin(rz),x*Math.sin(rz)+y*Math.cos(rz)];
+  for(const reflected of p.mirror?[false,true]:[false]){
+   const direction=[reflected?-x:x,y,z],vertices=mesh(p,reflected).vertices;
+   const dot=v=>v.reduce((s,n,i)=>s+n*direction[i],0),front=Math.max(...vertices.map(dot)),tip=vertices.filter(v=>front-dot(v)<1e-5);
+   const origin=[0,1,2].map(i=>(tip.reduce((sum,v)=>sum+v[i],0)/tip.length-center[i])/radius);
+   const lengthFactor=p.type==='cannon'&&p.designStyle==='jared'?(p.spikeLength??1.6)/1.6:1;
+   mounts.push({kind,origin,direction,slots:value,projectileSpeed:65*lengthFactor,range:162.5*lengthFactor,reloadTime:.3*lengthFactor,cooldown:0});
+  }
+ }
+ // Distribute support-module slot bonuses without multiplying damage by barrel count twice.
+ for(const kind of ['cannon','turret']){const group=mounts.filter(m=>m.kind===kind),sum=group.reduce((s,m)=>s+m.slots,0),total=stats[kind==='turret'?'turretSlots':'gunSlots'];if(sum)for(const mount of group)mount.slots*=total/sum;}
+ return mounts;
+}
+export function shotColor(kind,owner){return kind==='turret'?(owner?[1,.35,.85]:[.7,.55,1]):(owner?[1,.35,.2]:[.4,1,.8]);}
 export function pilot(parts,x=0,z=0){
   const stats=recommendedStats(parts);
-  return {x,z,yaw:0,speed:0,stats,hull:stats.hullMax,shield:stats.shieldMax,cooldown:0,radius:Math.max(1.5,Math.min(6,Math.cbrt(stats.volume))),hitAgo:99};
+  // Undo meshBuffers' normalization exactly: one editor unit is one arena unit.
+  return {x,z,yaw:0,roll:0,speed:0,stats,weapons:weaponMounts(parts,stats),hull:stats.hullMax,shield:stats.shieldMax,radius:shipBounds(parts).radius,hitAgo:99};
+}
+export function arenaMotion(stats){
+ const forward=Math.min(40*stats.propulsionBonus,stats.maxSpeed),acceleration=Math.min(18*stats.propulsionBonus,stats.acceleration);
+ return {forward,acceleration,reverse:.3*forward+Math.min(80,stats.reverseEngineMaxSpeed),reverseAcceleration:acceleration+Math.min(36,stats.reverseEngineAcceleration)};
 }
 export function drive(ship,input,dt){
   dt=Math.max(0,Math.min(.05,dt));
-  const s=ship.stats,limit=Math.min(40,s.maxSpeed),accel=Math.min(18,s.acceleration);
+  const s=ship.stats,motion=arenaMotion(s),limit=motion.forward,accel=(input.throttle||0)<0?motion.reverseAcceleration:motion.acceleration;
   ship.speed+=((input.throttle||0)*accel-ship.speed*.35)*dt;
   if(input.brake)ship.speed*=Math.exp(-8*dt);
-  ship.speed=Math.max(-limit*.3,Math.min(limit,ship.speed));
-  // Steering follows forward/reverse travel, with no lateral strafing or turning at rest.
-  ship.yaw+=(input.steer||0)*Math.min(2.4,s.turnMaxSpeed*Math.PI/180)*Math.tanh(ship.speed/4)*dt;
+  ship.speed=Math.max(-motion.reverse,Math.min(limit,ship.speed));
+  // Steering is independent of translational speed, including at rest and in reverse.
+  const targetRate=(input.steer||0)*Math.min(2.4*s.turnSpeedBonus,s.turnMaxSpeed*Math.PI/180),rateStep=s.turnAcceleration*Math.PI/180*dt;
+  const rate=ship.yawRate||0;ship.yawRate=rate+Math.max(-rateStep,Math.min(rateStep,targetRate-rate));
+  ship.yaw+=ship.yawRate*dt;
+  const targetRoll=-Math.max(-1,Math.min(1,input.steer||0))*Math.PI/12;
+  ship.roll=(ship.roll||0)+(targetRoll-(ship.roll||0))*(1-Math.exp(-8*dt));
   ship.x+=Math.sin(ship.yaw)*ship.speed*dt;ship.z-=Math.cos(ship.yaw)*ship.speed*dt;
-  ship.cooldown=Math.max(0,ship.cooldown-dt);ship.hitAgo+=dt;
+  for(const mount of ship.weapons)mount.cooldown=Math.max(0,mount.cooldown-dt);ship.hitAgo+=dt;
   if(ship.hitAgo>3){ship.shield=Math.min(s.shieldMax,ship.shield+s.shieldRegen*dt);ship.hull=Math.min(s.hullMax,ship.hull+s.hullRegen*dt);}
 }
 export function damage(ship,amount){const absorbed=Math.min(ship.shield,amount);ship.shield-=absorbed;ship.hull=Math.max(0,ship.hull-amount+absorbed);ship.hitAgo=0;}
 export function fire(ship,owner,bullets){
-  const guns=ship.stats.gunSlots+ship.stats.turretSlots;
-  if(ship.cooldown>0||guns<=0||ship.hull<=0)return;
-  const dx=Math.sin(ship.yaw),dz=-Math.cos(ship.yaw);
-  bullets.push({x:ship.x+dx*(ship.radius+1),z:ship.z+dz*(ship.radius+1),vx:dx*65,vz:dz*65,owner,life:2.5,damage:25*guns});ship.cooldown=.3;
+  if(!ship.weapons.length||ship.hull<=0)return;
+  const cr=Math.cos(ship.roll||0),sr=Math.sin(ship.roll||0),c=Math.cos(ship.yaw),s=Math.sin(ship.yaw);
+  const transform=([x,y,z])=>{const rolledX=x*cr-y*sr;return [rolledX*c-z*s,rolledX*s+z*c];};
+  for(const mount of ship.weapons){
+   if(mount.cooldown>1e-9)continue;
+   const [ox,oz]=transform(mount.origin),[dx,dz]=transform(mount.direction),length=Math.hypot(dx,dz);if(length<1e-6)continue;
+   bullets.push({x:ship.x+ox*ship.radius,z:ship.z+oz*ship.radius,vx:dx/length*mount.projectileSpeed,vz:dz/length*mount.projectileSpeed,owner,kind:mount.kind,life:mount.range/mount.projectileSpeed,damage:25*mount.slots});
+   mount.cooldown=mount.reloadTime;
+  }
 }
 export function advanceBullets(bullets,ships,dt){
-  for(const b of bullets){const oldX=b.x,oldZ=b.z;b.x+=b.vx*dt;b.z+=b.vz*dt;b.life-=dt;
+  for(const b of bullets){if(b.life<=0)continue;const oldX=b.x,oldZ=b.z,travelTime=Math.min(dt,b.life);b.x+=b.vx*travelTime;b.z+=b.vz*travelTime;b.life-=dt;
     const target=ships[1-b.owner];if(!target||target.hull<=0)continue;
     const dx=b.x-oldX,dz=b.z-oldZ,len=dx*dx+dz*dz,t=len?Math.max(0,Math.min(1,((target.x-oldX)*dx+(target.z-oldZ)*dz)/len)):0;
     if(Math.hypot(oldX+dx*t-target.x,oldZ+dz*t-target.z)<target.radius){damage(target,b.damage);b.life=0;}
@@ -40,12 +81,12 @@ export function advanceBullets(bullets,ships,dt){
 function arenaRenderer(canvas){
   const gl=canvas.getContext('webgl',{alpha:false,antialias:true});if(!gl)throw Error('WebGL is unavailable.');
   const shader=(type,source)=>{const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s));return s;};
-  const vs=shader(gl.VERTEX_SHADER,`attribute vec3 aPosition;attribute vec3 aNormal;attribute vec3 aColor;uniform vec4 uShip;uniform vec4 uView;varying vec3 color;void main(){float c=cos(uShip.z),s=sin(uShip.z);vec2 p=vec2(aPosition.x*c-aPosition.z*s,aPosition.x*s+aPosition.z*c)*uShip.w+uShip.xy;gl_Position=vec4((p.x-uView.x)/uView.z,-(p.y-uView.y)/uView.w,-aPosition.y*.1,1.);gl_PointSize=5.;color=aColor*(length(aNormal)<.01?1.:(.55+.45*abs(aNormal.y)));}`);
+  const vs=shader(gl.VERTEX_SHADER,`attribute vec3 aPosition;attribute vec3 aNormal;attribute vec3 aColor;uniform vec4 uShip;uniform vec4 uView;uniform float uRoll;varying vec3 color;void main(){float cr=cos(uRoll),sr=sin(uRoll);vec3 q=vec3(aPosition.x*cr-aPosition.y*sr,aPosition.x*sr+aPosition.y*cr,aPosition.z);vec3 n=vec3(aNormal.x*cr-aNormal.y*sr,aNormal.x*sr+aNormal.y*cr,aNormal.z);float c=cos(uShip.z),s=sin(uShip.z);vec2 p=vec2(q.x*c-q.z*s,q.x*s+q.z*c)*uShip.w+uShip.xy;gl_Position=vec4((p.x-uView.x)/uView.z,-(p.y-uView.y)/uView.w,-q.y*.1,1.);gl_PointSize=5.;color=aColor*(length(aNormal)<.01?1.:(.55+.45*abs(n.y)));}`);
   const fs=shader(gl.FRAGMENT_SHADER,`precision mediump float;varying vec3 color;void main(){gl_FragColor=vec4(color,1.);}`);
   const program=gl.createProgram();gl.attachShader(program,vs);gl.attachShader(program,fs);gl.linkProgram(program);gl.deleteShader(vs);gl.deleteShader(fs);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error('Could not link flight renderer.');
-  const attrs=['aPosition','aNormal','aColor'].map(n=>gl.getAttribLocation(program,n)),shipLoc=gl.getUniformLocation(program,'uShip'),viewLoc=gl.getUniformLocation(program,'uView'),buffers=new Set();
+  const attrs=['aPosition','aNormal','aColor'].map(n=>gl.getAttribLocation(program,n)),shipLoc=gl.getUniformLocation(program,'uShip'),viewLoc=gl.getUniformLocation(program,'uView'),rollLoc=gl.getUniformLocation(program,'uRoll'),buffers=new Set();
   function upload(data){const buffer=gl.createBuffer();buffers.add(buffer);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(data),gl.STATIC_DRAW);return {buffer,count:data.length/9};}
-  function draw(mesh,ship,mode=gl.TRIANGLES){gl.bindBuffer(gl.ARRAY_BUFFER,mesh.buffer);attrs.forEach((a,i)=>{gl.enableVertexAttribArray(a);gl.vertexAttribPointer(a,3,gl.FLOAT,false,36,i*12);});gl.uniform4f(shipLoc,ship.x,ship.z,ship.yaw,ship.radius);gl.drawArrays(mode,0,mesh.count);}
+  function draw(mesh,ship,mode=gl.TRIANGLES){gl.bindBuffer(gl.ARRAY_BUFFER,mesh.buffer);attrs.forEach((a,i)=>{gl.enableVertexAttribArray(a);gl.vertexAttribPointer(a,3,gl.FLOAT,false,36,i*12);});gl.uniform4f(shipLoc,ship.x,ship.z,ship.yaw,ship.radius);gl.uniform1f(rollLoc,ship.roll||0);gl.drawArrays(mode,0,mesh.count);}
   const shots=upload([]),grid=upload([]);
   return {load:(parts,time=0)=>upload(meshBuffers(combined(parts,time)).triangles),release:m=>{if(m){gl.deleteBuffer(m.buffer);buffers.delete(m.buffer);}},
     render(player,enemy,models,bullets,viewRange){gl.viewport(0,0,canvas.width,canvas.height);gl.clearColor(.025,.05,.085,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.enable(gl.DEPTH_TEST);gl.useProgram(program);const aspect=canvas.width/canvas.height;gl.uniform4f(viewLoc,player.x,player.z,viewRange*aspect,viewRange);
@@ -53,23 +94,39 @@ function arenaRenderer(canvas){
       for(let offset=-extent;offset<=extent;offset+=10)for(const [x,z] of [[cx+offset,cz-extent],[cx+offset,cz+extent],[cx-extent,cz+offset],[cx+extent,cz+offset]])lines.push(x,-5,z,0,1,0,.07,.13,.19);
       gl.bindBuffer(gl.ARRAY_BUFFER,grid.buffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(lines),gl.DYNAMIC_DRAW);grid.count=lines.length/9;draw(grid,{x:0,z:0,yaw:0,radius:1},gl.LINES);
       draw(models[0],player);if(enemy?.hull>0)draw(models[1],enemy);
-      const vertices=bullets.flatMap(b=>[b.x,0,b.z,0,1,0,...(b.owner?[1,.35,.2]:[.4,1,.8])]);gl.bindBuffer(gl.ARRAY_BUFFER,shots.buffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(vertices),gl.DYNAMIC_DRAW);shots.count=vertices.length/9;gl.disable(gl.DEPTH_TEST);draw(shots,{x:0,z:0,yaw:0,radius:1},gl.POINTS);},
+      const vertices=bullets.flatMap(b=>[b.x,0,b.z,0,1,0,...shotColor(b.kind,b.owner)]);gl.bindBuffer(gl.ARRAY_BUFFER,shots.buffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(vertices),gl.DYNAMIC_DRAW);shots.count=vertices.length/9;gl.disable(gl.DEPTH_TEST);draw(shots,{x:0,z:0,yaw:0,radius:1},gl.POINTS);},
     destroy(){for(const b of buffers)gl.deleteBuffer(b);gl.deleteProgram(program);}
   };
 }
 export function openFlight25(project){
   const dialog=document.createElement('dialog');dialog.className='flight-dialog';dialog.id='flight25Dialog';dialog.setAttribute('aria-label','2.5D test flight');
-  dialog.innerHTML=`<div class="flight-header"><h2>2.5D flight</h2><label>Opponent <select id="opponentTemplate" aria-label="Opponent template"></select></label><button id="startBattle">Battle / restart</button><button id="exit25">Back to builder</button></div><div class="flight-stage"><canvas id="arena25" tabindex="0" aria-label="Top down flight. W/S accelerate and reverse, A/D steer, Space fires, Shift brakes."></canvas><div class="flight-hud"><span id="playerHealth"></span><span id="opponentHealth"></span></div><p id="battleStatus" role="status"></p></div><div class="flight-controls"><button id="pause25">Pause</button><button id="reset25">Free flight / reset</button><div class="flight-steering"><button data-drive="throttle" data-value="1">Forward</button><button data-drive="throttle" data-value="-1">Reverse</button><button data-drive="steer" data-value="-1">Left</button><button data-drive="steer" data-value="1">Right</button><button data-drive="fire" data-value="1">Fire</button><button data-drive="brake" data-value="1">Brake</button></div><p>W/S or ↑/↓ accelerate and reverse · A/D or ←/→ steer · Space fires · Shift brakes · Scroll to zoom · Esc exits. Steering needs movement. Weapons require gun or turret slots. Cyan shots: you; orange shots: opponent.</p></div>`;
+  dialog.innerHTML=`<div class="flight-header"><h2>2.5D flight</h2><label>Opponent <select id="opponentTemplate" aria-label="Opponent template"></select></label><button id="startBattle">Battle / restart</button><button id="exit25">Back to builder</button></div><div class="flight-stage"><canvas id="arena25" tabindex="0" aria-label="Top down flight. W/S accelerate and reverse, A/D steer, Space fires, Shift brakes."></canvas><div class="flight-hud"><span id="playerHealth"></span><span id="opponentHealth"></span></div><p id="battleStatus" role="status"></p></div><div class="flight-controls"><button id="pause25">Pause</button><button id="reset25">Free flight / reset</button><div class="flight-steering"><button data-drive="throttle" data-value="1">Forward</button><button data-drive="throttle" data-value="-1">Reverse</button><button data-drive="steer" data-value="-1">Left</button><button data-drive="steer" data-value="1">Right</button><button data-drive="fire" data-value="1">Fire</button><button data-drive="brake" data-value="1">Brake</button></div><p>W/S or ↑/↓ accelerate and reverse · A/D or ←/→ steer · Space fires · Shift brakes · Scroll to zoom · Esc exits. You can turn while stationary. Weapons require gun or turret slots. Cannons: cyan / orange. Turrets: violet / pink (you / opponent).</p></div>`;
   document.body.append(dialog);const $=id=>dialog.querySelector('#'+id),canvas=$('arena25');
-  for(const [id,p] of Object.entries(catalogForFaction(project.faction)))if(id!=='empty')$('opponentTemplate').add(new Option(p.label,id));
-  let plasmaTime=0,lastPlasma=0;let player=pilot(project.parts),enemy=null,bullets=[],models=[],renderer,paused=false,last=0,frame=0,closed=false,result='',viewRange=40;
+  const flightStats=document.createElement('div');flightStats.id='flight25Stats';
+  dialog.querySelector('.flight-hud').append(flightStats);
+  for(const [faction,spec] of Object.entries(factions)){
+    const group=document.createElement('optgroup');group.label=spec.name;
+    for(const [id,p] of Object.entries(catalogForFaction(faction)))if(id!=='empty')group.append(new Option(p.label,id));
+    if(group.children.length)$('opponentTemplate').append(group);
+  }
+  let player=pilot(project.parts),enemy=null,bullets=[],models=[],renderer,paused=false,last=0,frame=0,closed=false,result='',viewRange=40;
   const keys=new Set(),held=new Map(),abort=new AbortController(),opts={signal:abort.signal};
   const say=text=>$('battleStatus').textContent=text;
   function clear(){keys.clear();held.clear();}
   function pause(value){paused=value;clear();$('pause25').textContent=value?'Resume':'Pause';}
   function reset(battle){clear();player=pilot(project.parts);enemy=null;bullets=[];result='';renderer.release(models[1]);models[1]=null;
+    const cannons=player.weapons.filter(m=>m.kind==='cannon').length,turrets=player.weapons.filter(m=>m.kind==='turret').length;
+    const salvoDamage=player.weapons.reduce((sum,m)=>sum+25*m.slots,0);
+    const motion=arenaMotion(player.stats);
+    flightStats.replaceChildren(...[
+      `Max speed ${motion.forward.toFixed(1)} m/s`,
+      `Reverse max ${motion.reverse.toFixed(1)} m/s`,
+      `Acceleration ${motion.acceleration.toFixed(1)} m/s²`,
+      `Damage / salvo ${salvoDamage.toFixed(1)} HP`,
+      `Cannons ${cannons}`,`Turrets ${turrets}`
+    ].map(text=>{const item=document.createElement('span');item.textContent=text;return item;}));
     if(battle){const parts=preset($('opponentTemplate').value);enemy=pilot(parts,0,-28);enemy.yaw=Math.PI;models[1]=renderer.load(parts);}
-    pause(false);say(!player.stats.thrust?'No propulsion: add engines.':!player.stats.gunSlots&&!player.stats.turretSlots?'No weapons: add a cannon or turret to deal damage.':battle?'Battle started.':'Free flight');canvas.focus();}
+    pause(false);say(!player.stats.thrust?'No propulsion: add engines.':!player.weapons.length?'No weapons: add a cannon or turret to deal damage.':battle?'Battle started.':'Free flight');canvas.focus();}
   $('exit25').onclick=()=>dialog.close();$('pause25').onclick=()=>pause(!paused);
   const hasOpponents=$('opponentTemplate').options.length>0;
   if(!hasOpponents){$('opponentTemplate').add(new Option('No opponent presets',''));$('opponentTemplate').disabled=true;$('startBattle').disabled=true;}
@@ -91,7 +148,7 @@ export function openFlight25(project){
       if(enemy){const dx=player.x-enemy.x,dz=player.z-enemy.z,target=Math.atan2(dx,-dz),angle=Math.atan2(Math.sin(target-enemy.yaw),Math.cos(target-enemy.yaw));drive(enemy,{throttle:Math.abs(angle)>1?.35:Math.hypot(dx,dz)>16?.8:.25,steer:Math.max(-1,Math.min(1,angle*2))},dt);if(Math.abs(angle)<.18)fire(enemy,1,bullets);}
       bullets=advanceBullets(bullets,[player,enemy],dt);if(enemy&&(player.hull<=0||enemy.hull<=0)){result=player.hull<=0?'Defeat — restart to try again.':'Victory — opponent destroyed.';say(result);clear();}
     }
-    if(!paused&&!result)plasmaTime+=dt;if(now-lastPlasma>80&&hasJaredPlasma(project.parts)){renderer.release(models[0]);models[0]=renderer.load(project.parts,plasmaTime);lastPlasma=now;}
+    
     renderer.render(player,enemy,models,bullets,viewRange);
     $('playerHealth').textContent=`YOU · Hull ${Math.ceil(player.hull)} · Shield ${Math.ceil(player.shield)} · ${player.speed.toFixed(1)} m/s`;
     $('opponentHealth').textContent=enemy?`ENEMY · Hull ${Math.ceil(enemy.hull)} · Shield ${Math.ceil(enemy.shield)} · ${Math.hypot(enemy.x-player.x,enemy.z-player.z).toFixed(0)} m`:'';

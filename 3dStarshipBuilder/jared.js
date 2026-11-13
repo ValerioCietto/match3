@@ -10,7 +10,7 @@ function crystal(){
 }
 export function jaredGeometry(p,time=0){
  const color=p.color;
- if(p.type==='hull')return blockierGeometry(color,p.moduleBevel??.15);
+ if(p.type==='hull')return blockierGeometry(color,p.moduleBevel??1,p.jaredHullProfile);
 
  if(p.type==='cockpit'){
    const shell=orb(color,[.4,.32,.8]);for(const v of shell.vertices)v[0]*=1+v[2]*.3;
@@ -18,21 +18,34 @@ export function jaredGeometry(p,time=0){
    return shell;
  }
  if(p.type==='engine'){
-   const bob=Math.sin(time*.8)*.09;
+
    const ball=orb(plasma,[.36,.36,.36]);
    ball.vertices=ball.vertices.map(([x,y,z])=>[x*.6,-z*.6,y]);
-   return move(ball,[0,0,bob]);
+   // Yellow marks the forward (-Z) pole; orange marks the rear (+Z) pole.
+   ball.faceColors=ball.faces.map(face=>{
+     const z=face.reduce((sum,i)=>sum+ball.vertices[i][2],0)/face.length;
+     return z<-.12?'#fff5af':z<.12?'#ffe55c':plasma;
+   });
+   return ball;
  }
  if(p.type==='wing'){
    const blade=orb(color,[1.3,.09,.4],[1.15,0,.2]);
    for(const v of blade.vertices){v[2]+=.28*v[0]*v[0];v[1]+=.06*v[0];}
+   // A longer, narrower swept blade with the same volume as the standard blade.
+   if(p.bladeProfile==='sustained')for(const v of blade.vertices){v[0]*=1.4;v[2]/=1.4;}
+   for(const v of blade.vertices){v[0]*=.5;v[2]*=.5;}
    blade.faces=blade.faces.flatMap(f=>Array.from({length:f.length-2},(_,i)=>[f[0],f[i+1],f[i+2]]));blade.faceColors=blade.faces.map(()=>color);return blade;
  }
  if(p.type==='shieldGenerator')return crystal();
  if(p.type==='cannon'){
    const length=p.spikeLength??1.6,vertices=[[0,0,-length],...Array.from({length:12},(_,i)=>[.24*Math.cos(i*Math.PI/6),.24*Math.sin(i*Math.PI/6),0])],faces=[Array.from({length:12},(_,i)=>i+1)];
    for(let i=0;i<12;i++)faces.push([0,i+1,(i+1)%12+1]);
-   return join([cylinder(.38,.35,16,color,'z'),solid(vertices,faces,'#f2a7b0')]);
+   const base=cylinder(.24+.1,.35,16,color,'z');
+   // Continue the rear rim into a pointed cap, sharing its vertices with the cylinder.
+   base.faces.splice(1,1);
+   const tip=base.vertices.length;base.vertices.push([0,0,.55]);
+   for(let i=0;i<16;i++)base.faces.push([16+i,16+(i+1)%16,tip]);
+   return move(join([solid(base.vertices,base.faces,color),solid(vertices,faces,'#f2a7b0')]),[0,0,0],[.5,.5,.5]);
  }
  if(p.type==='passengerModule'){
    const pieces=[orb(color,[.85,.85,.85])];
@@ -41,4 +54,4 @@ export function jaredGeometry(p,time=0){
  }
  throw Error('Unknown Jared part: '+p.type);
 }
-export function hasJaredPlasma(parts){return parts.some(p=>p.designStyle==='jared'&&p.type==='engine');}
+

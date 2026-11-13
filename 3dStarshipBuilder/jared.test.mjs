@@ -1,4 +1,4 @@
-﻿import {test} from 'node:test';
+import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {factions} from './factions.js';
 import {part,mesh,combined,validateProject,gltf,objFiles} from './model.js';
@@ -13,9 +13,9 @@ test('Jared library geometries are closed, exportable and scale consistently',()
   assert.ok(gltf([p]).meshes.length);assert.ok(objFiles([p]).obj.includes('f '));
  }
 });
-test('Jared plasma animates without changing stats or stored transforms; spike length is validated',()=>{
+test('Jared plasma stays stationary without changing stats or stored transforms; spike length is validated',()=>{
  const engine=make('engine'),saved=JSON.stringify(engine),stats=moduleStats(engine);
- assert.notDeepEqual(combined([engine],0).vertices,combined([engine],2).vertices);assert.equal(JSON.stringify(engine),saved);assert.deepEqual(moduleStats(engine),stats);
+ assert.deepEqual(combined([engine],0).vertices,combined([engine],2).vertices);assert.equal(JSON.stringify(engine),saved);assert.deepEqual(moduleStats(engine),stats);
  assert.ok(gltf([engine]).materials.some(m=>m.emissiveFactor));
  const cannon=make('cannon');assert.ok(Math.min(...mesh({...cannon,spikeLength:4}).vertices.map(v=>v[2]))<Math.min(...mesh(cannon).vertices.map(v=>v[2])));
  for(const spikeLength of [0,6,'2'])assert.throws(()=>validateProject({version:1,name:'Bad',parts:[{...cannon,spikeLength}]}));

@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "faction": "jared",
+  "name": "Interceptor",
+  "parts": [
+    {
+      "id": "6210d2c9-e7cd-4499-9019-b8370fea0469",
+      "type": "hull",
+      "name": "Interceptor hull",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1.15,
+        1.15,
+        1.15
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#91464d",
+      "mirror": false,
+      "designStyle": "jared",
+      "jaredHullProfile": "interceptor",
+      "moduleBevel": 1
+    },
+    {
+      "id": "3f56d870-6306-43ec-ad13-df282c668e74",
+      "type": "cockpit",
+      "name": "Cockpit",
+      "position": [
+        0,
+        0.1,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#63e7f2",
+      "mirror": false,
+      "designStyle": "jared"
+    },
+    {
+      "id": "62c23e07-afb4-45b4-82ad-22fc520d5dcf",
+      "type": "engine",
+      "thrusterProfile": "drone",
+      "name": "Plasma engine",
+      "position": [
+        1.4,
+        0,
+        0.6
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        25,
+        0
+      ],
+      "color": "#73343f",
+      "mirror": true,
+      "designStyle": "jared"
+    },
+    {
+      "id": "769f1889-1c6b-41b6-b12d-6b5c5c358367",
+      "type": "cannon",
+      "cannonBarrel": "hexagonal",
+      "name": "Spike cannon",
+      "position": [
+        0.3,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#a85a60",
+      "mirror": true,
+      "designStyle": "jared",
+      "spikeLength": 1.6
+    }
+  ]
+}

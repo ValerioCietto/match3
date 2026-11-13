@@ -9,7 +9,8 @@ test('each preset comes from its own importable JSON and loads independent parts
   const withoutIds=parts=>parts.map(({id,...p})=>p);
   for(const faction of ['human','jared','technician'])for(const [id,meta] of Object.entries(catalogForFaction(faction))){
     const folder=new URL((id==='empty'?'human':faction)+'/',root);
-    const source=JSON.parse(await readFile(new URL(id+'.json',folder),'utf8')),loaded=preset(id);
+    const filename=id==='jaredInterceptor'?'interceptor':id;
+    const source=JSON.parse(await readFile(new URL(filename+'.json',folder),'utf8')),loaded=preset(id);
     assert.equal(source.name,meta.name);assert.deepEqual(withoutIds(loaded),withoutIds(source.parts));assert.deepEqual(withoutIds(validateProject({...source,parts:loaded}).parts),withoutIds(validateProject(source).parts));
     if(loaded.length){assert.notEqual(loaded[0].id,preset(id)[0].id);loaded[0].position[0]=99;assert.deepEqual(withoutIds(preset(id)),withoutIds(source.parts));}
   }

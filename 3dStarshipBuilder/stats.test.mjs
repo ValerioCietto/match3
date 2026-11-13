@@ -3,6 +3,27 @@ import assert from 'node:assert/strict';
 import {library,presetCatalog,part,preset,validateProject,gltf,objFiles} from './model.js';
 import {moduleVolume,moduleStats,recommendedStats,statFields} from './stats.js';
 const near=(a,b)=>assert.ok(Math.abs(a-b)<1e-8*Math.max(1,Math.abs(b)),`${a} != ${b}`);
+test('sustained Jared blades trade turn acceleration for maximum turn speed and roundtrip',()=>{
+ const blade={...part('wing'),designStyle:'jared',mirror:true},variant={...blade,bladeProfile:'sustained'};
+ const standard=recommendedStats([part('hull'),blade]),fast=recommendedStats([part('hull'),variant]);
+ near(moduleVolume(blade),moduleVolume(variant));
+ near(moduleStats(variant).torque,moduleStats(blade).torque*.35);
+ assert.ok(fast.turnAcceleration<standard.turnAcceleration);assert.ok(fast.turnMaxSpeed>standard.turnMaxSpeed);
+ near(moduleStats({...variant,scale:[.5,.5,.5]}).torque,moduleStats(variant).torque/8);
+ const restored=validateProject({version:1,name:'Blade',parts:[variant]});assert.equal(restored.parts[0].bladeProfile,'sustained');
+ assert.throws(()=>validateProject({version:1,name:'Blade',parts:[{...variant,bladeProfile:'unknown'}]}));
+});
+test('Jared engines double propulsion per volume, including scaled and mixed ships',()=>{
+ const engine={...part('engine'),designStyle:'jared',scale:[.6,.7,.8],mirror:true};
+ const m=moduleStats(engine),ship=recommendedStats([part('hull'),engine]);
+ near(m.thrust,m.volume*45*2);near(ship.propulsionBonus,2);
+ near(ship.acceleration,2*(m.volume*45)/ship.massFull);
+ near(ship.maxSpeed,2*(m.volume*45)/(.08*ship.massFull+.02*ship.inertia));
+ const human=moduleStats(part('engine'));near(human.thrust,human.volume*45);
+ const mixed=recommendedStats([engine,part('engine')]);
+ near(mixed.propulsionBonus,(m.thrust+human.thrust)/(m.thrust/2+human.thrust));
+ near(recommendedStats([part('hull')]).propulsionBonus,1);
+});
 test('standalone cores are retired from the library and every preset, but old saves load',()=>{
   assert.equal(library.nozzle.legacy,true);
   for(const id of Object.keys(presetCatalog))assert.ok(preset(id).every(p=>p.type!=='nozzle'),id);

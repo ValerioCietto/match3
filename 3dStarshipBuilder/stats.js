@@ -43,9 +43,12 @@ const mirroredPassengerVolume=moduleVolume({type:'passengerModule',name:'Cabin',
 export function moduleStats(p){
   const volume=moduleVolume(p),r=p.type==='armor'?armorRates[p.armorProfile||'darkAlloy']:p.designStyle==='jared'&&p.type==='passengerModule'?{...moduleRates.passengerModule,payload:1.5}:moduleRates[p.type],capacity=volume/(p.type==='passengerModule'&&p.mirror&&p.designStyle!=='jared'?mirroredPassengerVolume:defaultVolumes[p.type]);
   const passengers=p.type==='passengerModule'?capacity*8:0;
+  const sustained=p.type==='wing'&&p.designStyle==='jared'&&p.bladeProfile==='sustained';
+  // Compact Jared blades keep their original handling contribution at one quarter volume.
+  const handlingVolume=volume*(p.type==='wing'&&p.designStyle==='jared'?4:1);
   return {
     volume,massEmpty:volume*r.mass,massFull:volume*(r.mass+(r.payload||0))+passengers*.1,
-    thrust:volume*(r.thrust||0),torque:volume*(r.torque||0),wingVolume:p.type==='wing'?volume:0,
+    thrust:volume*(r.thrust||0)*(p.type==='engine'&&p.designStyle==='jared'?2:1),torque:handlingVolume*(r.torque||0)*(sustained?.35:1),wingVolume:p.type==='wing'?handlingVolume:0,
     shieldRegen:volume*(r.shieldRegen||0),shieldMax:volume*(r.shield||0),
     hullRegen:volume*(r.repair||0),hullMax:volume*r.hull,
     energyGeneration:volume*(r.energy||0),radarReduction:volume*(r.radarReduction||0),
@@ -56,20 +59,38 @@ export function moduleStats(p){
 }
 export function recommendedStats(parts){
   const totals={volume:0,massEmpty:0,massFull:0,thrust:0,torque:0,wingVolume:0,shieldRegen:0,shieldMax:0,hullRegen:0,hullMax:0,maxPassengers:0,gunSlots:0,turretSlots:0,fighterSlots:0,expectedCost:0,energyGeneration:0,radarReduction:0};
-  for(const p of parts)for(const [key,value] of Object.entries(moduleStats(p)))totals[key]+=value;
+  let baseThrust=0,forwardThrust=0,reverseThrust=0,speedTorque=0,baseTorque=0;
+  for(const p of parts){
+    const stats=moduleStats(p),sustained=p.type==='wing'&&p.designStyle==='jared'&&p.bladeProfile==='sustained',jaredEngine=p.type==='engine'&&p.designStyle==='jared';
+    baseTorque+=stats.torque/(sustained?.35:1);speedTorque+=stats.torque*(sustained?4/.35:1);
+    // Local -Z is forward. X/Y rotations project thrust onto the ship's longitudinal axis.
+    const projection=jaredEngine?Math.cos(p.rotation[0]*Math.PI/180)*Math.cos(p.rotation[1]*Math.PI/180):1;
+    const longitudinal=Math.abs(projection)<1e-10?0:projection;
+    forwardThrust+=stats.thrust*Math.max(0,longitudinal);
+    reverseThrust+=stats.thrust*Math.max(0,-longitudinal);
+    baseThrust+=stats.thrust*Math.max(0,longitudinal)/(jaredEngine?2:1);
+    for(const [key,value] of Object.entries(stats))totals[key]+=value;
+  }
+  // Mixed fleets receive the bonus only in proportion to their Jared propulsion.
+  const propulsionBonus=baseThrust?forwardThrust/baseThrust:1;
   const inertia=totals.volume;
   const turnInertia=inertia?inertia/(1+6*totals.wingVolume/inertia):0;
-  const acceleration=totals.massFull?totals.thrust/totals.massFull:0;
+  const acceleration=totals.massFull?forwardThrust/totals.massFull:0;
   // Arcade damping gives a useful finite cruise-speed recommendation in space.
-  const maxSpeed=totals.massFull?totals.thrust/(.08*totals.massFull+.02*inertia):0;
-  const turnAcceleration=turnInertia?totals.torque/turnInertia:0;
-  const turnMaxSpeed=turnAcceleration?Math.sqrt(turnAcceleration)*12:0;
-  return {...totals,acceleration,maxSpeed,inertia,turnAcceleration,turnMaxSpeed,turnInertia};
+  const maxSpeed=totals.massFull?forwardThrust/(.08*totals.massFull+.02*inertia):0;
+  const reverseEngineMaxSpeed=totals.massFull?reverseThrust/(.08*totals.massFull+.02*inertia):0;
+  const reverseEngineAcceleration=totals.massFull?reverseThrust/totals.massFull:0;
+  const reverseMaxSpeed=.3*maxSpeed+reverseEngineMaxSpeed;
+  const turnAcceleration=turnInertia?2*totals.torque/turnInertia:0;
+  const turnMaxSpeed=turnInertia?Math.sqrt(speedTorque/turnInertia)*12:0;
+  const turnSpeedBonus=baseTorque?Math.sqrt(speedTorque/baseTorque):1;
+  return {...totals,acceleration,maxSpeed,inertia,turnAcceleration,turnMaxSpeed,turnInertia,propulsionBonus,turnSpeedBonus,forwardThrust,reverseThrust,reverseEngineMaxSpeed,reverseEngineAcceleration,reverseMaxSpeed};
 }
 
 export const statFields=[
   ['energyGeneration','Energy generation','EU/s'],['radarReduction','Radar signature reduction','pts'],
   ['acceleration','Acceleration','m/s²'],['maxSpeed','Max speed','m/s'],['inertia','Inertia','vol'],
+  ['reverseMaxSpeed','Reverse max speed','m/s'],
   ['massFull','Mass full','t'],['massEmpty','Mass empty','t'],
   ['turnAcceleration','Turn acceleration','°/s²'],['turnMaxSpeed','Turn max speed','°/s'],['turnInertia','Turn inertia','idx'],
   ['shieldRegen','Shield regen','HP/s'],['shieldMax','Shield max','HP'],

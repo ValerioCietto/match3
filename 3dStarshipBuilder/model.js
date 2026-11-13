@@ -116,8 +116,9 @@ export function validateProject(data){
   if(data?.version!==1||typeof data.name!=='string'||!Array.isArray(data.parts)||data.parts.length>150)throw Error('Invalid project or more than 150 parts.');
   for(const p of data.parts){
     if(p.designStyle!==undefined&&(p.designStyle!=='jared'||!jaredTypes.includes(p.type)))throw Error('Invalid part design style.');
-    if(p.jaredHullProfile!==undefined&&!['curved','blockier'].includes(p.jaredHullProfile))throw Error('Invalid Jared hull profile.');
-    if(p.moduleBevel!==undefined&&(!Number.isFinite(p.moduleBevel)||p.moduleBevel<0||p.moduleBevel>.5))throw Error('Invalid module bevel.');
+    if(p.jaredHullProfile!==undefined&&!['curved','blockier','interceptor','warlord'].includes(p.jaredHullProfile))throw Error('Invalid Jared hull profile.');
+    if(p.bladeProfile!==undefined&&!['standard','sustained'].includes(p.bladeProfile))throw Error('Invalid blade profile.');
+    if(p.moduleBevel!==undefined&&(!Number.isFinite(p.moduleBevel)||p.moduleBevel<0||p.moduleBevel>1))throw Error('Invalid module bevel.');
     if(p.spikeLength!==undefined&&(!Number.isFinite(p.spikeLength)||p.spikeLength<.2||p.spikeLength>5))throw Error('Invalid spike length.');
     if(!Object.hasOwn(library,p.type)||typeof p.name!=='string'||!/^#[0-9a-f]{6}$/i.test(p.color)||typeof p.mirror!=='boolean')throw Error('Invalid part data.');
     if(p.type==='cannon')for(const [key,options] of Object.entries(cannonOptions))if(p[key]!==undefined&&!(key==='cannonBarrel'&&p[key]==='classic')&&!Object.hasOwn(options,p[key]))throw Error('Invalid cannon option.');

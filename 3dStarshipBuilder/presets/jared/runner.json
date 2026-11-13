@@ -1,0 +1,127 @@
+{
+  "version": 1,
+  "faction": "jared",
+  "name": "Runner",
+  "parts": [
+    {
+      "id": "1ead8932-63a8-4d19-9cf5-0e0c71f0dee8",
+      "type": "hull",
+      "name": "Runner hull",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#91464d",
+      "mirror": false,
+      "designStyle": "jared",
+      "jaredHullProfile": "blockier",
+      "moduleBevel": 1
+    },
+    {
+      "id": "cde4c63b-7b24-44eb-8173-8aec1cba22b0",
+      "type": "shieldGenerator",
+      "name": "Enershield cell",
+      "position": [
+        0.7,
+        0.1,
+        0.2
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#8f5363",
+      "mirror": true,
+      "designStyle": "jared"
+    },
+    {
+      "id": "d880a6bc-4375-44fa-9fa3-586a53701ebe",
+      "type": "engine",
+      "thrusterProfile": "drone",
+      "name": "Plasma engine",
+      "position": [
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#73343f",
+      "mirror": false,
+      "designStyle": "jared"
+    },
+    {
+      "id": "8a4d35de-8ab7-4da1-b136-8cf8ce7455c3",
+      "type": "cockpit",
+      "name": "Cockpit",
+      "position": [
+        0,
+        0.1,
+        -0.3
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#63e7f2",
+      "mirror": false,
+      "designStyle": "jared"
+    },
+    {
+      "id": "be05cc2b-adb2-4295-9dae-a3ddfe23a7fa",
+      "type": "cannon",
+      "cannonBarrel": "hexagonal",
+      "name": "Spike cannon",
+      "position": [
+        0.7,
+        0,
+        -0.2
+      ],
+      "scale": [
+        1,
+        1,
+        0.85
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#a85a60",
+      "mirror": true,
+      "designStyle": "jared",
+      "spikeLength": 1.8
+    }
+  ]
+}

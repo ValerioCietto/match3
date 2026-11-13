@@ -1,4 +1,4 @@
-import {hasJaredPlasma} from './jared.js';
+
 import {factions,resolveFaction} from './factions.js';
 import {catalogForFaction} from './presets.js';
 import {WebGLRenderer} from './webgl-renderer.js';
@@ -94,7 +94,9 @@ for(const [value,profile] of Object.entries(wingProfiles)){const option=document
 $('wingProfile').onchange=()=>{if(current()?.type==='wing')change(()=>current().wingProfile=$('wingProfile').value);};
 const wingFields=[['wingSweep','Additional sweep',-35,35,5,0,'°'],['wingDihedral','Dihedral / tip angle',-45,45,5,0,'°'],['wingThickness','Thickness',.04,.6,.02,.16,' units']];
 for(const [id,label,min,max,step,,unit] of wingFields){const field=document.createElement('label');field.className='field';field.textContent=label;const input=document.createElement('input');input.type='range';input.id=id;input.min=min;input.max=max;input.step=step;const output=document.createElement('output');output.id=id+'Value';input.oninput=()=>output.textContent=input.value+unit;input.onchange=()=>{if(current()?.type==='wing')change(()=>current()[id]=Number(input.value));};field.append(input,output);wingOptions.append(field);}
-const jaredHullOptions=document.createElement('div');jaredHullOptions.hidden=true;jaredHullOptions.innerHTML='<label class="field">Jared hull shape<select id="jaredHullProfile"><option value="blockier">Runner</option></select></label><label class="field" id="moduleBevelField">Bevel<input id="moduleBevel" type="range" min="0" max="0.5" step="0.01"><output id="moduleBevelValue"></output></label>';$('partProperties').append(jaredHullOptions);
+const jaredHullOptions=document.createElement('div');jaredHullOptions.hidden=true;jaredHullOptions.innerHTML='<label class="field">Jared hull shape<select id="jaredHullProfile"><option value="blockier">Runner</option><option value="interceptor">Interceptor</option><option value="warlord">Warlord</option></select></label><label class="field" id="moduleBevelField">Bevel<input id="moduleBevel" type="range" min="0" max="1" step="0.01"><output id="moduleBevelValue"></output></label>';$('partProperties').append(jaredHullOptions);
+const bladeOptions=document.createElement('div');bladeOptions.hidden=true;bladeOptions.innerHTML='<label class="field">Blade variant<select id="bladeProfile"><option value="standard">Standard</option><option value="sustained">Sustained turn</option></select></label><p class="hint">Sustained turn: longer, narrower blades. Higher maximum turn speed, with only 35% of standard turning torque. Takes longer to build up or reverse a turn.</p>';$('partProperties').append(bladeOptions);
+$('bladeProfile').onchange=()=>{if(current()?.type==='wing'&&current()?.designStyle==='jared')change(()=>current().bladeProfile=$('bladeProfile').value);};
 $('jaredHullProfile').onchange=()=>{if(current()?.type==='hull'&&current()?.designStyle==='jared')change(()=>current().jaredHullProfile=$('jaredHullProfile').value);};
 $('moduleBevel').oninput=()=>$('moduleBevelValue').textContent=Math.round(Number($('moduleBevel').value)*100)+'%';
 $('moduleBevel').onchange=()=>{if(current()?.type==='hull'&&current()?.designStyle==='jared')change(()=>current().moduleBevel=Number($('moduleBevel').value));};
@@ -138,7 +140,8 @@ function refresh(){
   }
   if(p){$('partName').value=p.name;$('color').value=p.color;$('mirror').checked=p.mirror;document.querySelectorAll('[data-axis]').forEach(input=>input.value=p[input.dataset.field][Number(input.dataset.axis)]);}
   if(p?.designStyle==='jared')for(const panel of [hullOptions,cockpitOptions,thrusterOptions,wingOptions,cannonPanel])panel.hidden=true;
-  jaredHullOptions.hidden=!(p?.type==='hull'&&p?.designStyle==='jared');if(!jaredHullOptions.hidden){$('jaredHullProfile').value=p.jaredHullProfile||'curved';$('moduleBevelField').hidden=p.jaredHullProfile!=='blockier';$('moduleBevel').value=p.moduleBevel??.15;$('moduleBevelValue').textContent=Math.round((p.moduleBevel??.15)*100)+'%';}
+  bladeOptions.hidden=!(p?.type==='wing'&&p?.designStyle==='jared');if(!bladeOptions.hidden)$('bladeProfile').value=p.bladeProfile||'standard';
+  jaredHullOptions.hidden=!(p?.type==='hull'&&p?.designStyle==='jared');if(!jaredHullOptions.hidden){$('jaredHullProfile').value=p.jaredHullProfile&&p.jaredHullProfile!=='curved'?p.jaredHullProfile:'blockier';$('moduleBevelField').hidden=false;$('moduleBevel').value=p.moduleBevel??1;$('moduleBevelValue').textContent=Math.round((p.moduleBevel??1)*100)+'%';}
   spikeField.hidden=!(p?.designStyle==='jared'&&p?.type==='cannon');if(!spikeField.hidden){$('spikeLength').value=p.spikeLength??1.6;$('spikeLengthValue').textContent=(p.spikeLength??1.6)+' units';}
   dirty=true;
 }
@@ -186,6 +189,6 @@ for(const name of ['pointerup','pointercancel','lostpointercapture'])canvas.addE
 canvas.onkeydown=e=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','+','=','-','0'].includes(e.key))return;e.preventDefault();if(e.key==='0')view('perspective');else if(['+','=','-'].includes(e.key))zoom(e.key==='-'?1.1:.9);else{yaw+=e.key==='ArrowLeft'?-.1:e.key==='ArrowRight'?.1:0;pitch=Math.max(-1.57,Math.min(1.57,pitch+(e.key==='ArrowUp'?-.1:e.key==='ArrowDown'?.1:0)));free();}};
 for(const id of ['grid','wireframe','rotate'])$(id).onchange=()=>dirty=true;
 new ResizeObserver(()=>{const rect=canvas.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2);width=rect.width;height=rect.height;canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);dirty=true;}).observe(canvas);
-let lastPlasma=0;
-function frame(now){if(!document.hidden&&now-lastPlasma>80&&hasJaredPlasma(project.parts)){renderer?.setModel(combined(project.parts,now/1000));lastPlasma=now;dirty=true;}if($('rotate').checked&&!pointers.size&&!document.hidden){yaw+=Math.min((now-last)/1000,.05)*.35;free();}last=now;if(dirty){if(renderer?.model)renderer.render({yaw,pitch,distance,width,height,wireframe:$('wireframe').checked,grid:$('grid').checked});else if(renderer){renderer.gl.clear(renderer.gl.COLOR_BUFFER_BIT|renderer.gl.DEPTH_BUFFER_BIT);}dirty=false;}requestAnimationFrame(frame);}
+
+function frame(now){if($('rotate').checked&&!pointers.size&&!document.hidden){yaw+=Math.min((now-last)/1000,.05)*.35;free();}last=now;if(dirty){if(renderer?.model)renderer.render({yaw,pitch,distance,width,height,wireframe:$('wireframe').checked,grid:$('grid').checked});else if(renderer){renderer.gl.clear(renderer.gl.COLOR_BUFFER_BIT|renderer.gl.DEPTH_BUFFER_BIT);}dirty=false;}requestAnimationFrame(frame);}
 refresh();view('perspective');requestAnimationFrame(frame);
