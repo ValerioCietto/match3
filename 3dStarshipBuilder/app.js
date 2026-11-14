@@ -6,7 +6,7 @@ import {openTestFlight} from './flight.js';
 import {openFlight25} from './flight25.js';
 import {recommendedStats,statFields} from './stats.js';
 import {library,armorProfiles,hullProfiles,wingProfiles,thrusterProfiles,cockpitProfiles,finProfiles,cannonOptions,part,preset,combined,validateProject,objFiles,gltf} from './model.js';
-import {octagonalTypes,technicianDescriptions} from './technician.js';
+import {octagonalTypes,technicianDescriptions,technicianHullProfiles,hasAnimatedTechnician} from './technician.js';
 const faction=resolveFaction(new URL(location.href).searchParams.get('faction')),factionSpec=factions[faction],presetCatalog=catalogForFaction(faction);
 const $=id=>document.getElementById(id),key=faction==='human'?'orbital-foundry-v1':'starship-builder-'+faction;
 document.documentElement.dataset.faction=faction;
@@ -104,6 +104,9 @@ $('moduleBevel').onchange=()=>{if(current()?.type==='hull'&&current()?.designSty
 const spikeField=document.createElement('label');spikeField.className='field';spikeField.hidden=true;spikeField.innerHTML='Spike length<input id="spikeLength" type="range" min="0.2" max="5" step="0.1"><output id="spikeLengthValue"></output>';$('partProperties').append(spikeField);
 const technicianOptions=document.createElement('div');technicianOptions.hidden=true;technicianOptions.innerHTML='<p class="eyebrow">TECHNICIAN MODULE</p><p id="technicianDescription" class="hint"></p><label id="octagonalField"><input id="octagonalSymmetry" type="checkbox"> Octagonal symmetry (8 directions)</label><p class="hint">Laser, push wave, gravity, nanites and blink effects are active in 2.5D. Sap ray and predictive targeting are not simulated yet.</p>';$('partProperties').append(technicianOptions);
 $('octagonalSymmetry').onchange=()=>{if(current()?.designStyle==='technician'&&octagonalTypes.includes(current().type))change(()=>current().octagonalSymmetry=$('octagonalSymmetry').checked);};
+const technicianHullField=document.createElement('label');technicianHullField.className='field';technicianHullField.innerHTML='Hull shape<select id="technicianHullProfile"><option value="sphere">Sphere</option><option value="rockShell">Half rock shell</option></select>';technicianOptions.prepend(technicianHullField);
+$('technicianHullProfile').replaceChildren(...Object.entries(technicianHullProfiles).map(([value,label])=>new Option(label,value)));
+$('technicianHullProfile').onchange=()=>{if(current()?.designStyle==='technician'&&current().type==='hull')change(()=>current().technicianHullProfile=$('technicianHullProfile').value);};
 $('spikeLength').oninput=()=>$('spikeLengthValue').textContent=$('spikeLength').value+' units';
 $('spikeLength').onchange=()=>{if(current()?.designStyle==='jared'&&current().type==='cannon')change(()=>current().spikeLength=Number($('spikeLength').value));};
 function remember(){undo.push(JSON.stringify(project));if(undo.length>60)undo.shift();redo=[];}
@@ -145,6 +148,7 @@ function refresh(){
   if(p?.designStyle==='jared')for(const panel of [hullOptions,cockpitOptions,thrusterOptions,wingOptions,cannonPanel])panel.hidden=true;
   technicianOptions.hidden=p?.designStyle!=='technician';
   if(!technicianOptions.hidden){
+    technicianHullField.hidden=p.type!=='hull';$('technicianHullProfile').value=p.technicianHullProfile||'sphere';
     for(const panel of [hullOptions,cockpitOptions,thrusterOptions,wingOptions,cannonPanel])panel.hidden=true;
     $('technicianDescription').textContent=technicianDescriptions[p.type]||'';
     $('octagonalField').hidden=!octagonalTypes.includes(p.type);$('octagonalSymmetry').checked=p.octagonalSymmetry!==false;
@@ -189,15 +193,16 @@ $('load').onclick=()=>$('file').click();$('file').onchange=async()=>{const file=
 const views={perspective:[-.65,.55],top:[0,Math.PI/2],front:[Math.PI,0],side:[Math.PI/2,0]};
 function view(name){[yaw,pitch]=views[name];distance=3.5;document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===name)));dirty=true;}
 function free(){document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed','false'));dirty=true;}
-document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{$('rotate').checked=false;view(b.dataset.view);});$('reset').onclick=()=>{$('rotate').checked=false;view('perspective');};
-function zoom(factor){distance=Math.max(2.1,Math.min(10,distance*factor));dirty=true;}
+document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{view(b.dataset.view);});$('reset').onclick=()=>view('perspective');
+function zoom(factor){distance=Math.max(1.05,Math.min(10,distance*factor));dirty=true;}
 canvas.onwheel=e=>{e.preventDefault();zoom(Math.exp(Math.max(-100,Math.min(100,e.deltaY))*.002));};
 canvas.onpointerdown=e=>{canvas.focus();canvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,[e.clientX,e.clientY]);};
 canvas.onpointermove=e=>{const prev=pointers.get(e.pointerId);if(!prev)return;const next=[e.clientX,e.clientY];if(pointers.size===2){const other=[...pointers.entries()].find(([id])=>id!==e.pointerId)[1],before=Math.hypot(prev[0]-other[0],prev[1]-other[1]),after=Math.hypot(next[0]-other[0],next[1]-other[1]);if(before&&after)zoom(before/after);}else{yaw+=(next[0]-prev[0])*.008;pitch=Math.max(-1.57,Math.min(1.57,pitch+(next[1]-prev[1])*.008));free();}pointers.set(e.pointerId,next);};
 for(const name of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(name,e=>pointers.delete(e.pointerId));
 canvas.onkeydown=e=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','+','=','-','0'].includes(e.key))return;e.preventDefault();if(e.key==='0')view('perspective');else if(['+','=','-'].includes(e.key))zoom(e.key==='-'?1.1:.9);else{yaw+=e.key==='ArrowLeft'?-.1:e.key==='ArrowRight'?.1:0;pitch=Math.max(-1.57,Math.min(1.57,pitch+(e.key==='ArrowUp'?-.1:e.key==='ArrowDown'?.1:0)));free();}};
-for(const id of ['grid','wireframe','rotate'])$(id).onchange=()=>dirty=true;
+for(const id of ['triangles','wireframe'])$(id).onchange=()=>dirty=true;
 new ResizeObserver(()=>{const rect=canvas.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2);width=rect.width;height=rect.height;canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);dirty=true;}).observe(canvas);
 
-function frame(now){if($('rotate').checked&&!pointers.size&&!document.hidden){yaw+=Math.min((now-last)/1000,.05)*.35;free();}last=now;if(dirty){if(renderer?.model)renderer.render({yaw,pitch,distance,width,height,wireframe:$('wireframe').checked,grid:$('grid').checked});else if(renderer){renderer.gl.clear(renderer.gl.COLOR_BUFFER_BIT|renderer.gl.DEPTH_BUFFER_BIT);}dirty=false;}requestAnimationFrame(frame);}
+let lastModuleFrame=0;
+function frame(now){if(!document.hidden&&renderer?.model&&now-lastModuleFrame>=50&&hasAnimatedTechnician(project.parts)){renderer.setModel(combined(project.parts,now/1000));lastModuleFrame=now;dirty=true;}if(dirty){if(renderer?.model)renderer.render({yaw,pitch,distance,width,height,wireframe:$('wireframe').checked,triangleLines:$('triangles').checked});else if(renderer){renderer.gl.clear(renderer.gl.COLOR_BUFFER_BIT|renderer.gl.DEPTH_BUFFER_BIT);}dirty=false;}requestAnimationFrame(frame);}
 refresh();view('perspective');requestAnimationFrame(frame);

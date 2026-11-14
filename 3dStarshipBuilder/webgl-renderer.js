@@ -53,21 +53,10 @@ export function meshBuffers(model) {
     const n=model.emissiveColors?.includes(model.faceColors?.[index]||model.color)?[0,0,0]:normal.map(value=>value/length),color=rgb(model.faceColors?.[index]||model.color);
     for(let i=1;i<face.length-1;i++)for(const id of [face[0],face[i],face[i+1]])vertex(triangles,positions[id],n,color);
   });
-  for(const edge of edgesOf(model))for(const id of edge)vertex(lines,positions[id],[0,0,1],[1,1,1]);
+  const triangulatedFaces=model.faces.flatMap(face=>Array.from({length:face.length-2},(_,i)=>[face[0],face[i+1],face[i+2]]));
+  for(const edge of edgesOf({faces:triangulatedFaces}))for(const id of edge)vertex(lines,positions[id],[0,0,1],[1,1,1]);
   for(const position of positions)vertex(points,position,[0,0,1],[1,1,1]);
   return {triangles:new Float32Array(triangles),lines:new Float32Array(lines),points:new Float32Array(points)};
-}
-
-function gridBuffer() {
-  const data=[],normal=[0,1,0];
-  const line=(a,b,color)=>{vertex(data,a,normal,rgb(color));vertex(data,b,normal,rgb(color));};
-  for(let i=-5;i<=5;i++) {
-    line([i*.28,-1.1,-1.4],[i*.28,-1.1,1.4],'#354c49');
-    line([-1.4,-1.1,i*.28],[1.4,-1.1,i*.28],'#354c49');
-  }
-  line([0,-1.099,0],[1.4,-1.099,0],'#946a66');
-  line([0,-1.099,0],[0,-1.099,1.4],'#638f9b');
-  return new Float32Array(data);
 }
 
 export class WebGLRenderer {
@@ -101,8 +90,8 @@ export class WebGLRenderer {
     this.program=program;
     this.attributes=['aPosition','aNormal','aColor'].map(name=>gl.getAttribLocation(program,name));
     this.uniforms=Object.fromEntries(['uAngles','uScale','uDistance','uPointSize','uLit','uOverride','uColor'].map(name=>[name,gl.getUniformLocation(program,name)]));
-    this.buffers=Object.fromEntries(['triangles','lines','points','grid'].map(name=>[name,{buffer:gl.createBuffer(),count:0}]));
-    this.upload('grid',gridBuffer());
+    this.buffers=Object.fromEntries(['triangles','lines','points'].map(name=>[name,{buffer:gl.createBuffer(),count:0}]));
+
     gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.clearDepth(1);
     // Source meshes include mixed face winding and an open player hull.
     gl.disable(gl.CULL_FACE);gl.disable(gl.BLEND);
@@ -122,7 +111,7 @@ export class WebGLRenderer {
     gl.uniform1f(u.uLit,lit?1:0);gl.uniform1f(u.uOverride,color?1:0);gl.uniform3fv(u.uColor,color||[1,1,1]);
     gl.drawArrays(mode,0,entry.count);
   }
-  render({yaw,pitch,distance,width,height,wireframe,grid}) {
+  render({yaw,pitch,distance,width,height,wireframe,triangleLines=true}) {
     if(this.lost||!this.model)return;
     const gl=this.gl,u=this.uniforms;
     gl.viewport(0,0,this.canvas.width,this.canvas.height);
@@ -136,12 +125,12 @@ export class WebGLRenderer {
       gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(1,1);
       this.draw('triangles',gl.TRIANGLES,true);
       gl.disable(gl.POLYGON_OFFSET_FILL);
-      this.draw('lines',gl.LINES,false,rgb('#819c9c'));
+      if(triangleLines)this.draw('lines',gl.LINES,false,rgb('#819c9c'));
     } else {
       // Wireframe intentionally exposes all edges; solid mode uses occlusion.
       this.draw('lines',gl.LINES,false,rgb('#c6ee9c'));
       this.draw('points',gl.POINTS,false,rgb('#e2f5d0'));
     }
-    if(grid)this.draw('grid',gl.LINES,false);
+
   }
 }

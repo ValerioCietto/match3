@@ -1,3 +1,4 @@
+import {hasAnimatedTechnician} from './technician.js';
 
 import {combined} from './model.js';
 import {recommendedStats} from './stats.js';
@@ -26,6 +27,7 @@ export function openTestFlight(project){
   const stats=recommendedStats(project.parts),dialog=document.createElement('dialog');dialog.className='flight-dialog';dialog.id='testFlightDialog';dialog.setAttribute('aria-labelledby','flightTitle');
   dialog.innerHTML='<div class="flight-header"><div><span class="eyebrow">TEST FLIGHT / HANDLING SANDBOX</span><h2 id="flightTitle"></h2></div><button id="flightClose">Back to builder ×</button></div><div class="flight-stage"><canvas id="flightStars" aria-hidden="true"></canvas><canvas id="flightShip" tabindex="0" aria-label="Test flight. Arrow keys steer; W and S change throttle; Space brakes; Escape returns to the builder."></canvas><div class="flight-hud" aria-live="off"><span id="flightSpeed"></span><span id="flightDistance"></span><span id="flightHeading"></span></div><p id="flightError" role="status"></p><span class="flight-reticle" aria-hidden="true">+</span></div><div class="flight-controls"><label>Throttle <input id="flightThrottle" aria-label="Flight throttle" type="range" min="0" max="100" value="65"><output id="flightThrottleValue">65%</output></label><button id="flightPause">Pause</button><button id="flightReset">Restart</button><div class="flight-steering" aria-label="Flight controls"><button data-flight="left" aria-label="Turn left">←</button><button data-flight="up" aria-label="Pitch up">↑</button><button data-flight="down" aria-label="Pitch down">↓</button><button data-flight="right" aria-label="Turn right">→</button><button data-flight="brake">Brake</button></div><p>Arrow keys steer · W/S throttle · Space brake · Esc exit<br>Full-load handling. Free flight only; no combat or collisions. Your design stays unchanged.</p></div>';
   document.body.append(dialog);const $=id=>dialog.querySelector('#'+id);$('flightTitle').textContent=project.name;
+  let animationTime=0,lastModuleTime=-1;const animated=hasAnimatedTechnician(project.parts);
   let state=flightState(),paused=false,last=0,frameId=0,renderer,closed=false;
   const keys=new Set(),held=new Set(),abort=new AbortController(),listen={signal:abort.signal};
   const canvas=$('flightShip'),starsCanvas=$('flightStars'),ctx=starsCanvas.getContext('2d');let width=1,height=1;
@@ -54,6 +56,7 @@ export function openTestFlight(project){
   dialog.showModal();observer.observe(canvas);canvas.focus();
   function frame(now){
     if(closed)return;const dt=last?Math.min((now-last)/1000,.05):0;last=now;
+    if(!paused){animationTime+=dt;if(animated&&renderer&&!renderer.lost&&animationTime-lastModuleTime>=.05){renderer.setModel(combined(project.parts,animationTime));lastModuleTime=animationTime;}}
     const active=(key,button)=>keys.has(key)||held.has(button);
     if(!paused&&!renderer?.lost)stepFlight(state,stats,{yaw:Number(active('ArrowRight','right'))-Number(active('ArrowLeft','left')),pitch:Number(active('ArrowUp','up'))-Number(active('ArrowDown','down')),throttle:Number(keys.has('KeyW'))-Number(keys.has('KeyS')),brake:active('Space','brake')},dt);
     if(ctx){ctx.clearRect(0,0,width,height);const basis=flightBasis(state),focal=Math.min(width,height)*.9;

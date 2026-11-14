@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "faction": "technician",
+  "name": "spike interceptor",
+  "parts": [
+    {
+      "id": "7cf4d49e-a47d-4bac-8d99-d2d9d8e2fd88",
+      "type": "hull",
+      "name": "Hull",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#a4abb1",
+      "mirror": false,
+      "designStyle": "technician",
+      "hullProfile": "sphere"
+    },
+    {
+      "id": "5d5839f4-ce48-4931-adac-3ccd06157ad6",
+      "type": "pushOutside",
+      "designStyle": "technician",
+      "octagonalSymmetry": false,
+      "name": "Push outside weapon",
+      "position": [
+        -0.8,
+        -0.2,
+        0.9
+      ],
+      "scale": [
+        3,
+        3,
+        3
+      ],
+      "rotation": [
+        0,
+        0,
+        15
+      ],
+      "color": "#a4abb1",
+      "mirror": true
+    },
+    {
+      "id": "8d51644a-1b96-4553-ba2f-9d60a2337844",
+      "type": "pushOutside",
+      "designStyle": "technician",
+      "octagonalSymmetry": false,
+      "name": "Push outside weapon copy",
+      "position": [
+        -0.8,
+        0.2,
+        0.9
+      ],
+      "scale": [
+        3,
+        3,
+        3
+      ],
+      "rotation": [
+        0,
+        0,
+        -15
+      ],
+      "color": "#a4abb1",
+      "mirror": true
+    },
+    {
+      "id": "c08e4255-f915-445e-b37b-ef085218f7b4",
+      "type": "engine",
+      "thrusterProfile": "drone",
+      "name": "Omni engine",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#a4abb1",
+      "mirror": false,
+      "designStyle": "technician",
+      "octagonalSymmetry": false
+    }
+  ]
+}

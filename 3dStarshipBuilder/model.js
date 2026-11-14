@@ -1,4 +1,4 @@
-import {technicianGeometry,technicianLibrary,technicianTypes,octagonalTypes,technicianGlow} from './technician.js';
+import {technicianGeometry,technicianLibrary,technicianTypes,octagonalTypes,technicianGlow,technicianHullProfiles} from './technician.js';
 import {jaredGeometry,jaredTypes} from './jared.js';
 import {blockGeometry,specialHullGeometry,thrusterGeometry,cockpitGeometry,finGeometry,cannonGeometry} from './blocks.js';
 export const cannonOptions={
@@ -96,7 +96,7 @@ export function mesh(p,reflected=false,time=0){
   const hull=p.type==='hull'?hullProfiles[p.hullProfile||'standard']:null;
   const spec=hull?{...base,shape:hull.shape}:p.type==='wing'?{...base,shape:wingProfiles[p.wingProfile||'swept'].shape,height:p.wingThickness??.16}:base;
   const technician=p.designStyle==='technician'||Object.hasOwn(technicianLibrary,p.type);
-  const geometry=technician?technicianGeometry(p):p.type==='cannon'?cannonGeometry(p):p.type==='cockpit'&&p.cockpitProfile&&p.cockpitProfile!=='classic'?cockpitGeometry(p.cockpitProfile,p.color):hull?.composite?specialHullGeometry(p.hullProfile,p.color):p.type==='engine'?thrusterGeometry(!p.thrusterProfile||p.thrusterProfile==='classic'?'drone':p.thrusterProfile,p.color):spec.composite?blockGeometry(p.type,p.color,{passengerSide,armorProfile:p.armorProfile}):extruded(spec);
+  const geometry=technician?technicianGeometry(p,time):p.type==='cannon'?cannonGeometry(p):p.type==='cockpit'&&p.cockpitProfile&&p.cockpitProfile!=='classic'?cockpitGeometry(p.cockpitProfile,p.color):hull?.composite?specialHullGeometry(p.hullProfile,p.color):p.type==='engine'?thrusterGeometry(!p.thrusterProfile||p.thrusterProfile==='classic'?'drone':p.thrusterProfile,p.color):spec.composite?blockGeometry(p.type,p.color,{passengerSide,armorProfile:p.armorProfile}):extruded(spec);
   const selectedGeometry=technician?geometry:p.designStyle==='jared'?jaredGeometry(p,time):hull&&!hull.composite?hullGeometry(spec,p):p.type==='fin'&&p.finProfile&&p.finProfile!=='classic'?finGeometry(finProfiles[p.finProfile].outline,p.color):geometry;
   const {vertices,faces,faceColors}=p.type==='cockpit'&&p.designStyle!=='jared'?bevelGeometry(selectedGeometry,p.cockpitBevel??0,p.color):selectedGeometry;
   if(p.type==='fin')for(const v of vertices){const height=v[1]+.55;v[0]=v[0]*(p.finThickness??.16)/.16+height*Math.tan((p.finCant??0)*Math.PI/180);v[2]+=height*Math.tan((p.finSweep??0)*Math.PI/180);}
@@ -120,6 +120,7 @@ export function validateProject(data){
   for(const p of data.parts){
     if(p.designStyle!==undefined&&!((p.designStyle==='jared'&&jaredTypes.includes(p.type))||(p.designStyle==='technician'&&technicianTypes.includes(p.type))))throw Error('Invalid part design style.');
     if(p.octagonalSymmetry!==undefined&&(typeof p.octagonalSymmetry!=='boolean'||!octagonalTypes.includes(p.type)))throw Error('Invalid octagonal symmetry.');
+    if(p.technicianHullProfile!==undefined&&!Object.hasOwn(technicianHullProfiles,p.technicianHullProfile))throw Error('Invalid Technician hull profile.');
     if(p.jaredHullProfile!==undefined&&!['curved','blockier','interceptor','warlord'].includes(p.jaredHullProfile))throw Error('Invalid Jared hull profile.');
     if(p.bladeProfile!==undefined&&!['standard','sustained'].includes(p.bladeProfile))throw Error('Invalid blade profile.');
     if(p.moduleBevel!==undefined&&(!Number.isFinite(p.moduleBevel)||p.moduleBevel<0||p.moduleBevel>1))throw Error('Invalid module bevel.');

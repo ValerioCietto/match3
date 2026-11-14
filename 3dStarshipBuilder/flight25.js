@@ -1,3 +1,4 @@
+import {hasAnimatedTechnician} from './technician.js';
 
 import {catalogForFaction} from './presets.js';
 import {factions} from './factions.js';
@@ -60,9 +61,10 @@ export function advanceLasers(ships,dt){
  return beams;
 }
 export function pilot(parts,x=0,z=0){
-  const stats=recommendedStats(parts);
+  const stats=recommendedStats(parts),engines=parts.filter(p=>p.type==='engine');
+  const hasOmni=engines.some(p=>p.designStyle==='technician'),instantCar=hasOmni&&engines.reduce((sum,p)=>sum+(p.mirror?2:1),0)===1;
   // Undo meshBuffers' normalization exactly: one editor unit is one arena unit.
-  return {...combatState(parts),x,z,yaw:0,roll:0,speed:0,vx:0,vz:0,omni:parts.some(p=>p.type==='engine'&&p.designStyle==='technician'),stats,weapons:weaponMounts(parts,stats),hull:stats.hullMax,shield:stats.shieldMax,radius:shipBounds(parts).radius,hitAgo:99};
+  return {...combatState(parts),renderParts:parts,animated:hasAnimatedTechnician(parts),x,z,yaw:0,roll:0,speed:0,vx:0,vz:0,omni:hasOmni&&!instantCar,instantCar,stats,weapons:weaponMounts(parts,stats),hull:stats.hullMax,shield:stats.shieldMax,radius:shipBounds(parts).radius,hitAgo:99};
 }
 export function arenaMotion(stats){
  const forward=Math.min(40*stats.propulsionBonus,stats.maxSpeed),acceleration=Math.min(18*stats.propulsionBonus,stats.acceleration);
@@ -84,9 +86,10 @@ export function drive(ship,input,dt){
     ship.x+=ship.vx*dt;ship.z+=ship.vz*dt;
     ship.roll*=Math.exp(-8*dt);ship.yawRate=0;
   }else{
-  ship.speed+=((input.throttle||0)*accel-ship.speed*.35)*dt;
+  if(ship.instantCar&&input.throttle&&!input.brake)ship.speed=Math.max(-1,Math.min(1,input.throttle))*limit;
+  else ship.speed+=((input.throttle||0)*accel-ship.speed*.35)*dt;
   if(input.brake)ship.speed*=Math.exp(-8*dt);
-  ship.speed=Math.max(-motion.reverse,Math.min(limit,ship.speed));
+  ship.speed=Math.max(-(ship.instantCar?limit:motion.reverse),Math.min(limit,ship.speed));
   // Steering is independent of translational speed, including at rest and in reverse.
   const targetRate=(input.steer||0)*Math.min(2.4*s.turnSpeedBonus,s.turnMaxSpeed*Math.PI/180),rateStep=s.turnAcceleration*Math.PI/180*dt;
   const rate=ship.yawRate||0;ship.yawRate=rate+Math.max(-rateStep,Math.min(rateStep,targetRate-rate));
@@ -131,7 +134,7 @@ function arenaRenderer(canvas){
   function upload(data){const buffer=gl.createBuffer();buffers.add(buffer);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(data),gl.STATIC_DRAW);return {buffer,count:data.length/9};}
   function draw(mesh,ship,mode=gl.TRIANGLES){gl.bindBuffer(gl.ARRAY_BUFFER,mesh.buffer);attrs.forEach((a,i)=>{gl.enableVertexAttribArray(a);gl.vertexAttribPointer(a,3,gl.FLOAT,false,36,i*12);});gl.uniform4f(shipLoc,ship.x,ship.z,ship.yaw,ship.radius);gl.uniform1f(rollLoc,ship.roll||0);gl.drawArrays(mode,0,mesh.count);}
   const shots=upload([]),grid=upload([]),effects=upload([]);
-  return {load:(parts,time=0)=>upload(meshBuffers(combined(parts,time)).triangles),release:m=>{if(m){gl.deleteBuffer(m.buffer);buffers.delete(m.buffer);}},
+  return {load:(parts,time=0)=>upload(meshBuffers(combined(parts,time)).triangles),update:(model,parts,time)=>{const data=meshBuffers(combined(parts,time)).triangles;gl.bindBuffer(gl.ARRAY_BUFFER,model.buffer);gl.bufferData(gl.ARRAY_BUFFER,data,gl.DYNAMIC_DRAW);model.count=data.length/9;},release:m=>{if(m){gl.deleteBuffer(m.buffer);buffers.delete(m.buffer);}},
     render(player,enemy,models,bullets,viewRange,beams=[]){gl.viewport(0,0,canvas.width,canvas.height);gl.clearColor(.025,.05,.085,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.enable(gl.DEPTH_TEST);gl.useProgram(program);const aspect=canvas.width/canvas.height;gl.uniform4f(viewLoc,player.x,player.z,viewRange*aspect,viewRange);
       const lines=[],cx=Math.floor(player.x/10)*10,cz=Math.floor(player.z/10)*10,extent=Math.ceil(Math.max(viewRange*aspect,viewRange)/10)*10+20;
       for(let offset=-extent;offset<=extent;offset+=10)for(const [x,z] of [[cx+offset,cz-extent],[cx+offset,cz+extent],[cx-extent,cz+offset],[cx+extent,cz+offset]])lines.push(x,-5,z,0,1,0,.07,.13,.19);
@@ -208,6 +211,7 @@ export function openFlight25(project){
   dialog.addEventListener('close',()=>{closed=true;cancelAnimationFrame(frame);observer.disconnect();abort.abort();renderer?.destroy();dialog.remove();document.getElementById('testFlight')?.focus();},{once:true});
   dialog.showModal();observer.observe(canvas);canvas.focus();
   try{renderer=arenaRenderer(canvas);models[0]=renderer.load(project.parts);reset(false);}catch(error){say(error.message);$('startBattle').disabled=$('reset25').disabled=$('pause25').disabled=true;return;}
+  let animationTime=0,lastModuleTime=-1;
   const down=(...codes)=>codes.some(c=>keys.has(c));
   function tick(now){if(closed)return;const dt=last?Math.min(.05,(now-last)/1000):0;last=now;
     if(!paused&&!result){const input={throttle:Number(down('KeyW','ArrowUp'))-Number(down('KeyS','ArrowDown')),steer:Number(down('KeyD','ArrowRight'))-Number(down('KeyA','ArrowLeft')),brake:down('ShiftLeft','ShiftRight'),fire:down('Space')};for(const [button,value] of held)input[button.dataset.drive]=value;
@@ -221,6 +225,7 @@ export function openFlight25(project){
       bullets=advanceBullets(bullets,[player,enemy],dt);beams=advanceLasers([player,enemy],dt);if(enemy&&(player.hull<=0||enemy.hull<=0)){result=player.hull<=0?'Defeat — restart to try again.':'Victory — opponent destroyed.';say(result);clear();}
     }
     
+    if(!paused&&!result){animationTime+=dt;if(animationTime-lastModuleTime>=.05){for(const [i,ship] of [player,enemy].entries())if(ship?.animated&&models[i])renderer.update(models[i],ship.renderParts,animationTime);lastModuleTime=animationTime;}}
     renderer.render(player,enemy,models,bullets,viewRange,beams);
     $('playerHealth').textContent=`YOU · Hull ${Math.ceil(player.hull)} · Shield ${Math.ceil(player.shield)} · ${player.speed.toFixed(1)} m/s${combatStatus(player)}`;
     $('opponentHealth').textContent=enemy?`ENEMY · Hull ${Math.ceil(enemy.hull)} · Shield ${Math.ceil(enemy.shield)} · ${Math.hypot(enemy.x-player.x,enemy.z-player.z).toFixed(0)} m${combatStatus(enemy)}`:'';

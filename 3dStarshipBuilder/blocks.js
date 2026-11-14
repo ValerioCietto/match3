@@ -12,8 +12,8 @@ function cylinder(radius,height,sides,color,axis='y'){
   if(axis==='z')for(const v of vertices)[v[1],v[2]]=[v[2],v[1]];
   const faces=[Array.from({length:sides},(_,i)=>i),Array.from({length:sides},(_,i)=>i+sides)];for(let i=0;i<sides;i++){const j=(i+1)%sides;faces.push([i,j,j+sides,i+sides]);}return solid(vertices,faces,color);
 }
-function sphere(radius,color){
-  const sides=12,rings=6,vertices=[[0,radius,0]],faces=[];
+function sphere(radius,color,sides=12,rings=6){
+  const vertices=[[0,radius,0]],faces=[];
   for(let j=1;j<rings;j++)for(let i=0;i<sides;i++){const a=j*Math.PI/rings,b=i*2*Math.PI/sides;vertices.push([radius*Math.sin(a)*Math.cos(b),radius*Math.cos(a),radius*Math.sin(a)*Math.sin(b)]);}
   const bottom=vertices.length;vertices.push([0,-radius,0]);
   for(let i=0;i<sides;i++){const next=(i+1)%sides;faces.push([0,1+i,1+next],[bottom,1+(rings-2)*sides+next,1+(rings-2)*sides+i]);}

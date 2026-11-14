@@ -5,8 +5,8 @@ import {meshBuffers} from './webgl-renderer.js';
 import {pilot,drive,fire,damage,advanceBullets,shotColor,arenaMotion} from './flight25.js';
 import {moduleStats} from './stats.js';
 const parts=[part('hull'),part('engine'),part('wing'),part('cannon')];
-test('Technician omni moves in eight world directions with equal speed and no reverse cap',()=>{
- const parts=[part('hull'),{...part('engine'),designStyle:'technician'}];
+test('multiple Technician omni engines move in eight world directions with equal speed and no reverse cap',()=>{
+ const parts=[part('hull'),{...part('engine'),designStyle:'technician',mirror:true}];
  let reference;
  for(const [steer,throttle] of [[0,1],[1,1],[1,0],[1,-1],[0,-1],[-1,-1],[-1,0],[-1,1]]){
   const ship=pilot(parts);ship.yaw=.73;
@@ -23,6 +23,22 @@ test('Technician omni moves in eight world directions with equal speed and no re
  const stationary=pilot(parts);drive(stationary,{steer:0,throttle:0},.05);assert.equal(stationary.speed,0);
  assert.equal(pilot([part('hull'),part('engine')]).omni,false);
  assert.equal(pilot([{...part('hull'),designStyle:'technician'}]).omni,false);
+});
+test('one Technician omni engine uses car steering and instantly reaches top speed',()=>{
+ const engine={...part('engine'),designStyle:'technician'},ship=pilot([part('hull'),engine]);
+ assert.equal(ship.instantCar,true);assert.equal(ship.omni,false);
+ const limit=arenaMotion(ship.stats).forward;
+ ship.yaw=Math.PI/2;drive(ship,{throttle:1},.01);
+ assert.equal(ship.speed,limit);assert.ok(ship.x>0);assert.ok(Math.abs(ship.z)<1e-8);
+ const yaw=ship.yaw;drive(ship,{throttle:1,steer:1},.01);assert.ok(ship.yaw>yaw);assert.equal(ship.speed,limit);
+ drive(ship,{throttle:-1},.01);assert.equal(ship.speed,-limit);
+ drive(ship,{brake:true},.05);assert.ok(Math.abs(ship.speed)<limit);
+ assert.equal(pilot([part('hull'),engine,{...engine,id:'second'}]).omni,true);
+ assert.equal(pilot([part('hull'),{...engine,mirror:true}]).instantCar,false);
+ for(const designStyle of [undefined,'jared']){
+  const other=pilot([part('hull'),{...part('engine'),designStyle}]);drive(other,{throttle:1},.01);
+  assert.equal(other.instantCar,false);assert.ok(other.speed<arenaMotion(other.stats).forward);
+ }
 });
 test('spike length scales range, speed and independent reload from 1.6 units',()=>{
  const spike=length=>({...part('cannon'),designStyle:'jared',spikeLength:length});
