@@ -5,8 +5,17 @@ import {meshBuffers} from './webgl-renderer.js';
 import {pilot,drive,fire,damage,advanceBullets,shotColor,arenaMotion} from './flight25.js';
 import {moduleStats} from './stats.js';
 const parts=[part('hull'),part('engine'),part('wing'),part('cannon')];
-test('multiple Technician omni engines move in eight world directions with equal speed and no reverse cap',()=>{
- const parts=[part('hull'),{...part('engine'),designStyle:'technician',mirror:true}];
+test('tenfold maximum turn speed applies only to Technician faction, not acceleration',()=>{
+ const human=pilot(parts,0,0,'human'),jared=pilot(parts,0,0,'jared'),tech=pilot(parts,0,0,'technician');
+ assert.equal(tech.stats.turnMaxSpeed,human.stats.turnMaxSpeed*10);
+ assert.equal(jared.stats.turnMaxSpeed,human.stats.turnMaxSpeed);
+ assert.equal(tech.stats.turnAcceleration,human.stats.turnAcceleration);
+ assert.equal(human.stats.turnFactionBonus,1);assert.equal(tech.stats.turnFactionBonus,10);
+ for(let i=0;i<10000;i++){drive(human,{steer:1},.05);drive(tech,{steer:1},.05);}
+ assert.ok(Math.abs(tech.yawRate-human.yawRate*10)<1e-8);
+});
+test('three Technician omni engines move in eight world directions with equal speed and no reverse cap',()=>{
+ const parts=[part('hull'),{...part('engine'),designStyle:'technician',mirror:true},{...part('engine'),designStyle:'technician'}];
  let reference;
  for(const [steer,throttle] of [[0,1],[1,1],[1,0],[1,-1],[0,-1],[-1,-1],[-1,0],[-1,1]]){
   const ship=pilot(parts);ship.yaw=.73;
@@ -16,9 +25,9 @@ test('multiple Technician omni engines move in eight world directions with equal
   assert.ok(Math.abs(ship.vx/ship.speed-steer/length)<1e-8);
   assert.ok(Math.abs(ship.vz/ship.speed+throttle/length)<1e-8);
   if(reference===undefined)reference=ship.speed;else assert.ok(Math.abs(ship.speed-reference)<1e-8);
-  assert.ok(ship.speed<=arenaMotion(ship.stats).forward);
+  assert.ok(ship.speed<=arenaMotion(ship.stats).forward+1e-8);
   if(throttle===-1&&steer===0)assert.ok(ship.speed>arenaMotion(ship.stats).reverse);
-  const before=ship.speed;for(let i=0;i<20;i++)drive(ship,{brake:true},.05);assert.ok(ship.speed<before*.001);
+  const before=ship.speed;for(let i=0;i<Math.ceil(before/(2*arenaMotion(ship.stats).acceleration*.05))+1;i++)drive(ship,{brake:true},.05);assert.ok(ship.speed<before*.001);
  }
  const stationary=pilot(parts);drive(stationary,{steer:0,throttle:0},.05);assert.equal(stationary.speed,0);
  assert.equal(pilot([part('hull'),part('engine')]).omni,false);
@@ -29,12 +38,14 @@ test('one Technician omni engine uses car steering and instantly reaches top spe
  assert.equal(ship.instantCar,true);assert.equal(ship.omni,false);
  const limit=arenaMotion(ship.stats).forward;
  ship.yaw=Math.PI/2;drive(ship,{throttle:1},.01);
- assert.equal(ship.speed,limit);assert.ok(ship.x>0);assert.ok(Math.abs(ship.z)<1e-8);
- const yaw=ship.yaw;drive(ship,{throttle:1,steer:1},.01);assert.ok(ship.yaw>yaw);assert.equal(ship.speed,limit);
- drive(ship,{throttle:-1},.01);assert.equal(ship.speed,-limit);
+ assert.ok(Math.abs(ship.speed-limit)<1e-8);assert.ok(ship.x>0);assert.ok(Math.abs(ship.z)<1e-8);
+ const yaw=ship.yaw;drive(ship,{throttle:1,steer:1},.01);assert.ok(ship.yaw>yaw);assert.ok(Math.abs(ship.speed-limit)<1e-8);
+ drive(ship,{throttle:-1},.01);assert.ok(Math.abs(ship.speed-limit)<1e-8);assert.ok(ship.vx*Math.sin(ship.yaw)-ship.vz*Math.cos(ship.yaw)<0);
  drive(ship,{brake:true},.05);assert.ok(Math.abs(ship.speed)<limit);
- assert.equal(pilot([part('hull'),engine,{...engine,id:'second'}]).omni,true);
- assert.equal(pilot([part('hull'),{...engine,mirror:true}]).instantCar,false);
+ for(const engines of [[engine,{...engine,id:'second'}],[{...engine,mirror:true}]]){
+  const pair=pilot([part('hull'),...engines]);assert.equal(pair.instantCar,true);assert.equal(pair.omni,false);
+  drive(pair,{throttle:1,steer:1},.01);assert.ok(Math.abs(pair.speed-arenaMotion(pair.stats).forward)<1e-8);assert.ok(pair.yaw>0);
+ }
  for(const designStyle of [undefined,'jared']){
   const other=pilot([part('hull'),{...part('engine'),designStyle}]);drive(other,{throttle:1},.01);
   assert.equal(other.instantCar,false);assert.ok(other.speed<arenaMotion(other.stats).forward);
@@ -95,7 +106,7 @@ test('Jared engine direction allocates thrust to forward or reverse, including m
   const reverse=pilot([hull,{...engine,rotation}]);
   assert.equal(reverse.stats.maxSpeed,0);assert.equal(reverse.stats.acceleration,0);
   assert.ok(Math.abs(reverse.stats.reverseEngineMaxSpeed-forward.stats.maxSpeed)<1e-8);
-  drive(reverse,{throttle:-1},.05);assert.ok(reverse.speed<0);
+  drive(reverse,{throttle:-1},.05);assert.ok(reverse.vz>0);
   assert.ok(arenaMotion(reverse.stats).reverse>0);
  }
  const sideways=pilot([hull,{...engine,rotation:[0,90,0]}]);
@@ -105,7 +116,7 @@ test('Jared engine direction allocates thrust to forward or reverse, including m
  const mixed=pilot([hull,engine,{...engine,rotation:[180,0,0]}]),motion=arenaMotion(mixed.stats);
  assert.ok(motion.reverse>.3*motion.forward);
  for(let i=0;i<2000;i++)drive(mixed,{throttle:-1},.05);
- assert.ok(-mixed.speed>.3*motion.forward);assert.ok(-mixed.speed<=motion.reverse);
+ assert.ok(mixed.vz>.3*motion.forward);assert.ok(mixed.speed<=motion.reverse+1e-8);
  const human=pilot([hull,part('engine')]);assert.equal(arenaMotion(human.stats).reverse,.3*arenaMotion(human.stats).forward);
 });
 test('sustained blades turn more slowly initially but reach a higher turn rate in arena',()=>{
@@ -150,8 +161,8 @@ test('support slot bonuses boost real weapons without creating extra barrels',()
 test('steering works at rest and in reverse, while acceleration and braking work',()=>{
  const s=pilot(parts);drive(s,{steer:1},.05);assert.ok(s.yaw>0);assert.equal(s.x,0);assert.equal(s.z,0);
  for(let i=0;i<100;i++)drive(s,{throttle:1},.05);assert.ok(s.speed>0&&s.z<0);drive(s,{steer:1},.05);assert.ok(s.yaw>0);
- const speed=s.speed;for(let i=0;i<20;i++)drive(s,{brake:true},.05);assert.ok(s.speed<speed*.01);
- s.speed=-4;s.yaw=0;drive(s,{steer:1},.05);assert.ok(s.yaw>0);
+ const speed=s.speed;for(let i=0;i<Math.ceil(speed/(2*arenaMotion(s.stats).acceleration*.05))+1;i++)drive(s,{brake:true},.05);assert.ok(s.speed<speed*.01);
+ s.vx=0;s.vz=4;s.speed=4;s.yaw=0;drive(s,{steer:1},.05);assert.ok(s.yaw>0);
  const noEngine=pilot([part('hull')]);drive(noEngine,{throttle:1},.05);assert.equal(noEngine.speed,0);
 });
 test('weapons respect slots, cooldown, swept collision and shield absorption',()=>{

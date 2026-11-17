@@ -64,7 +64,7 @@ export function moduleStats(p){
     expectedCost:volume*r.cost
   };
 }
-export function recommendedStats(parts){
+export function recommendedStats(parts,faction){
   const totals={volume:0,massEmpty:0,massFull:0,thrust:0,torque:0,wingVolume:0,shieldRegen:0,shieldMax:0,hullRegen:0,hullMax:0,maxPassengers:0,gunSlots:0,turretSlots:0,fighterSlots:0,expectedCost:0,energyGeneration:0,radarReduction:0};
   let baseThrust=0,forwardThrust=0,reverseThrust=0,speedTorque=0,baseTorque=0;
   for(const p of parts){
@@ -89,9 +89,11 @@ export function recommendedStats(parts){
   const reverseEngineAcceleration=totals.massFull?reverseThrust/totals.massFull:0;
   const reverseMaxSpeed=.3*maxSpeed+reverseEngineMaxSpeed;
   const turnAcceleration=turnInertia?2*totals.torque/turnInertia:0;
-  const turnMaxSpeed=turnInertia?Math.sqrt(speedTorque/turnInertia)*12:0;
+  const shipFaction=faction??parts.find(p=>p.type==='hull')?.designStyle??(parts.some(p=>p.designStyle==='technician')?'technician':'human');
+  const turnFactionBonus=shipFaction==='technician'?10:1;
+  const turnMaxSpeed=turnInertia?Math.sqrt(speedTorque/turnInertia)*12*turnFactionBonus:0;
   const turnSpeedBonus=baseTorque?Math.sqrt(speedTorque/baseTorque):1;
-  return {...totals,acceleration,maxSpeed,inertia,turnAcceleration,turnMaxSpeed,turnInertia,propulsionBonus,turnSpeedBonus,forwardThrust,reverseThrust,reverseEngineMaxSpeed,reverseEngineAcceleration,reverseMaxSpeed};
+  return {...totals,acceleration,maxSpeed,inertia,turnAcceleration,turnMaxSpeed,turnInertia,propulsionBonus,turnSpeedBonus,turnFactionBonus,forwardThrust,reverseThrust,reverseEngineMaxSpeed,reverseEngineAcceleration,reverseMaxSpeed};
 }
 
 export const statFields=[

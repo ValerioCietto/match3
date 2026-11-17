@@ -42,7 +42,7 @@ statsPanel.innerHTML='<summary id="recommendedStatsTitle">Recommended stats</sum
 document.querySelector('.library').prepend(statsPanel);
 for(const [id,label,unit] of statFields){const row=document.createElement('div'),term=document.createElement('dt'),value=document.createElement('dd');term.textContent=label;value.id='stat-'+id;value.dataset.unit=unit;row.append(term,value);$('recommendedStatsValues').append(row);}
 const statsNumber=new Intl.NumberFormat('en',{maximumFractionDigits:2});
-function updateStats(){const values=recommendedStats(project.parts);for(const [id,,unit] of statFields){const value=values[id],text=value>0&&value<.01?value.toPrecision(2):statsNumber.format(value);$('stat-'+id).textContent=text+(unit?' '+unit:'');$('stat-'+id).dataset.value=String(value);}}
+function updateStats(){const values=recommendedStats(project.parts,project.faction);for(const [id,,unit] of statFields){const value=values[id],text=value>0&&value<.01?value.toPrecision(2):statsNumber.format(value);$('stat-'+id).textContent=text+(unit?' '+unit:'');$('stat-'+id).dataset.value=String(value);}}
 const armorOptions=document.createElement('div');armorOptions.id='armorOptions';armorOptions.hidden=true;
 armorOptions.innerHTML='<p class="eyebrow">ARMOR OPTIONS</p><label class="field">Armor type<select id="armorProfile"></select></label><p id="armorDescription" class="hint"></p>';
 $('partProperties').append(armorOptions);

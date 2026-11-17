@@ -20,8 +20,6 @@ export function tickStatuses(ship,dt){
   ship.hull=Math.max(0,ship.hull-value/10);ship.nextNaniteTick+=.1;
  }
  ship.statusClock=end;ship.nanites=ship.nanites.filter(s=>s.expires>end+1e-9);
- const decay=Math.exp(-3*dt),travel=(1-decay)/3;
- ship.x+=ship.pushVx*travel;ship.z+=ship.pushVz*travel;ship.pushVx*=decay;ship.pushVz*=decay;
 }
 export function onHit(ship,random=Math.random){
  ship.hitAgo=0;
