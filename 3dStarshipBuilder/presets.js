@@ -16,13 +16,15 @@ import small_warlord from './presets/jared/small_warlord.json' with {type:'json'
 import warlord from './presets/jared/warlord.json' with {type:'json'};
 import sniper from './presets/jared/sniper.json' with {type:'json'};
 import spikeInterceptor from './presets/technician/spike-interceptor.json' with {type:'json'};
+import smallMerchant from './presets/technician/small-merchant.json' with {type:'json'};
+import singularity from './presets/technician/singularity.json' with {type:'json'};
 
 const configurations={aresArmoredFighter,fighter,interceptor,hauler,scout,carrier,megaCargo,explorer,cruise,sharkDestroyer,artemisSniper,empty};
 export const presetCatalog=Object.fromEntries(Object.entries(configurations).map(([id,{name,label,description}])=>[id,{name,label:label||name,description:description||''}]));
-const factionConfigurations={human:configurations,jared:{runner,jaredInterceptor,small_warlord,warlord,sniper,empty},technician:{'spike-interceptor':spikeInterceptor,empty}};
+const factionConfigurations={human:configurations,jared:{runner,jaredInterceptor,small_warlord,warlord,sniper,empty},technician:{'spike-interceptor':spikeInterceptor,'small-merchant':smallMerchant,singularity,empty}};
 export function catalogForFaction(faction='human'){return Object.fromEntries(Object.entries(factionConfigurations[faction]||configurations).map(([id,{name,label,description}])=>[id,{name,label:label||name,description:description||''}]));}
 export function preset(id){
-  const configuration=id==='runner'?runner:id==='jaredInterceptor'?jaredInterceptor:id==='small_warlord'?small_warlord:id==='warlord'?warlord:id==='sniper'?sniper:id==='spike-interceptor'?spikeInterceptor:configurations[id];
+  const configuration=id==='runner'?runner:id==='jaredInterceptor'?jaredInterceptor:id==='small_warlord'?small_warlord:id==='warlord'?warlord:id==='sniper'?sniper:id==='spike-interceptor'?spikeInterceptor:id==='small-merchant'?smallMerchant:id==='singularity'?singularity:configurations[id];
   if(!configuration)throw Error('Unknown preset: '+id);
   return structuredClone(configuration.parts).map(p=>({...p,id:crypto.randomUUID()}));
 }

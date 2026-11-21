@@ -1,0 +1,105 @@
+{
+  "version": 1,
+  "faction": "technician",
+  "name": "Small Merchant",
+  "parts": [
+    {
+      "id": "757da0b5-7ef5-46ae-b3f3-f10aa7cca6a0",
+      "type": "hull",
+      "name": "Shell Hull",
+      "position": [
+        0.8,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        -90
+      ],
+      "color": "#a4abb1",
+      "mirror": true,
+      "designStyle": "technician",
+      "hullProfile": "sphere",
+      "technicianHullProfile": "rockShell"
+    },
+    {
+      "id": "62296f85-8c4c-41da-bfb9-6d71343938d5",
+      "type": "hull",
+      "name": "Pearl Hull",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#a4abb1",
+      "mirror": false,
+      "designStyle": "technician",
+      "hullProfile": "sphere"
+    },
+    {
+      "id": "81c25303-bdb4-43b6-9e7e-c43176eb6cb4",
+      "type": "engine",
+      "thrusterProfile": "drone",
+      "name": "Omni engine",
+      "position": [
+        1.1,
+        0,
+        0.9
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        180,
+        0
+      ],
+      "color": "#a4abb1",
+      "mirror": true,
+      "designStyle": "technician",
+      "octagonalSymmetry": false
+    },
+    {
+      "id": "08aca64f-dfdb-4eda-840b-8db6858fcdec",
+      "type": "gravStop",
+      "designStyle": "technician",
+      "octagonalSymmetry": false,
+      "name": "Grav stop bullet",
+      "position": [
+        -1.6,
+        0,
+        1.1
+      ],
+      "scale": [
+        1.95,
+        1,
+        1.65
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#a4abb1",
+      "mirror": true
+    }
+  ]
+}

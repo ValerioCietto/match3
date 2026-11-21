@@ -1,0 +1,200 @@
+{
+  "version": 1,
+  "faction": "technician",
+  "name": "Singularity",
+  "parts": [
+    {
+      "id": "19636f73-6b10-457c-80af-7c8d23e4d1f8",
+      "type": "hull",
+      "name": "Main Pearl Hull",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        3,
+        3,
+        3
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#a4abb1",
+      "mirror": false,
+      "designStyle": "technician",
+      "hullProfile": "sphere"
+    },
+    {
+      "id": "2d597551-83b6-4b8b-9fc1-c3b30ed58e36",
+      "type": "gravStop",
+      "designStyle": "technician",
+      "octagonalSymmetry": false,
+      "name": "Grav stop bullet",
+      "position": [
+        -2.9,
+        0,
+        2
+      ],
+      "scale": [
+        3,
+        3,
+        3
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#a4abb1",
+      "mirror": true
+    },
+    {
+      "id": "f59e20f5-dae3-45c5-a364-3a9e4de74926",
+      "type": "gravStop",
+      "designStyle": "technician",
+      "octagonalSymmetry": false,
+      "name": "Upper Grav stop bullet copy",
+      "position": [
+        -2.7,
+        1.3,
+        2
+      ],
+      "scale": [
+        3,
+        3,
+        3
+      ],
+      "rotation": [
+        0,
+        0,
+        -20
+      ],
+      "color": "#a4abb1",
+      "mirror": true
+    },
+    {
+      "id": "0a79f8c9-1c3f-4843-980b-3a902bd983f8",
+      "type": "hull",
+      "name": "Middle Pearl Hull",
+      "position": [
+        0,
+        0,
+        -3.6
+      ],
+      "scale": [
+        2,
+        2,
+        2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#a4abb1",
+      "mirror": false,
+      "designStyle": "technician",
+      "hullProfile": "sphere"
+    },
+    {
+      "id": "fba83e3c-2364-4c6e-8824-271050c84a70",
+      "type": "hull",
+      "name": "Smallest Pearl Hull",
+      "position": [
+        0,
+        0,
+        -5.9
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#a4abb1",
+      "mirror": false,
+      "designStyle": "technician",
+      "hullProfile": "sphere"
+    },
+    {
+      "id": "36cf7946-5c13-474a-9dcf-6a235f94279e",
+      "type": "gravStop",
+      "designStyle": "technician",
+      "octagonalSymmetry": false,
+      "name": "Lower Grav stop bullet",
+      "position": [
+        -2.7,
+        -1.3,
+        2
+      ],
+      "scale": [
+        3,
+        3,
+        3
+      ],
+      "rotation": [
+        0,
+        0,
+        20
+      ],
+      "color": "#a4abb1",
+      "mirror": true
+    },
+    {
+      "id": "9cac81c3-8256-4587-9d29-977020fc4f01",
+      "type": "nanitesSpray",
+      "designStyle": "technician",
+      "octagonalSymmetry": true,
+      "name": "Nanites spray",
+      "position": [
+        0,
+        0,
+        -3.5
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": "#a4abb1",
+      "mirror": false
+    },
+    {
+      "id": "2d58201f-a48d-4fd9-9b45-fae20a6c131e",
+      "type": "engine",
+      "thrusterProfile": "drone",
+      "name": "Omni engine",
+      "position": [
+        2.4,
+        0,
+        1.3
+      ],
+      "scale": [
+        3,
+        3,
+        3
+      ],
+      "rotation": [
+        0,
+        180,
+        0
+      ],
+      "color": "#a4abb1",
+      "mirror": true,
+      "designStyle": "technician",
+      "octagonalSymmetry": false
+    }
+  ]
+} 
