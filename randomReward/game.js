@@ -7,7 +7,9 @@ const $ = (selector) => document.querySelector(selector);
 const grid = $("#dice-grid");
 const rollButton = $("#roll-button");
 const result = $("#result");
-const SAVE_KEY = "randomReward.save.v1";
+const billionaire = new URLSearchParams(location.search).get("billionaire") === "true";
+const SAVE_KEY = billionaire ? "randomReward.billionaire.v1" : "randomReward.save.v1";
+const startingCredits = billionaire ? 1000000 : 120;
 let state = loadState();
 let diceViews = [];
 const isRolling = () => diceViews.some(view => view.rolling);
@@ -15,7 +17,7 @@ const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").match
 const rotation = ([x, y]) => `rotateX(${x}deg) rotateY(${y}deg)`;
 
 function loadState() {
-  const fresh = DiceRules.fresh();
+  const fresh = DiceRules.fresh(billionaire);
   try {
     const saved = JSON.parse(localStorage.getItem(SAVE_KEY));
     if (!saved || !Number.isSafeInteger(saved.credits) || saved.credits < 0) return fresh;
@@ -24,6 +26,7 @@ function loadState() {
       fresh[key] = saved[key];
     }
     fresh.credits = saved.credits;
+    fresh.luckyStart = saved.luckyStart === true;
     return fresh;
   } catch {
     return fresh;
@@ -82,6 +85,25 @@ function buildDice() {
     grid.append(slot);
     return { slot, button, cube, index, rolling: false, orientation: [0, 0], reward: slot.querySelector(".die-reward") };
   });
+  layoutDice();
+}
+
+function layoutDice() {
+  const count = diceViews.length;
+  const width = grid.clientWidth || 600;
+  const height = grid.clientHeight || 300;
+  let columns = 1, cell = 0;
+  for (let c = 1; c <= count; c++) {
+    const candidate = Math.min(width / c, height / Math.ceil(count / c));
+    if (candidate > cell) { columns = c; cell = candidate; }
+  }
+  const size = Math.max(8, Math.min(136 / Math.pow(count, .2), cell * .48));
+  grid.style.setProperty("--columns", columns);
+  grid.style.setProperty("--rows", Math.ceil(count / columns));
+  grid.style.setProperty("--size", `${size}px`);
+  grid.style.setProperty("--half", `${size / 2}px`);
+  grid.style.setProperty("--toss", `${-Math.min(45, cell * .18)}px`);
+  grid.classList.toggle("dense", count > 16);
 }
 
 function refresh() {
@@ -89,22 +111,23 @@ function refresh() {
   const rolling = isRolling();
   $(".game").hidden = Boolean(state.casino);
   $("#win-screen").hidden = !state.casino;
-  $("#final-credits").textContent = `${state.credits.toLocaleString()} cr remaining`;
-  $("#credits").innerHTML = `${state.credits.toLocaleString()} <small>cr</small>`;
-  $("#stats").textContent = `${state.dice + 1}/10 dice · ${state.free}% free roll · ${state.double}% double win`;
-  const idle = diceViews.filter(view => !view.rolling).length;
-  const affordable = state.free === 100 ? idle : Math.min(idle, Math.floor(state.credits / DiceRules.price(state)));
-  rollButton.textContent = !idle ? "Rolling…" : state.free === 100 ? `Roll ${idle} · Free` : `Roll ${affordable || 1} · ${DiceRules.price(state)} cr each`;
+  $("#final-credits").textContent = `${state.credits.toLocaleString("it-IT", { useGrouping: "always" })} cr remaining`;
+  $("#credits").innerHTML = `${state.credits.toLocaleString("it-IT", { useGrouping: "always" })} <small>cr</small>`;
+  $("#stats").textContent = `${state.dice + 1}/100 dice · ${state.free}% free roll · ${state.double}% double win`;
+  const totalCost = state.free === 100 ? 0 : diceViews.length * DiceRules.price(state);
+  rollButton.textContent = rolling ? "Rolling…" : `Roll all ${diceViews.length} · ${totalCost.toLocaleString("it-IT", { useGrouping: "always" })} cr`;
   const blocked = !DiceRules.canRoll(state);
-  rollButton.disabled = !idle || blocked;
+  rollButton.disabled = rolling || blocked || state.credits < totalCost;
   diceViews.forEach(view => { view.button.disabled = view.rolling || blocked; });
   $("#restart").disabled = rolling;
-  $("#hint").textContent = blocked && !rolling ? "Not enough credits to roll. Start over for 120 cr." : "Tap a die to roll it independently. Each die has its own cost and prize.";
+  $("#hint").textContent = state.luckyStart ? "Lucky start: your first die will land on six." : blocked && !rolling ? "Not enough credits to roll. Start a new game." : state.credits < totalCost ? "Not enough for all dice. Tap an individual die to roll." : "All dice roll six: JACKPOT × dice count. Free spins reduce the total cost.";
+  $("#restart").textContent = `Start over · ${startingCredits.toLocaleString("it-IT", { useGrouping: "always" })} cr`;
+  $("#try-again").textContent = `Try again · ${startingCredits.toLocaleString("it-IT", { useGrouping: "always" })} cr`;
   for (const view of upgradeViews) {
     const capped = state[view.key] >= DiceRules.upgrades[view.key].cap;
     const cost = DiceRules.cost(state, view.key);
-    view.level.textContent = view.key === "casino" ? (state.casino ? "Owned" : "Final upgrade") : view.key === "dice" ? `${state.dice + 1}/10 dice` : view.key === "discount" ? `${DiceRules.price(state)} cr / roll` : `${state[view.key]}% chance`;
-    view.cost.textContent = capped ? "MAX" : `${cost.toLocaleString("it-IT")} cr`;
+    view.level.textContent = view.key === "casino" ? (state.casino ? "Owned" : "Final upgrade") : view.key === "dice" ? `${state.dice + 1}/100 dice` : view.key === "discount" ? `${DiceRules.price(state)} cr / roll` : `${state[view.key]}% chance`;
+    view.cost.textContent = capped ? "MAX" : `${cost.toLocaleString("it-IT", { useGrouping: "always" })} cr`;
     view.button.disabled = Boolean(state.casino) || rolling || capped || state.credits < cost;
   }
   const gameOver = $("#game-over-dialog");
@@ -116,9 +139,9 @@ function refresh() {
   }
 }
 
-function fountain(slot, amount) {
+function fountain(slot, amount, doubled = false) {
   if (reducedMotion()) return;
-  const count = Math.min(32, 12 + Math.floor(amount / 8));
+  const count = Math.min(32, 12 + Math.floor(amount / (doubled ? 16 : 8))) * (doubled ? 2 : 1);
   for (let i = 0; i < count; i++) {
     const coin = document.createElement("span");
     coin.className = "coin";
@@ -137,59 +160,72 @@ function fountain(slot, amount) {
   }
 }
 
-async function roll(view) {
-  if (view.rolling) return;
-  const outcome = DiceRules.startRoll(state);
-  if (!outcome) return;
-  view.rolling = true;
-  view.pendingReward = outcome.total;
-  result.textContent = `Die ${view.index + 1} · ${outcome.free ? "Free roll!" : `Rolling · ${outcome.paid} cr`}`;
-  view.slot.classList.remove("winner");
-  view.reward.textContent = outcome.free ? "Free roll!" : "Rolling…";
-  view.slot.classList.add("rolling");
+let latestRound = 0;
+function roll(view) { return rollDice([view]); }
+
+async function rollDice(views) {
+  if (!views.length || views.some(view => view.rolling) || !DiceRules.canRoll(state)) return;
+  const totalCost = state.free === 100 ? 0 : views.length * DiceRules.price(state);
+  if (state.credits < totalCost) return;
+  const round = ++latestRound;
+  const outcomes = views.map(() => DiceRules.startRoll(state));
+  const jackpot = DiceRules.jackpot(outcomes, diceViews.length);
+  const totalWin = outcomes.reduce((sum, outcome) => sum + outcome.total, 0);
+  const freeSpins = outcomes.filter(outcome => outcome.free).length;
+  const paid = outcomes.reduce((sum, outcome) => sum + outcome.paid, 0);
+  views.forEach((view, index) => {
+    view.rolling = true;
+    view.pendingReward = outcomes[index].total;
+    view.slot.classList.remove("winner");
+    view.slot.classList.add("rolling");
+    view.reward.textContent = outcomes[index].free ? "Free spin" : "Rolling…";
+  });
+  result.textContent = "Rolling · " + paid.toLocaleString("it-IT", { useGrouping: "always" }) + " cr paid · " + freeSpins + " free spins";
+  result.classList.remove("jackpot");
   refresh();
-  const die = outcome.dice[0];
-  const target = orientations[die.value];
-  const animation = view.cube.animate([
-    { transform: rotation(view.orientation) },
-    { transform: rotation([target[0] + 720, target[1] + 1080]) },
-  ], { duration: reducedMotion() ? 0 : 1250, easing: "cubic-bezier(.18,.65,.25,1)", fill: "forwards" });
-  await animation.finished;
-  view.cube.style.transform = rotation(target);
-  animation.cancel();
-  view.orientation = target;
-  view.button.setAttribute("aria-label", `Die ${view.index + 1}: top face ${die.value}. Roll this die`);
-  state.credits += outcome.total;
-  view.pendingReward = 0;
-  view.slot.classList.remove("rolling");
-  view.reward.textContent = `Rolled ${die.value}`;
-  if (die.reward) {
-    view.slot.classList.add("winner");
-    view.reward.textContent = `+${die.reward} cr${die.doubled ? " · DOUBLE!" : ""}`;
-    fountain(view.slot, die.reward);
+  await Promise.all(views.map(async (view, index) => {
+    const die = outcomes[index].dice[0];
+    const target = orientations[die.value];
+    const animation = view.cube.animate([
+      { transform: rotation(view.orientation) },
+      { transform: rotation([target[0] + 720, target[1] + 1080]) },
+    ], { duration: reducedMotion() ? 0 : 1250, easing: "cubic-bezier(.18,.65,.25,1)", fill: "forwards" });
+    await animation.finished;
+    view.cube.style.transform = rotation(target);
+    animation.cancel();
+    view.orientation = target;
+    view.button.setAttribute("aria-label", "Die " + (view.index + 1) + ": top face " + die.value + ". Won " + die.reward + " credits. Roll this die");
+    view.button.title = "Die " + (view.index + 1) + " · " + die.value + " · +" + die.reward + " cr";
+    state.credits += die.reward;
+    view.pendingReward = 0;
+    view.rolling = false;
+    view.slot.classList.remove("rolling");
+    view.reward.textContent = die.reward ? "+" + die.reward + (die.doubled ? " ×2" : " cr") : "Rolled " + die.value;
+    if (die.reward) {
+      view.slot.classList.add("winner");
+      fountain(view.slot, die.reward, die.doubled);
+    }
+    refresh();
+  }));
+  if (round === latestRound) {
+    result.textContent = (jackpot ? "JACKPOT ×" + diceViews.length + "! " : "") + "Total win +" + totalWin.toLocaleString("it-IT", { useGrouping: "always" }) + " cr · " + freeSpins + " free spins";
+    result.classList.toggle("jackpot", jackpot);
   }
-  result.textContent = `Die ${view.index + 1}: ${die.value}${outcome.free ? " · Free roll" : ""}${outcome.total ? ` — Won ${outcome.total} cr!` : " — No six this time."}`;
-  view.rolling = false;
-  refresh();
 }
 
-rollButton.addEventListener("click", () => {
-  // Reserve one fee per die synchronously before any animations finish.
-  const idle = diceViews.filter(view => !view.rolling);
-  const count = state.free === 100 ? idle.length : Math.min(idle.length, Math.floor(state.credits / DiceRules.price(state)));
-  idle.slice(0, count).forEach(view => roll(view));
-});
+rollButton.addEventListener("click", () => rollDice(diceViews));
 $("#restart").addEventListener("click", () => {
   if (isRolling()) return;
-  if (DiceRules.canRoll(state) && !confirm("Start over with 120 credits? Your upgrades will be reset.")) return;
+  if (DiceRules.canRoll(state) && !confirm(`Start over with ${startingCredits.toLocaleString("it-IT", { useGrouping: "always" })} credits? Your upgrades will be reset.`)) return;
   restartGame();
 });
 function restartGame() {
   if (isRolling()) return;
   $("#game-over-dialog").close();
-  state = DiceRules.fresh();
+  state = DiceRules.fresh(billionaire);
   buildDice();
-  result.textContent = "Fresh start. Ready to roll?";
+  result.textContent = "Lucky start! Your first roll is a six.";
+  result.classList.remove("jackpot");
   refresh();
   rollButton.focus();
 }
@@ -198,3 +234,5 @@ $("#try-again").addEventListener("click", restartGame);
 $("#dismiss-game-over").addEventListener("click", () => $("#game-over-dialog").close());
 buildDice();
 refresh();
+
+if (typeof ResizeObserver !== "undefined") new ResizeObserver(layoutDice).observe(grid);

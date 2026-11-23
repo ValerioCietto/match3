@@ -2,12 +2,12 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
-function setup(storage = new Map(), extraDice = true) {
+function setup(storage = new Map(), extraDice = true, search = "") {
   const animations = [];
   function element() {
     const children = new Map();
     const classes = new Set();
-    return { style: {}, disabled: false, textContent: '', open: false,
+    return { style: { setProperty(key, value) { this[key] = value; } }, disabled: false, textContent: '', open: false,
     showModal() { this.open = true; }, close() { this.open = false; }, classList: {
       add: c => classes.add(c), remove: c => classes.delete(c), toggle() {}, contains: c => classes.has(c),
     }, querySelector(s) { if (!children.has(s)) children.set(s, element()); return children.get(s); },
@@ -16,12 +16,12 @@ function setup(storage = new Map(), extraDice = true) {
     };
   }
   const root = element();
-  const context = vm.createContext({ document: { querySelector: s => root.querySelector(s), createElement: element },
+  const context = vm.createContext({ URLSearchParams, location: { search }, document: { querySelector: s => root.querySelector(s), createElement: element },
     localStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) },
     crypto: { getRandomValues: buffer => { buffer[0] = 0; } }, matchMedia: () => ({matches: true}), confirm: () => true });
   for (const file of ['rules.js', 'game.js']) vm.runInContext(fs.readFileSync(`${__dirname}/${file}`, 'utf8'), context);
   const run = source => vm.runInContext(source, context);
-  if (extraDice) run('state.dice = 2; buildDice(); refresh()');
+  if (extraDice) run('state.dice = 2; state.luckyStart = false; buildDice(); refresh()');
   return { run, animations, storage };
 }
 test('dice roll concurrently; each locks only itself and settles separately', async () => {
@@ -41,9 +41,12 @@ test('dice roll concurrently; each locks only itself and settles separately', as
   animations[0](); await first;
   assert.equal(run('isRolling()'), false);
 });
-test('batch button rolls only affordable idle dice and cannot overspend', async () => {
+test('roll-all requires the total cost; individual rolls remain affordable', async () => {
   const {run, animations} = setup();
   run('state.credits = 15; refresh(); rollButton.click(); rollButton.click()');
+  assert.equal(animations.length, 0);
+  assert.equal(run('rollButton.disabled'), true);
+  run('roll(diceViews[0])');
   assert.equal(animations.length, 1);
   assert.equal(run('state.credits'), 5);
   await run('roll(diceViews[1])');
@@ -154,4 +157,54 @@ test('insufficient saved balance shows dialog, while free rolls and victory do n
   assert.equal(reload({...saved, free: 100}).run('$("#game-over-dialog").open'), false);
   assert.equal(reload({...saved, casino: 1}).run('$("#game-over-dialog").open'), false);
   assert.equal(reload({...saved, discount: 9}).run('$("#game-over-dialog").open'), false);
+});
+test('billionaire URL starts a separate million-credit save and restart restores it', () => {
+  const storage = new Map();
+  const normal = setup(storage, false);
+  normal.run('state.credits = 321; refresh()');
+  const cheat = setup(storage, false, '?billionaire=true');
+  assert.equal(cheat.run('state.credits'), 1000000);
+  cheat.run('state.credits = 999000; state.luckyStart = false; refresh()');
+  assert.equal(setup(storage, false, '?billionaire=true').run('state.credits'), 999000);
+  assert.equal(setup(storage, false).run('state.credits'), 321);
+  cheat.run('restartGame()');
+  assert.equal(cheat.run('state.credits'), 1000000);
+  assert.equal(cheat.run('state.luckyStart'), true);
+});
+test('lucky start is consumed before animation and survives reload correctly', async () => {
+  const {run, storage, animations} = setup(new Map(), false);
+  const pending = run('roll(diceViews[0])');
+  assert.equal(run('state.luckyStart'), false);
+  assert.equal(setup(new Map(storage), false).run('state.luckyStart'), false);
+  animations[0](); await pending;
+  assert.equal(run('diceViews[0].orientation[0]'), 90);
+  assert.equal(run('diceViews[0].orientation[1]'), 180);
+  run('restartGame()');
+  assert.equal(run('state.luckyStart'), true);
+});
+test('roll-all reports total price, jackpot gain and free spins and persists multiplier', async () => {
+  const {run, storage, animations} = setup();
+  assert.equal(run('rollButton.textContent'), 'Roll all 3 · 30 cr');
+  run('DiceRules.startRoll = s => ({free:true,paid:0,dice:[{value:6,reward:20,doubled:true}],total:20})');
+  const pending = run('rollDice(diceViews)');
+  assert.equal(setup(new Map(storage), false).run('state.credits'), 300);
+  animations.forEach(finish => finish()); await pending;
+  assert.equal(run('state.credits'), 300);
+  assert.equal(run('result.textContent'), 'JACKPOT ×3! Total win +180 cr · 3 free spins');
+});
+test('100 dice fit the computed grid and cannot be upgraded further', () => {
+  const {run} = setup();
+  run('state.dice = 99; state.credits = 1000000; grid.clientWidth = 360; grid.clientHeight = 300; buildDice(); refresh()');
+  assert.equal(run('diceViews.length'), 100);
+  assert.equal(run('upgradeViews.find(v=>v.key === "dice").button.disabled'), true);
+  assert.equal(run('rollButton.textContent'), 'Roll all 100 · 1.000 cr');
+  assert.ok(run('Number(grid.style["--columns"]) * Number(grid.style["--rows"]) >= 100'));
+  assert.ok(run('parseFloat(grid.style["--size"]) < 20'));
+});
+test('double wins launch twice as many coins for the same base reward', () => {
+  const {run, animations} = setup();
+  run('matchMedia = () => ({matches:false}); fountain(diceViews[0].slot, 80, false)');
+  const normalCount = animations.length;
+  run('fountain(diceViews[0].slot, 160, true)');
+  assert.equal(animations.length - normalCount, normalCount * 2);
 });
