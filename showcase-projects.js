@@ -1,6 +1,11 @@
 // Higher weights appear first. Equal weights keep the order below.
 const showcaseProjects = [
   {
+    "title": "Random Reward — Roll the Dice",
+    "href": "randomReward/",
+    "weight": 0
+  },
+  {
     "title": "Starship builder",
     "href": "3dStarshipBuilder/",
     "weight": 10,

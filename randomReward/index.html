@@ -1,0 +1,82 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090909">
+  <title>Random Reward · Roll the dice</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="rules.js" defer></script>
+  <script src="game.js" defer></script>
+</head>
+<body>
+  <main class="game">
+    <aside class="upgrades" aria-labelledby="upgrade-title">
+      <p class="eyebrow">MAKE YOUR OWN LUCK</p>
+      <h2 id="upgrade-title">Upgrades</h2>
+      <p class="shop-intro">Spend a little. Change the odds.</p>
+      <div id="upgrade-list"></div>
+      <p class="shop-note">Each die rolls independently.<br>Pay per die. Every six wins 10–120 cr.</p>
+      <button class="restart" id="restart">Start over · 120 cr</button>
+    </aside>
+    <section class="play-area" aria-label="Dice game">
+      <header>
+        <p class="eyebrow">RANDOM REWARD</p>
+        <h1>Give chance a spin.</h1>
+        <p class="subtitle">Roll a six. Make it rain.</p>
+      </header>
+      <div class="wallet"><span>CREDITS</span><strong id="credits">120 <small>cr</small></strong></div>
+      <div class="stats" id="stats"></div>
+      <div class="table">
+        <div class="table-ring" aria-hidden="true"></div>
+        <div class="dice-grid" id="dice-grid"></div>
+      </div>
+      <section class="controls" aria-label="Dice controls">
+        <p class="result" id="result" role="status" aria-live="polite">Ready to roll?</p>
+        <button class="roll-button" id="roll-button">Roll 1 · 10 cr each</button>
+        <p class="hint" id="hint">Tap a die to roll it independently. The top face counts.</p>
+      </section>
+      <footer>LET THE DOTS DECIDE</footer>
+    </section>
+  </main>
+  <dialog id="game-over-dialog" class="game-over-dialog" aria-labelledby="game-over-title" aria-describedby="game-over-message game-over-question">
+    <p class="eyebrow">GAME OVER</p>
+    <h2 id="game-over-title">the game ends for you</h2>
+    <p id="game-over-message">you squandered all your virtual money</p>
+    <p id="game-over-question">want to try again?</p>
+    <div class="win-actions">
+      <button class="roll-button" id="try-again" autofocus>Try again · 120 cr</button>
+      <button class="restart" id="dismiss-game-over">Not now</button>
+    </div>
+  </dialog>
+  <section class="win-screen" id="win-screen" aria-labelledby="win-title" hidden>
+    <div class="win-card">
+      <div class="win-emblem" aria-hidden="true">♛</div>
+      <p class="eyebrow">THE HOUSE IS YOURS</p>
+      <h1 id="win-title" tabindex="-1">You Win!</h1>
+      <p class="win-summary">You bought the casino for <strong>1.000.000 cr</strong>.<br>Your game is complete.</p>
+      <p id="final-credits" class="hint"></p>
+      <section class="prevention" aria-labelledby="prevention-title">
+        <h2 id="prevention-title">Keep the win in the game.</h2>
+        <p>These credits are fictional. This game's rewards and upgrades do not reflect real-world gambling odds or offer a way to earn money.</p>
+        <h3>Preventing gambling harm</h3>
+        <ul>
+          <li><strong>Don't chase losses.</strong> More betting is not a reliable way to recover lost money.</li>
+          <li><strong>Protect your essentials.</strong> Never borrow to gamble or use money needed for bills, food, or rent.</li>
+          <li><strong>Set boundaries and take breaks.</strong> Decide time and spending limits in advance. Choosing not to gamble is always an option.</li>
+          <li><strong>Notice the warning signs.</strong> Hiding gambling, feeling unable to stop, or gambling to escape distress are reasons to seek support.</li>
+          <li><strong>Make support easier to reach.</strong> Talk to someone you trust or a health professional. Gambling blocks and self-exclusion can help create distance.</li>
+        </ul>
+        <p class="support-source">Learn more: <a href="https://www.nhs.uk/live-well/addiction-support/gambling-addiction/" target="_blank" rel="noopener noreferrer">NHS — help for problems with gambling</a>.</p>
+      </section>
+      <div class="win-actions">
+        <a class="roll-button" href="../">Back to games</a>
+        <button class="restart" id="play-again">Start a new game</button>
+      </div>
+    </div>
+  </section>
+</body>
+</html>
